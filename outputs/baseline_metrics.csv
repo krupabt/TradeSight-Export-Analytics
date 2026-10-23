@@ -1,0 +1,38 @@
+metric_name,calculated_value,unit,definition,source_columns
+total_orders,600,Orders,Total count of recorded B2B export orders,da_b2b_orders.order_id
+total_order_value_inr,3968829214.20,INR,Sum of recorded gross order value across all orders,da_b2b_orders.total_value_inr
+average_order_value_inr,6614715.36,INR,Average order value (Total Order Value / Total Orders),da_b2b_orders.total_value_inr
+median_order_value_inr,4817483.05,INR,Median order value of all recorded orders,da_b2b_orders.total_value_inr
+min_order_value_inr,28360.80,INR,Minimum individual order value,da_b2b_orders.total_value_inr
+max_order_value_inr,24380230.92,INR,Maximum individual order value,da_b2b_orders.total_value_inr
+total_ordered_units,1509070,Units,Sum of all product units ordered across B2B shipments,da_b2b_orders.quantity_units
+total_returned_units,15242,Units,Sum of all returned product units,da_b2b_orders.return_qty
+unit_return_rate_pct,1.0100,Percent,Proportion of ordered units returned: (Total Returned Units / Total Ordered Units) * 100,"da_b2b_orders.return_qty, da_b2b_orders.quantity_units"
+orders_with_returns_count,591,Orders,Count of orders experiencing at least one unit returned (return_qty > 0),da_b2b_orders.return_qty
+order_return_rate_pct,98.5000,Percent,Proportion of orders with returns: (Orders with Returns / Total Orders) * 100,"da_b2b_orders.return_qty, da_b2b_orders.order_id"
+on_time_orders_count,465,Orders,Count of orders delivered on time according to contract schedule,da_b2b_orders.on_time_delivery
+on_time_delivery_rate_pct,77.5000,Percent,Proportion of on-time deliveries: (On-Time Orders / Total Orders) * 100,"da_b2b_orders.on_time_delivery, da_b2b_orders.order_id"
+delayed_orders_count,135,Orders,Count of orders experiencing delivery delays (on_time_delivery == 0),da_b2b_orders.on_time_delivery
+delayed_delivery_rate_pct,22.5000,Percent,Proportion of delayed deliveries: (Delayed Orders / Total Orders) * 100,"da_b2b_orders.on_time_delivery, da_b2b_orders.order_id"
+average_delivery_days,23.49,Days,Mean transit duration in days from order placement to customer receipt,da_b2b_orders.delivery_days
+median_delivery_days,23.5,Days,Median transit duration in days,da_b2b_orders.delivery_days
+min_delivery_days,3,Days,Shortest transit duration recorded,da_b2b_orders.delivery_days
+max_delivery_days,45,Days,Longest transit duration recorded,da_b2b_orders.delivery_days
+repeat_buyer_orders_count,227,Orders,Count of orders placed by repeat buyers (repeat_buyer == 1),da_b2b_orders.repeat_buyer
+repeat_buyer_rate_pct,37.8333,Percent,Proportion of orders from repeat buyers: (Repeat Orders / Total Orders) * 100,"da_b2b_orders.repeat_buyer, da_b2b_orders.order_id"
+unique_buyers_count,187,Buyers,Distinct count of buyer entities recorded in order logs,da_b2b_orders.buyer_id
+unique_sellers_count,80,Sellers,Distinct count of seller/supplier entities recorded in order logs,da_b2b_orders.seller_id
+product_catalogue_count,50,Products,Total number of product items documented in the reference catalogue,da_product_catalogue.Product_ID
+total_catalogue_stock_units,13857,Units,Total warehouse stock units across catalogue products,da_product_catalogue.Stock_Units
+average_product_mrp_inr,2262.94,INR,Mean Maximum Retail Price across catalogue items,da_product_catalogue.MRP
+average_product_cogs_inr,939.08,INR,Mean Cost of Goods Sold across catalogue items,da_product_catalogue.COGS
+catalogue_gross_margin_pct,58.5018,Percent,Gross margin of catalogue: ((Average MRP - Average COGS) / Average MRP) * 100,"da_product_catalogue.MRP, da_product_catalogue.COGS"
+customer_profiles_count,200,Customers,Total number of customer account profiles in database,da_customer_profiles.Customer_ID
+customers_reported_revenue_inr,4992621.00,INR,Sum of lifetime total revenue recorded across customer account profiles,da_customer_profiles.Total_Revenue
+customer_churn_rate_pct,3.0000,Percent,Proportion of churned customer accounts: (Churned Accounts / Total Accounts) * 100,"da_customer_profiles.Churned, da_customer_profiles.Customer_ID"
+missing_values_count,0,Cells,Count of null or missing cells across all 3 original CSV datasets,All datasets
+duplicate_rows_count,0,Rows,Count of exact duplicate rows across all 3 original CSV datasets,All datasets
+invalid_return_records_count,2,Orders,Count of orders where return_qty exceeds quantity_units (logical impossibility),"da_b2b_orders.return_qty, da_b2b_orders.quantity_units"
+customer_date_inversions_count,42,Customers,Customer profiles where First_Purchase_Date > Last_Purchase_Date (chronological anomaly),"da_customer_profiles.First_Purchase_Date, da_customer_profiles.Last_Purchase_Date"
+order_value_calculation_discrepancies,0,Orders,Orders where total_value_inr differs from (quantity_units * unit_price_inr) by > 0.05,"da_b2b_orders.total_value_inr, da_b2b_orders.quantity_units, da_b2b_orders.unit_price_inr"
+disjunct_schema_flag,True,Boolean,Indicates datasets have disjunct schemas and lack foreign key joins,Cross-dataset analysis

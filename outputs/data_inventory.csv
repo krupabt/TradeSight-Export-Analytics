@@ -1,0 +1,4 @@
+dataset_name,file_name,file_path,file_size_kb,row_count,column_count,memory_usage_mb,total_null_cells,duplicate_rows,columns_list,status
+da_b2b_orders,da_b2b_orders.csv,D:\TradeSight-Export-Analytics\data\da_b2b_orders.csv,56.17,600,13,0.2322,0,0,"order_id, buyer_id, seller_id, category, order_date, quantity_units, unit_price_inr, total_value_inr, payment_terms, delivery_days, on_time_delivery, return_qty, repeat_buyer",Validated
+da_product_catalogue,da_product_catalogue.csv,D:\TradeSight-Export-Analytics\data\da_product_catalogue.csv,2.0,50,7,0.0096,0,0,"Product_ID, Name, Category, MRP, COGS, Stock_Units, Avg_Monthly_Sales",Validated
+da_customer_profiles,da_customer_profiles.csv,D:\TradeSight-Export-Analytics\data\da_customer_profiles.csv,11.8,200,10,0.0782,0,0,"Customer_ID, City, Age_Band, Gender, Acquisition_Channel, First_Purchase_Date, Total_Orders, Total_Revenue, Last_Purchase_Date, Churned",Validated

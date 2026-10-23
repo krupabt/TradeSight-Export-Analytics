@@ -1,0 +1,146 @@
+{
+  "report_generated_at": "2026-10-23T13:25:02.711821",
+  "summary": {
+    "total_datasets_inspected": 3,
+    "total_records_analyzed": 850,
+    "total_missing_cells": 0,
+    "total_duplicate_rows": 0,
+    "orders_return_quantity_overrun_count": 2,
+    "customer_date_inversion_count": 42,
+    "order_value_discrepancy_count": 0
+  },
+  "datasets": {
+    "da_b2b_orders": {
+      "dataset_name": "da_b2b_orders",
+      "row_count": 600,
+      "total_null_cells": 0,
+      "null_counts_by_col": {
+        "order_id": 0,
+        "buyer_id": 0,
+        "seller_id": 0,
+        "category": 0,
+        "order_date": 0,
+        "quantity_units": 0,
+        "unit_price_inr": 0,
+        "total_value_inr": 0,
+        "payment_terms": 0,
+        "delivery_days": 0,
+        "on_time_delivery": 0,
+        "return_qty": 0,
+        "repeat_buyer": 0
+      },
+      "duplicate_rows": 0,
+      "primary_key_duplicates": 0
+    },
+    "da_product_catalogue": {
+      "dataset_name": "da_product_catalogue",
+      "row_count": 50,
+      "total_null_cells": 0,
+      "null_counts_by_col": {
+        "Product_ID": 0,
+        "Name": 0,
+        "Category": 0,
+        "MRP": 0,
+        "COGS": 0,
+        "Stock_Units": 0,
+        "Avg_Monthly_Sales": 0
+      },
+      "duplicate_rows": 0,
+      "primary_key_duplicates": 0
+    },
+    "da_customer_profiles": {
+      "dataset_name": "da_customer_profiles",
+      "row_count": 200,
+      "total_null_cells": 0,
+      "null_counts_by_col": {
+        "Customer_ID": 0,
+        "City": 0,
+        "Age_Band": 0,
+        "Gender": 0,
+        "Acquisition_Channel": 0,
+        "First_Purchase_Date": 0,
+        "Total_Orders": 0,
+        "Total_Revenue": 0,
+        "Last_Purchase_Date": 0,
+        "Churned": 0
+      },
+      "duplicate_rows": 0,
+      "primary_key_duplicates": 0
+    }
+  },
+  "cross_dataset_relationship_analysis": {
+    "is_relational_schema": false,
+    "direct_buyer_match_count": 0,
+    "numeric_index_overlap_count": 187,
+    "has_product_id_in_orders": false,
+    "category_overlap": [],
+    "orders_date_range": [
+      "2023-01-02",
+      "2024-12-31"
+    ],
+    "customers_date_range": [
+      "2024-07-14",
+      "2026-07-07"
+    ],
+    "orders_total_revenue_inr": 3968829214.2,
+    "customers_total_revenue_inr": 4992621.0,
+    "findings": [
+      "Dataset Independence Finding: The three datasets represent separate business domains.",
+      "1. orders.buyer_id ('BUY-0001' to 'BUY-0200') does not directly match customers.Customer_ID ('C1' to 'C200').",
+      "2. orders.category ('Food Ingredients', 'Textiles', etc.) has zero overlap with products.Category ('Beauty', 'Grocery', etc.).",
+      "3. orders lacks a product foreign key column (e.g., product_id).",
+      "4. Temporal and scale divergence: Orders represent B2B wholesale transactions (2023-2024, ~\u20b93.97B INR), while customer profiles represent retail summaries (2024-2026, ~\u20b94.99M INR).",
+      "Conclusion: Relationships are documented as disjoint entities. Fabricating joins between them would produce invalid analytical conclusions."
+    ]
+  },
+  "anomalous_records": {
+    "return_overrun_order_ids": [
+      "B2B-00131",
+      "B2B-00188"
+    ],
+    "date_inversion_customer_ids": [
+      "C8",
+      "C10",
+      "C11",
+      "C14",
+      "C16",
+      "C21",
+      "C23",
+      "C26",
+      "C27",
+      "C30",
+      "C39",
+      "C52",
+      "C57",
+      "C71",
+      "C77",
+      "C82",
+      "C86",
+      "C98",
+      "C99",
+      "C101",
+      "C102",
+      "C103",
+      "C108",
+      "C110",
+      "C114",
+      "C119",
+      "C127",
+      "C128",
+      "C133",
+      "C135",
+      "C136",
+      "C141",
+      "C150",
+      "C153",
+      "C155",
+      "C157",
+      "C169",
+      "C174",
+      "C181",
+      "C185",
+      "C194",
+      "C200"
+    ]
+  }
+}
