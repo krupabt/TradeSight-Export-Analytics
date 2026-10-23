@@ -190,3 +190,61 @@ $Trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday -At 08:00AM
 $Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable
 Register-ScheduledTask -TaskName "TradeSight_Weekly_Exception_Report" -Action $Action -Trigger $Trigger -Settings $Settings -Description "Runs weekly data pipeline and exception generator"
 ```
+
+---
+
+## 10. Cynaris Week 6: Deep-Dive Analysis (B2B Buyer Segmentation & Statistical Testing)
+
+**Milestone:** Week 6 — Deep-Dive Analytical Investigation  
+**Primary Methodology:** B2B Commercial Buyer Segmentation (RFM-V & K-Means Clustering)  
+**Supporting Validation:** Parametric & Non-Parametric Statistical Hypothesis Testing, 24-Month Cohort Retention Analysis, and Empirical Predictive Model Evaluation  
+
+### Core Findings & Strategic Highlights
+1. **Four Commercial Account Segments ($k=4$):**
+   - **Core Stable Accounts (75 Buyers | 38.3% Revenue | ₹1,519.8M):** Bedrock accounts with an outstanding **95.0% on-time fulfillment rate**.
+   - **Active Growth Buyers (68 Buyers | 37.6% Revenue | ₹1,493.5M):** High purchasing velocity with the lowest recency (**98.9 days**), operating at a **75.2% on-time delivery rate**.
+   - **Operationally Vulnerable Accounts (27 Buyers | 13.6% Revenue | ₹538.7M):** Severe fulfillment failure with a **75.0% delivery delay rate** (only 25.0% on-time) and elevated return rates (3.15%), representing critical commercial churn risk.
+   - **Lapsed Accounts (17 Buyers | 10.5% Revenue | ₹416.7M):** Long dormancy (**538.5 days** mean recency) despite historically excellent fulfillment (**94.1% on-time**).
+2. **Empirical Evaluation of Predictive Modeling:**
+   - Evaluated Logistic Regression, Random Forest, and Gradient Boosting to predict delivery delays.
+   - All models converge to a cross-validated ROC-AUC of **0.5088** (equivalent to random chance), proving that delivery delays are not caused by order attributes (size, price, category, payment terms), but rather by external logistics carrier bottlenecks.
+3. **Statistical Hypothesis Testing:**
+   - ANOVA and Kruskal-Wallis tests confirmed that recency ($p < 0.001$), order frequency ($p < 0.001$), spend ($p < 0.001$), and on-time fulfillment ($p < 0.001$) are statistically distinct across segments.
+   - Chi-Square tests confirmed that payment terms ($p = 0.817$) and commodity categories ($p = 0.498$) are statistically independent of delivery delays.
+
+### Deliverables in `week6_deep_dive/`
+```text
+D:\TradeSight-Export-Analytics\week6_deep_dive\
+├── run_deep_dive.py                  # Master orchestration script for Week 6
+├── deep_dive_report.md               # Comprehensive executive Markdown report
+├── deep_dive_report.pdf              # Publication-ready executive PDF report (1.70 MB, < 10 MB)
+├── outputs/                          # 8 supporting analytical CSV files
+│   ├── buyer_rfm_segments.csv        # Buyer-level features and segment assignments
+│   ├── segment_profile_summary.csv   # Aggregated commercial and operational metrics
+│   ├── statistical_test_results.csv  # 8 hypothesis tests with test stats & p-values
+│   ├── cohort_retention_matrix.csv   # 24-month retention matrix
+│   ├── cohort_benchmarks.csv         # Milestone retention benchmarks
+│   ├── predictive_model_metrics.csv  # Supervised ML model comparison
+│   ├── predictive_feature_importance.csv # Feature importances
+│   └── cluster_k_evaluation.csv      # Elbow & silhouette evaluation scores
+└── visualizations/                   # 6 high-resolution publication charts (PNG)
+    ├── elbow_silhouette_analysis.png # K evaluation curves
+    ├── pca_cluster_scatter.png       # 2D PCA cluster projection
+    ├── segment_profiles_bar.png      # Multi-panel segment comparison
+    ├── cohort_retention_heatmap.png  # 24-month retention heatmap
+    ├── operational_risk_scatter.png  # Spend vs On-time rate quadrant
+    └── payment_terms_distribution.png# Payment terms breakdown by cluster
+```
+
+### How to Reproduce Week 6 Deep-Dive Analysis
+```powershell
+# In Windows PowerShell:
+cd D:\TradeSight-Export-Analytics
+
+# Run the complete deep-dive pipeline (generates CSVs, charts, Markdown, and PDF report)
+python week6_deep_dive/run_deep_dive.py
+
+# Run all 27 automated tests (Week 3 + Week 6 test suite)
+pytest -v
+```
+

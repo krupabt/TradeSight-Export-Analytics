@@ -1,0 +1,4 @@
+model_name,test_accuracy,test_precision,test_recall,test_f1_score,test_roc_auc,cv_mean_roc_auc,cv_std_roc_auc
+Logistic Regression (L2),0.7733,0.0,0.0,0.0,0.467,0.4608,0.0434
+Random Forest Classifier,0.7733,0.0,0.0,0.0,0.4675,0.4976,0.0802
+Gradient Boosting Classifier,0.74,0.2727,0.0882,0.1333,0.4848,0.4988,0.0655

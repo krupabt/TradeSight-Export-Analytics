@@ -1,0 +1,6 @@
+milestone,eligible_cohorts_count,mean_retention_rate_pct,median_retention_rate_pct,min_retention_rate_pct,max_retention_rate_pct
+Month 1 Retention,23,12.57,9.09,0.0,50.0
+Month 3 Retention,21,8.84,0.0,0.0,33.33
+Month 6 Retention,18,16.81,6.06,0.0,100.0
+Month 9 Retention,15,13.8,11.76,0.0,33.33
+Month 12 Retention,12,14.01,12.89,0.0,40.0
