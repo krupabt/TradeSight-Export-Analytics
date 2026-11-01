@@ -244,7 +244,51 @@ cd D:\TradeSight-Export-Analytics
 # Run the complete deep-dive pipeline (generates CSVs, charts, Markdown, and PDF report)
 python week6_deep_dive/run_deep_dive.py
 
-# Run all 27 automated tests (Week 3 + Week 6 test suite)
+# Run all 34 automated tests (Week 3, Week 6, and Week 9 test suite)
+pytest -v
+```
+
+---
+
+## 11. Cynaris Week 9: Dashboard V1 & Peer Review
+
+**Milestone:** Week 9 — Dashboard V1 & Formal Peer Review  
+**Technology Stack:** Streamlit, Plotly, Power BI Desktop, Python 3.12, ReportLab, pytest  
+**Status:** Dashboard V1 Released & Verified | Peer Review Protocol Established  
+
+### Core Capabilities & Deliverables
+1. **Interactive Executive Dashboard (`week9_dashboard/app.py`):**
+   - Multi-tab application featuring:
+     - **Tab 1 (Executive Overview):** Top KPI cards (₹396.88 Cr revenue, 600 orders, ₹66.15 L AOV, 77.50% SLA, 1.01% returns), monthly trend dual-axis chart, category revenue bars, and payment terms donut.
+     - **Tab 2 (Logistics Fulfillment):** Delivery days histogram, SLA target comparison (80% benchmark), and credit terms friction table.
+     - **Tab 3 (Returns & Exception Audit):** Return rate by category, physical units comparison, and the critical exception grid for the 2 return overrun anomalies (`B2B-00131` and `B2B-00188`).
+     - **Tab 4 (Week 6 Buyer Segmentation):** Summary of the 4 commercial account clusters (*Core Stable*, *Active Growth*, *Operationally Vulnerable*, *Lapsed*), interactive 2D PCA cluster map, and searchable buyer explorer table.
+     - **Tab 5 (Data Governance & Missing KPIs):** Explicit disclosure of unavailable KPIs (Foreign Exchange, Profitability/COGS, Compliance) alongside the complete enterprise verified scorecard and filtered CSV download.
+2. **Power BI Implementation Guide (`week9_dashboard/powerbi/`):**
+   - Full 5-page canvas visual specification (`dashboard_specification_v1.md`).
+   - 20+ verified DAX measures library (`dax_measures_v1.md`).
+   - Star-schema data architecture and Power BI Service publishing runbook (`powerbi_model_v1.md`).
+3. **Executive PDF Report (`week9_dashboard/dashboard_v1_report.pdf`):**
+   - Publication-quality multi-page PDF report (1.47 MB, strictly under 10 MB limit) containing scorecard, embedded high-resolution screenshots, and governance audit.
+4. **Formal Peer Review Framework:**
+   - Single-reviewer evaluation rubric covering Layout Clarity, Metric Accuracy, Chart Readability, Filter Functionality, Navigation, and UX (`peer_review_template.md`).
+   - Formal session tracking log initialized as `Pending Real Peer Review Session` (`peer_feedback_log.md`).
+   - Actionable continuous improvement backlog tracking items `REV-001` through `REV-008` marked `Pending` (`revision_list.md`).
+
+### How to Run and Test Dashboard V1
+```powershell
+# In Windows PowerShell:
+cd D:\TradeSight-Export-Analytics
+
+# 1. Launch the interactive Streamlit dashboard:
+streamlit run week9_dashboard/app.py
+# (Access at http://localhost:8501)
+
+# 2. Regenerate high-resolution screenshots and PDF report:
+python week9_dashboard/src/generate_screenshots.py
+python week9_dashboard/src/generate_pdf_report.py
+
+# 3. Run the automated test suite (34 passing tests across Weeks 3, 6, and 9):
 pytest -v
 ```
 
