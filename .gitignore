@@ -43,3 +43,8 @@ Desktop.ini
 *.log
 scratch/
 tmp/
+node_modules/
+dist/
+.vercel/
+
+.vercel
