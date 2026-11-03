@@ -1,64 +1,65 @@
 import React, { useState, useMemo } from 'react';
 import {
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  ScatterChart, Scatter, ZAxis, ReferenceLine
+  ReferenceLine
 } from 'recharts';
 import {
-  TrendingUp, Truck, RotateCcw, Users, ShieldAlert,
+  TrendingUp, Truck, RotateCcw, Users, ShieldAlert, Package,
   Download, Filter, RefreshCw, AlertTriangle, CheckCircle,
-  FileText, ExternalLink, Calendar, CreditCard, Box
+  FileText, Calendar, Box, Database, Layers, ArrowUpRight,
+  Info, Search, HelpCircle
 } from 'lucide-react';
 
 import ordersRaw from './data/orders.json';
-import buyersRaw from './data/buyers.json';
+import productsRaw from './data/products.json';
+import customersRaw from './data/customers.json';
+import buyersRaw from './data/buyers_aggregated.json';
 
+// Unique filters supported by orders dataset
 const ALL_CATEGORIES = [...new Set(ordersRaw.map(o => o.category))].sort();
 const ALL_TERMS = [...new Set(ordersRaw.map(o => o.payment_terms))].sort();
-const ALL_SEGMENTS = [
-  'Core Stable Accounts (High Fulfillment)',
-  'Active Growth Buyers (High Velocity)',
-  'Operationally Vulnerable (High Friction)',
-  'Lapsed Accounts (Dormant)'
-];
 
+// Color scheme: Dark navy background with Teal & Cyan highlights
 const COLORS = {
-  navy: '#0F2027',
-  primary: '#203A43',
-  blue: '#2563EB',
-  teal: '#0D9488',
-  amber: '#D97706',
-  red: '#DC2626',
-  green: '#16A34A',
+  teal: '#14B8A6',
+  cyan: '#06B6D4',
+  blue: '#3B82F6',
+  amber: '#F59E0B',
+  rose: '#F43F5E',
+  emerald: '#10B981',
   slate: '#64748B',
-  cluster: {
-    'Core Stable Accounts (High Fulfillment)': '#2563EB',
-    'Active Growth Buyers (High Velocity)': '#16A34A',
-    'Operationally Vulnerable (High Friction)': '#D97706',
-    'Lapsed Accounts (Dormant)': '#DC2626'
-  }
+  pie: ['#14B8A6', '#06B6D4', '#3B82F6', '#F59E0B', '#8B5CF6']
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeSection, setActiveSection] = useState('overview');
 
-  // Filters
-  const [selectedCategories, setSelectedCategories] = useState(ALL_CATEGORIES);
-  const [selectedTerms, setSelectedTerms] = useState(ALL_TERMS);
-  const [selectedSegments, setSelectedSegments] = useState(ALL_SEGMENTS);
-  const [searchTerm, setSearchTerm] = useState('');
+  // Interactive Filters
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [selectedTerm, setSelectedTerm] = useState('ALL');
+  const [buyerSearch, setBuyerSearch] = useState('');
+  const [productSearch, setProductSearch] = useState('');
+  const [orderSearch, setOrderSearch] = useState('');
 
-  // Filter Logic
+  // Filtered Orders Data
   const filteredOrders = useMemo(() => {
     return ordersRaw.filter(order => {
-      if (selectedCategories.length && !selectedCategories.includes(order.category)) return false;
-      if (selectedTerms.length && !selectedTerms.includes(order.payment_terms)) return false;
-      if (selectedSegments.length && !selectedSegments.includes(order.segment_label)) return false;
+      if (selectedCategory !== 'ALL' && order.category !== selectedCategory) return false;
+      if (selectedTerm !== 'ALL' && order.payment_terms !== selectedTerm) return false;
+      if (orderSearch) {
+        const q = orderSearch.toLowerCase();
+        return (
+          order.order_id.toLowerCase().includes(q) ||
+          order.buyer_id.toLowerCase().includes(q) ||
+          order.seller_id.toLowerCase().includes(q)
+        );
+      }
       return true;
     });
-  }, [selectedCategories, selectedTerms, selectedSegments]);
+  }, [selectedCategory, selectedTerm, orderSearch]);
 
-  // Baseline Aggregations
+  // Orders Aggregations
   const stats = useMemo(() => {
     const totalRevenue = filteredOrders.reduce((sum, o) => sum + (o.total_value_inr || 0), 0);
     const totalOrders = filteredOrders.length;
@@ -85,7 +86,10 @@ export default function App() {
     const repeatBuyerPct = totalOrders ? (repeatBuyerOrders / totalOrders) * 100 : 0;
 
     const uniqueBuyers = new Set(filteredOrders.map(o => o.buyer_id)).size;
-    const invalidReturns = filteredOrders.filter(o => o.is_valid_return === false || o.is_valid_return === 'False');
+    const uniqueSellers = new Set(filteredOrders.map(o => o.seller_id)).size;
+
+    // Anomalous orders where returned units exceed shipped units
+    const invalidReturns = filteredOrders.filter(o => o.return_qty > o.quantity_units);
 
     return {
       totalRevenue,
@@ -102,23 +106,50 @@ export default function App() {
       repeatBuyerOrders,
       repeatBuyerPct,
       uniqueBuyers,
+      uniqueSellers,
       invalidReturns
     };
   }, [filteredOrders]);
 
-  // Monthly Trend Data
-  const monthlyTrendData = useMemo(() => {
+  // Product Catalogue Stats (from da_product_catalogue.csv)
+  const productStats = useMemo(() => {
+    const totalProducts = productsRaw.length;
+    const totalStock = productsRaw.reduce((sum, p) => sum + (p.Stock_Units || 0), 0);
+    const avgMRP = totalProducts ? productsRaw.reduce((sum, p) => sum + p.MRP, 0) / totalProducts : 0;
+    const avgCOGS = totalProducts ? productsRaw.reduce((sum, p) => sum + p.COGS, 0) / totalProducts : 0;
+    const avgMarginPct = totalProducts ? productsRaw.reduce((sum, p) => sum + p.Margin_Pct, 0) / totalProducts : 0;
+    const totalMonthlySales = productsRaw.reduce((sum, p) => sum + (p.Avg_Monthly_Sales || 0), 0);
+    return { totalProducts, totalStock, avgMRP, avgCOGS, avgMarginPct, totalMonthlySales };
+  }, []);
+
+  // Customer Profile Stats (from da_customer_profiles.csv)
+  const customerStats = useMemo(() => {
+    const count = customersRaw.length;
+    const totalRev = customersRaw.reduce((sum, c) => sum + (c.Total_Revenue || 0), 0);
+    const totalOrders = customersRaw.reduce((sum, c) => sum + (c.Total_Orders || 0), 0);
+    const churnedCount = customersRaw.filter(c => c.Churned === 1).length;
+    const churnRate = count ? (churnedCount / count) * 100 : 0;
+    const dateAnomalies = customersRaw.filter(c => new Date(c.First_Purchase_Date) > new Date(c.Last_Purchase_Date));
+    return { count, totalRev, totalOrders, churnedCount, churnRate, dateAnomalies };
+  }, []);
+
+  // Monthly Revenue & Orders Trend
+  const monthlyData = useMemo(() => {
     const map = {};
     filteredOrders.forEach(o => {
       const ym = o.order_year_month || o.order_date.substring(0, 7);
-      if (!map[ym]) map[ym] = { month: ym, revenueCr: 0, orders: 0 };
+      if (!map[ym]) map[ym] = { month: ym, revenueCr: 0, orders: 0, units: 0 };
       map[ym].revenueCr += (o.total_value_inr || 0) / 10000000;
       map[ym].orders += 1;
+      map[ym].units += o.quantity_units || 0;
     });
-    return Object.values(map).sort((a, b) => a.month.localeCompare(b.month));
+    return Object.values(map).map(m => ({
+      ...m,
+      revenueCr: parseFloat(m.revenueCr.toFixed(2))
+    })).sort((a, b) => a.month.localeCompare(b.month));
   }, [filteredOrders]);
 
-  // Category Revenue & Return Data
+  // Category Aggregations
   const categoryData = useMemo(() => {
     const map = {};
     filteredOrders.forEach(o => {
@@ -133,9 +164,9 @@ export default function App() {
     });
     return Object.values(map).map(c => ({
       ...c,
-      returnRate: c.ordered ? ((c.returned / c.ordered) * 100).toFixed(2) : 0,
-      slaRate: c.total ? ((c.onTime / c.total) * 100).toFixed(1) : 0,
-      revenueCr: parseFloat(c.revenueCr.toFixed(2))
+      revenueCr: parseFloat(c.revenueCr.toFixed(2)),
+      returnRate: c.ordered ? parseFloat(((c.returned / c.ordered) * 100).toFixed(2)) : 0,
+      slaRate: c.total ? parseFloat(((c.onTime / c.total) * 100).toFixed(1)) : 0
     })).sort((a, b) => b.revenueCr - a.revenueCr);
   }, [filteredOrders]);
 
@@ -143,345 +174,397 @@ export default function App() {
   const paymentTermsData = useMemo(() => {
     const map = {};
     filteredOrders.forEach(o => {
-      if (!map[o.payment_terms]) map[o.payment_terms] = { name: o.payment_terms, value: 0 };
-      map[o.payment_terms].value += 1;
+      if (!map[o.payment_terms]) map[o.payment_terms] = { name: o.payment_terms, orders: 0, revenueCr: 0 };
+      map[o.payment_terms].orders += 1;
+      map[o.payment_terms].revenueCr += (o.total_value_inr || 0) / 10000000;
     });
-    return Object.values(map);
+    return Object.values(map).map(p => ({
+      ...p,
+      revenueCr: parseFloat(p.revenueCr.toFixed(2))
+    }));
   }, [filteredOrders]);
 
-  // Transit histogram binned
-  const transitBinnedData = useMemo(() => {
-    const bins = { '0-10 d': 0, '11-20 d': 0, '21-30 d': 0, '31-40 d': 0, '41+ d': 0 };
+  // Delivery Days Histogram Bins
+  const transitHistogram = useMemo(() => {
+    const bins = [
+      { range: '1-10 Days', count: 0 },
+      { range: '11-20 Days', count: 0 },
+      { range: '21-30 Days', count: 0 },
+      { range: '31-40 Days', count: 0 },
+      { range: '41-50 Days', count: 0 }
+    ];
     filteredOrders.forEach(o => {
-      const d = o.delivery_days || 0;
-      if (d <= 10) bins['0-10 d']++;
-      else if (d <= 20) bins['11-20 d']++;
-      else if (d <= 30) bins['21-30 d']++;
-      else if (d <= 40) bins['31-40 d']++;
-      else bins['41+ d']++;
+      const d = o.delivery_days;
+      if (d <= 10) bins[0].count++;
+      else if (d <= 20) bins[1].count++;
+      else if (d <= 30) bins[2].count++;
+      else if (d <= 40) bins[3].count++;
+      else bins[4].count++;
     });
-    return Object.entries(bins).map(([bin, count]) => ({ bin, count }));
+    return bins;
   }, [filteredOrders]);
 
-  // Filtered Buyers
+  // Order Value Tiers
+  const orderValueTiers = useMemo(() => {
+    const tiers = [
+      { tier: '< ₹10 Lakh', count: 0, revCr: 0 },
+      { tier: '₹10L - ₹50L', count: 0, revCr: 0 },
+      { tier: '₹50L - ₹1 Cr', count: 0, revCr: 0 },
+      { tier: '> ₹1 Crore', count: 0, revCr: 0 }
+    ];
+    filteredOrders.forEach(o => {
+      const v = o.total_value_inr || 0;
+      if (v < 1000000) { tiers[0].count++; tiers[0].revCr += v/1e7; }
+      else if (v < 5000000) { tiers[1].count++; tiers[1].revCr += v/1e7; }
+      else if (v < 10000000) { tiers[2].count++; tiers[2].revCr += v/1e7; }
+      else { tiers[3].count++; tiers[3].revCr += v/1e7; }
+    });
+    return tiers.map(t => ({ ...t, revCr: parseFloat(t.revCr.toFixed(2)) }));
+  }, [filteredOrders]);
+
+  // Filtered Buyers Search
   const filteredBuyers = useMemo(() => {
     return buyersRaw.filter(b => {
-      if (selectedSegments.length && !selectedSegments.includes(b.segment_label)) return false;
-      if (searchTerm) {
-        const q = searchTerm.toLowerCase();
-        return b.buyer_id.toLowerCase().includes(q) || b.segment_label.toLowerCase().includes(q);
+      if (buyerSearch) {
+        const q = buyerSearch.toLowerCase();
+        return b.buyer_id.toLowerCase().includes(q) || b.primary_category.toLowerCase().includes(q);
+      }
+      return true;
+    }).sort((a, b) => b.total_spend_inr - a.total_spend_inr);
+  }, [buyerSearch]);
+
+  // Filtered Products Search
+  const filteredProducts = useMemo(() => {
+    return productsRaw.filter(p => {
+      if (productSearch) {
+        const q = productSearch.toLowerCase();
+        return p.Product_ID.toLowerCase().includes(q) || p.Name.toLowerCase().includes(q) || p.Category.toLowerCase().includes(q);
       }
       return true;
     });
-  }, [selectedSegments, searchTerm]);
+  }, [productSearch]);
 
-  // Toggle Filters
-  const toggleCategory = (cat) => {
-    setSelectedCategories(prev => 
-      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
-    );
-  };
-
-  const toggleTerm = (term) => {
-    setSelectedTerms(prev => 
-      prev.includes(term) ? prev.filter(t => t !== term) : [...prev, term]
-    );
-  };
-
-  const toggleSegment = (seg) => {
-    setSelectedSegments(prev => 
-      prev.includes(seg) ? prev.filter(s => s !== seg) : [...prev, seg]
-    );
-  };
-
+  // Reset Filters
   const resetFilters = () => {
-    setSelectedCategories(ALL_CATEGORIES);
-    setSelectedTerms(ALL_TERMS);
-    setSelectedSegments(ALL_SEGMENTS);
-    setSearchTerm('');
+    setSelectedCategory('ALL');
+    setSelectedTerm('ALL');
+    setOrderSearch('');
   };
 
-  // Export CSV
+  // Export Filtered Orders to CSV
   const handleExportCSV = () => {
     if (!filteredOrders.length) return;
-    const headers = Object.keys(filteredOrders[0]).join(',');
-    const rows = filteredOrders.map(row => 
-      Object.values(row).map(val => typeof val === 'string' ? `"${val}"` : val).join(',')
+    const headers = [
+      'order_id', 'buyer_id', 'seller_id', 'category', 'order_date',
+      'quantity_units', 'unit_price_inr', 'total_value_inr', 'payment_terms',
+      'delivery_days', 'on_time_delivery', 'return_qty', 'repeat_buyer'
+    ];
+    const rows = filteredOrders.map(o => 
+      headers.map(h => o[h] !== undefined ? `"${o[h]}"` : '""').join(',')
     );
-    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
     const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `tradesight_orders_export_${new Date().toISOString().split('T')[0]}.csv`);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `tradesight_orders_export_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   return (
-    <div className="dashboard-container">
-      {/* SIDEBAR FILTERS */}
-      <aside className="sidebar">
-        <div className="brand-header">
-          <div className="brand-logo">TS</div>
-          <div className="brand-text">
-            <h1>TradeSight Export</h1>
-            <p>Executive Analytics Portal</p>
+    <div className="app-layout">
+      {/* SIDEBAR NAVIGATION */}
+      <aside className="app-sidebar">
+        <div className="sidebar-brand">
+          <div className="brand-icon">TS</div>
+          <div>
+            <div className="brand-title">TradeSight</div>
+            <div className="brand-subtitle">Export Analytics</div>
           </div>
         </div>
 
-        <div className="filter-section">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F2027', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Filter size={15} /> Active Filters
-            </span>
-            <span style={{ fontSize: '11px', fontWeight: '600', color: '#64748B' }}>
-              {filteredOrders.length} of 600 Orders
-            </span>
-          </div>
-
-          {/* Categories */}
-          <div className="filter-group">
-            <label>Product Category</label>
-            <div className="filter-pills">
-              {ALL_CATEGORIES.map(cat => (
-                <button
-                  key={cat}
-                  className={`pill-btn ${selectedCategories.includes(cat) ? 'active' : ''}`}
-                  onClick={() => toggleCategory(cat)}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Payment Terms */}
-          <div className="filter-group">
-            <label>Commercial Credit Terms</label>
-            <div className="filter-pills">
-              {ALL_TERMS.map(term => (
-                <button
-                  key={term}
-                  className={`pill-btn ${selectedTerms.includes(term) ? 'active' : ''}`}
-                  onClick={() => toggleTerm(term)}
-                >
-                  {term}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Buyer Segments */}
-          <div className="filter-group">
-            <label>Buyer RFM-V Segment</label>
-            <div className="filter-pills">
-              {ALL_SEGMENTS.map(seg => (
-                <button
-                  key={seg}
-                  className={`pill-btn ${selectedSegments.includes(seg) ? 'active' : ''}`}
-                  onClick={() => toggleSegment(seg)}
-                  style={{ textAlign: 'left', width: '100%' }}
-                >
-                  <span style={{
-                    display: 'inline-block',
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: COLORS.cluster[seg],
-                    marginRight: '6px'
-                  }}></span>
-                  {seg.split('(')[0].trim()}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <button className="reset-btn" onClick={resetFilters}>
-            <RefreshCw size={13} /> Reset All Filters
+        <nav className="sidebar-nav">
+          <button
+            className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`}
+            onClick={() => setActiveSection('overview')}
+          >
+            <TrendingUp size={16} /> 1. Executive Overview
           </button>
+          <button
+            className={`nav-item ${activeSection === 'revenue' ? 'active' : ''}`}
+            onClick={() => setActiveSection('revenue')}
+          >
+            <Layers size={16} /> 2. Export Revenue
+          </button>
+          <button
+            className={`nav-item ${activeSection === 'logistics' ? 'active' : ''}`}
+            onClick={() => setActiveSection('logistics')}
+          >
+            <Truck size={16} /> 3. Logistics & SLA
+          </button>
+          <button
+            className={`nav-item ${activeSection === 'returns' ? 'active' : ''}`}
+            onClick={() => setActiveSection('returns')}
+          >
+            <RotateCcw size={16} /> 4. Returns & Quality
+          </button>
+          <button
+            className={`nav-item ${activeSection === 'buyers' ? 'active' : ''}`}
+            onClick={() => setActiveSection('buyers')}
+          >
+            <Users size={16} /> 5. Buyer Analytics
+          </button>
+          <button
+            className={`nav-item ${activeSection === 'products' ? 'active' : ''}`}
+            onClick={() => setActiveSection('products')}
+          >
+            <Package size={16} /> 6. Product Catalogue
+          </button>
+          <button
+            className={`nav-item ${activeSection === 'governance' ? 'active' : ''}`}
+            onClick={() => setActiveSection('governance')}
+          >
+            <ShieldAlert size={16} /> 7. Data Governance
+          </button>
+        </nav>
 
-          <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: '1px solid #E2E8F0', fontSize: '11px', color: '#94A3B8' }}>
-            <p><strong>Cynaris Capstone Week 9</strong></p>
-            <p>Deployment: Vercel Production</p>
-            <p>Author: Krupa B T</p>
+        <div className="sidebar-footer">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', color: '#CBD5E1', fontWeight: 600 }}>
+            <Database size={13} color="#14B8A6" /> 3 Source Datasets Loaded
+          </div>
+          <div style={{ color: '#64748B' }}>
+            600 Orders • 50 Products • 200 Profiles
           </div>
         </div>
       </aside>
 
       {/* MAIN VIEWPORT */}
-      <main className="main-content">
-        {/* TOP NAVBAR */}
-        <header className="top-navbar">
-          <div className="navbar-title">
-            <h2>TradeSight Export Management Platform</h2>
-            <p>Chennai, India • 50 Key Client Accounts Across 12 Export Jurisdictions</p>
+      <div className="app-main">
+        {/* TOP BAR */}
+        <header className="top-bar">
+          <div className="page-heading">
+            <h1 className="page-title">
+              {activeSection === 'overview' && 'Executive Overview & Enterprise KPIs'}
+              {activeSection === 'revenue' && 'Export Revenue & Commercial Performance'}
+              {activeSection === 'logistics' && 'Logistics, Transit & Delivery SLA Performance'}
+              {activeSection === 'returns' && 'Cargo Returns & Data Quality Exception Audit'}
+              {activeSection === 'buyers' && 'Commercial Buyer Analytics & Order History'}
+              {activeSection === 'products' && 'Master Product Catalogue & Stock Margins'}
+              {activeSection === 'governance' && 'Enterprise Data Governance & Schema Boundaries'}
+            </h1>
+            <span className="page-badge">Source: da_b2b_orders.csv</span>
           </div>
-          <button className="export-btn" onClick={handleExportCSV}>
-            <Download size={15} /> Export Filtered CSV
-          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button className="action-btn primary" onClick={handleExportCSV}>
+              <Download size={14} /> Export CSV
+            </button>
+          </div>
         </header>
 
-        {/* TAB NAVIGATION */}
-        <nav className="tab-navigation">
-          <button
-            className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
-          >
-            <TrendingUp size={16} /> 1. Executive Overview
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'logistics' ? 'active' : ''}`}
-            onClick={() => setActiveTab('logistics')}
-          >
-            <Truck size={16} /> 2. Logistics & SLA
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'returns' ? 'active' : ''}`}
-            onClick={() => setActiveTab('returns')}
-          >
-            <RotateCcw size={16} /> 3. Returns & Audit
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'segmentation' ? 'active' : ''}`}
-            onClick={() => setActiveTab('segmentation')}
-          >
-            <Users size={16} /> 4. Buyer Segmentation
-          </button>
-          <button
-            className={`tab-btn ${activeTab === 'governance' ? 'active' : ''}`}
-            onClick={() => setActiveTab('governance')}
-          >
-            <ShieldAlert size={16} /> 5. Data Governance & KPIs
-          </button>
-        </nav>
+        {/* FILTER TOOLBAR (Supported across orders) */}
+        <div className="filter-toolbar">
+          <div className="filter-label">
+            <Filter size={14} /> Data Filters:
+          </div>
 
-        {/* PAGE CONTENT CONTAINER */}
-        <div className="page-body">
-          {/* TAB 1: EXECUTIVE OVERVIEW */}
-          {activeTab === 'overview' && (
+          <div>
+            <select
+              className="filter-select"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+              <option value="ALL">All Product Categories ({ALL_CATEGORIES.length})</option>
+              {ALL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <select
+              className="filter-select"
+              value={selectedTerm}
+              onChange={(e) => setSelectedTerm(e.target.value)}
+            >
+              <option value="ALL">All Payment Terms ({ALL_TERMS.length})</option>
+              {ALL_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+
+          {(selectedCategory !== 'ALL' || selectedTerm !== 'ALL') && (
+            <button className="action-btn" onClick={resetFilters}>
+              <RefreshCw size={12} /> Reset Filters
+            </button>
+          )}
+
+          <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#94A3B8' }}>
+            Displaying <strong style={{ color: '#F8FAFC' }}>{filteredOrders.length}</strong> of 600 orders
+          </div>
+        </div>
+
+        {/* CONTENT BODY */}
+        <div className="content-body">
+
+          {/* ============================================================== */}
+          {/* SECTION 1: EXECUTIVE OVERVIEW */}
+          {/* ============================================================== */}
+          {activeSection === 'overview' && (
             <>
-              {/* TOP KPI CARDS */}
-              <div className="metrics-grid">
-                <div className="metric-card accent-navy">
-                  <div className="metric-header">
-                    <span>Total Export Value</span>
-                    <Box size={16} color="#0F2027" />
+              {/* TOP 8 KPI CARDS */}
+              <div className="kpi-grid">
+                <div className="kpi-card teal-top">
+                  <div className="kpi-header">
+                    <span className="kpi-title">Gross Export Value</span>
+                    <div className="kpi-icon"><TrendingUp size={16} color="#14B8A6" /></div>
                   </div>
-                  <div className="metric-value">₹{(stats.totalRevenue / 10000000).toFixed(2)} Cr</div>
-                  <div className="metric-sub">{stats.totalOrders} verified B2B orders</div>
+                  <div className="kpi-value mono">₹{(stats.totalRevenue / 10000000).toFixed(2)} Cr</div>
+                  <div className="kpi-sub">₹3,968,829,214.20 INR exact</div>
                 </div>
 
-                <div className="metric-card accent-blue">
-                  <div className="metric-header">
-                    <span>Total Orders</span>
-                    <FileText size={16} color="#2563EB" />
+                <div className="kpi-card cyan-top">
+                  <div className="kpi-header">
+                    <span className="kpi-title">Total Orders Placed</span>
+                    <div className="kpi-icon"><FileText size={16} color="#06B6D4" /></div>
                   </div>
-                  <div className="metric-value">{stats.totalOrders}</div>
-                  <div className="metric-sub">2023–2024 calendar window</div>
+                  <div className="kpi-value mono">{stats.totalOrders}</div>
+                  <div className="kpi-sub">Across 2023–2024 order log</div>
                 </div>
 
-                <div className="metric-card accent-navy">
-                  <div className="metric-header">
-                    <span>Average Order Value</span>
-                    <TrendingUp size={16} color="#203A43" />
+                <div className="kpi-card teal-top">
+                  <div className="kpi-header">
+                    <span className="kpi-title">Average Order Value</span>
+                    <div className="kpi-icon"><Box size={16} color="#14B8A6" /></div>
                   </div>
-                  <div className="metric-value">₹{(stats.aov / 100000).toFixed(2)} Lakh</div>
-                  <div className="metric-sub">Median: ₹48.17 Lakh</div>
+                  <div className="kpi-value mono">₹{(stats.aov / 100000).toFixed(2)} L</div>
+                  <div className="kpi-sub">Median: ₹48.17 Lakh</div>
                 </div>
 
-                <div className="metric-card accent-amber">
-                  <div className="metric-header">
-                    <span>On-Time SLA Rate</span>
-                    <Truck size={16} color="#D97706" />
+                <div className="kpi-card amber-top">
+                  <div className="kpi-header">
+                    <span className="kpi-title">On-Time Delivery Rate</span>
+                    <div className="kpi-icon"><Truck size={16} color="#F59E0B" /></div>
                   </div>
-                  <div className="metric-value">{stats.onTimeRate.toFixed(2)}%</div>
-                  <div className="metric-sub">Target Benchmark: 80.00%</div>
+                  <div className="kpi-value mono">{stats.onTimeRate.toFixed(2)}%</div>
+                  <div className="kpi-sub">465 On-Time vs 135 Delayed</div>
                 </div>
 
-                <div className="metric-card accent-green">
-                  <div className="metric-header">
-                    <span>Unit Return Rate</span>
-                    <RotateCcw size={16} color="#16A34A" />
+                <div className="kpi-card rose-top">
+                  <div className="kpi-header">
+                    <span className="kpi-title">Unit Return Rate</span>
+                    <div className="kpi-icon"><RotateCcw size={16} color="#F43F5E" /></div>
                   </div>
-                  <div className="metric-value">{stats.returnRate.toFixed(2)}%</div>
-                  <div className="metric-sub">{stats.returnUnits.toLocaleString()} returned units</div>
+                  <div className="kpi-value mono">{stats.returnRate.toFixed(2)}%</div>
+                  <div className="kpi-sub">{stats.returnUnits.toLocaleString()} returned units</div>
                 </div>
 
-                <div className="metric-card accent-blue">
-                  <div className="metric-header">
-                    <span>Active Buyers</span>
-                    <Users size={16} color="#2563EB" />
+                <div className="kpi-card cyan-top">
+                  <div className="kpi-header">
+                    <span className="kpi-title">Active B2B Buyers</span>
+                    <div className="kpi-icon"><Users size={16} color="#06B6D4" /></div>
                   </div>
-                  <div className="metric-value">{stats.uniqueBuyers}</div>
-                  <div className="metric-sub">{stats.repeatBuyerPct.toFixed(1)}% repeat buyers</div>
+                  <div className="kpi-value mono">{stats.uniqueBuyers}</div>
+                  <div className="kpi-sub">{stats.repeatBuyerPct.toFixed(1)}% repeat buyer orders</div>
+                </div>
+
+                <div className="kpi-card purple-top">
+                  <div className="kpi-header">
+                    <span className="kpi-title">Catalogue SKUs</span>
+                    <div className="kpi-icon"><Package size={16} color="#8B5CF6" /></div>
+                  </div>
+                  <div className="kpi-value mono">{productStats.totalProducts}</div>
+                  <div className="kpi-sub">Gross margin: {productStats.avgMarginPct.toFixed(1)}%</div>
+                </div>
+
+                <div className="kpi-card blue-top">
+                  <div className="kpi-header">
+                    <span className="kpi-title">Customer Profiles</span>
+                    <div className="kpi-icon"><Users size={16} color="#3B82F6" /></div>
+                  </div>
+                  <div className="kpi-value mono">{customerStats.count}</div>
+                  <div className="kpi-sub">Total rev: ₹{(customerStats.totalRev/1e5).toFixed(1)} L</div>
                 </div>
               </div>
 
               {/* CHARTS ROW 1 */}
-              <div className="charts-grid">
+              <div className="charts-grid-2">
                 <div className="chart-card">
-                  <h3>Monthly Export Revenue (₹ Cr) & Order Volume Trend</h3>
-                  <p>24-month longitudinal performance indicating steady ₹14–18 Cr monthly export cadence.</p>
+                  <div className="chart-card-header">
+                    <div>
+                      <h2 className="chart-card-title">Monthly Export Revenue (₹ Cr) & Orders Placed</h2>
+                      <p className="chart-card-desc">Actual monthly volume and gross order value across the 24-month horizon (2023–2024).</p>
+                    </div>
+                  </div>
                   <ResponsiveContainer width="100%" height={320}>
-                    <BarChart data={monthlyTrendData} margin={{ top: 10, right: 30, left: 0, bottom: 25 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="month" angle={-45} textAnchor="end" tick={{ fontSize: 11 }} />
-                      <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
-                      <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
-                      <Tooltip />
+                    <BarChart data={monthlyData} margin={{ top: 10, right: 30, left: 0, bottom: 25 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E2E4F" />
+                      <XAxis dataKey="month" angle={-45} textAnchor="end" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <YAxis yAxisId="left" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <YAxis yAxisId="right" orientation="right" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} />
                       <Legend />
-                      <Bar yAxisId="left" dataKey="revenueCr" name="Revenue (₹ Cr)" fill="#203A43" radius={[4, 4, 0, 0]} />
-                      <Line yAxisId="right" type="monotone" dataKey="orders" name="Order Count" stroke="#D97706" strokeWidth={2.5} />
+                      <Bar yAxisId="left" dataKey="revenueCr" name="Revenue (₹ Cr)" fill="#14B8A6" radius={[4, 4, 0, 0]} />
+                      <Line yAxisId="right" type="monotone" dataKey="orders" name="Order Count" stroke="#38BDF8" strokeWidth={2.5} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
 
                 <div className="chart-card">
-                  <h3>Export Revenue by Commodity Category</h3>
-                  <p>Contribution across core commodity categories in Indian Rupees (Crores).</p>
+                  <div className="chart-card-header">
+                    <div>
+                      <h2 className="chart-card-title">Export Revenue by Product Category (₹ Cr)</h2>
+                      <p className="chart-card-desc">Contribution of each commodity classification in da_b2b_orders.csv.</p>
+                    </div>
+                  </div>
                   <ResponsiveContainer width="100%" height={320}>
-                    <BarChart data={categoryData} layout="vertical" margin={{ top: 10, right: 30, left: 40, bottom: 10 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" />
-                      <XAxis type="number" tick={{ fontSize: 11 }} />
-                      <YAxis type="category" dataKey="category" tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(value) => `₹${value} Cr`} />
-                      <Bar dataKey="revenueCr" fill="#2563EB" radius={[0, 4, 4, 0]} />
+                    <BarChart data={categoryData} layout="vertical" margin={{ top: 10, right: 30, left: 60, bottom: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#1E2E4F" />
+                      <XAxis type="number" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <YAxis type="category" dataKey="category" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} formatter={(val) => `₹${val} Cr`} />
+                      <Bar dataKey="revenueCr" fill="#06B6D4" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               {/* CHARTS ROW 2 */}
-              <div className="charts-grid">
+              <div className="charts-grid-2">
                 <div className="chart-card">
-                  <h3>Commercial Credit Payment Terms Distribution</h3>
-                  <p>Breakdown of orders across 30, 60, 90-day Net and Advance payment agreements.</p>
+                  <div className="chart-card-header">
+                    <div>
+                      <h2 className="chart-card-title">Commercial Payment Terms Breakdown</h2>
+                      <p className="chart-card-desc">Distribution of orders by payment terms (Advance, 30 Days Net, COD, LC, 60 Days Net).</p>
+                    </div>
+                  </div>
                   <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
                       <Pie
                         data={paymentTermsData}
-                        dataKey="value"
+                        dataKey="orders"
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={80}
-                        innerRadius={45}
+                        outerRadius={85}
+                        innerRadius={50}
                         paddingAngle={4}
                         label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
                       >
                         {paymentTermsData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={[COLORS.navy, COLORS.blue, COLORS.teal, COLORS.amber][index % 4]} />
+                          <Cell key={`cell-${index}`} fill={COLORS.pie[index % COLORS.pie.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
 
                 <div className="chart-card">
-                  <h3>Commercial Repeat Buyer Order Share</h3>
-                  <p>Loyalty profile showing 227 repeat buyer transactions (37.8%) vs first-time accounts.</p>
+                  <div className="chart-card-header">
+                    <div>
+                      <h2 className="chart-card-title">Repeat Buyer Order Proportion</h2>
+                      <p className="chart-card-desc">Verified orders placed by repeat buyers (repeat_buyer = 1) vs first-time commercial buyers.</p>
+                    </div>
+                  </div>
                   <ResponsiveContainer width="100%" height={260}>
                     <PieChart>
                       <Pie
@@ -493,15 +576,15 @@ export default function App() {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={80}
-                        innerRadius={45}
+                        outerRadius={85}
+                        innerRadius={50}
                         paddingAngle={4}
                         label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
                       >
-                        <Cell fill="#203A43" />
-                        <Cell fill="#CBD5E0" />
+                        <Cell fill="#14B8A6" />
+                        <Cell fill="#334155" />
                       </Pie>
-                      <Tooltip />
+                      <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -509,450 +592,933 @@ export default function App() {
             </>
           )}
 
-          {/* TAB 2: LOGISTICS & SLA */}
-          {activeTab === 'logistics' && (
+          {/* ============================================================== */}
+          {/* SECTION 2: EXPORT REVENUE ANALYTICS */}
+          {/* ============================================================== */}
+          {activeSection === 'revenue' && (
             <>
-              <div className="metrics-grid">
-                <div className="metric-card accent-navy">
-                  <div className="metric-header"><span>Mean Transit Duration</span><Truck size={16} /></div>
-                  <div className="metric-value">{stats.avgDeliveryDays.toFixed(2)} Days</div>
-                  <div className="metric-sub">Std Dev: 7.97 days</div>
+              <div className="kpi-grid">
+                <div className="kpi-card teal-top">
+                  <div className="kpi-header"><span className="kpi-title">Gross Export Revenue</span><TrendingUp size={16} color="#14B8A6" /></div>
+                  <div className="kpi-value mono">₹{(stats.totalRevenue/1e7).toFixed(2)} Cr</div>
+                  <div className="kpi-sub">Total across filtered orders</div>
                 </div>
 
-                <div className="metric-card accent-blue">
-                  <div className="metric-header"><span>Median Transit Duration</span><Calendar size={16} /></div>
-                  <div className="metric-value">{stats.medianDeliveryDays.toFixed(1)} Days</div>
-                  <div className="metric-sub">IQR: 17 to 30 days</div>
+                <div className="kpi-card cyan-top">
+                  <div className="kpi-header"><span className="kpi-title">Total Units Shipped</span><Box size={16} color="#06B6D4" /></div>
+                  <div className="kpi-value mono">{stats.totalUnits.toLocaleString()}</div>
+                  <div className="kpi-sub">Commodity export units</div>
                 </div>
 
-                <div className="metric-card accent-green">
-                  <div className="metric-header"><span>On-Time Fulfillment</span><CheckCircle size={16} color="#16A34A" /></div>
-                  <div className="metric-value">{stats.onTimeOrders} Orders</div>
-                  <div className="metric-sub">{stats.onTimeRate.toFixed(2)}% of total shipments</div>
+                <div className="kpi-card teal-top">
+                  <div className="kpi-header"><span className="kpi-title">Average Order Value</span><Box size={16} color="#14B8A6" /></div>
+                  <div className="kpi-value mono">₹{(stats.aov/1e5).toFixed(2)} L</div>
+                  <div className="kpi-sub">Median: ₹48.17 Lakh</div>
                 </div>
 
-                <div className="metric-card accent-red">
-                  <div className="metric-header"><span>Delayed Shipments</span><AlertTriangle size={16} color="#DC2626" /></div>
-                  <div className="metric-value">{stats.delayedOrders} Orders</div>
-                  <div className="metric-sub">{(100 - stats.onTimeRate).toFixed(2)}% SLA breaches</div>
+                <div className="kpi-card amber-top">
+                  <div className="kpi-header"><span className="kpi-title">Max Single Order</span><ArrowUpRight size={16} color="#F59E0B" /></div>
+                  <div className="kpi-value mono">₹2.44 Cr</div>
+                  <div className="kpi-sub">Min order: ₹28,360.80</div>
                 </div>
               </div>
 
-              <div className="charts-grid">
+              {/* REVENUE VELOCITY CHART */}
+              <div className="chart-card">
+                <div className="chart-card-header">
+                  <div>
+                    <h2 className="chart-card-title">Longitudinal Monthly Revenue Velocity (₹ Cr)</h2>
+                    <p className="chart-card-desc">Monthly transaction values demonstrating consistent ₹14M - ₹24M run-rate across 2023–2024.</p>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={monthlyData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
+                    <defs>
+                      <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="#14B8A6" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E2E4F" />
+                    <XAxis dataKey="month" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                    <YAxis tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                    <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} formatter={(val) => `₹${val} Cr`} />
+                    <Area type="monotone" dataKey="revenueCr" stroke="#14B8A6" fillOpacity={1} fill="url(#colorRev)" strokeWidth={2.5} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* REVENUE BY PAYMENT TERMS & VALUE TIERS */}
+              <div className="charts-grid-2">
                 <div className="chart-card">
-                  <h3>On-Time Fulfillment SLA Rate (%) vs 80% Benchmark</h3>
-                  <p>Comparison across product categories with red reference benchmark line.</p>
-                  <ResponsiveContainer width="100%" height={320}>
-                    <BarChart data={categoryData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="category" tick={{ fontSize: 11 }} />
-                      <YAxis domain={[50, 100]} tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(value) => `${value}%`} />
-                      <ReferenceLine y={80} stroke="#DC2626" strokeDasharray="4 4" label="80% Target SLA" />
-                      <Bar dataKey="slaRate" fill="#0D9488" radius={[4, 4, 0, 0]} />
+                  <div className="chart-card-header">
+                    <div>
+                      <h2 className="chart-card-title">Export Revenue by Payment Terms (₹ Cr)</h2>
+                      <p className="chart-card-desc">Total contract value realization across commercial credit terms.</p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={paymentTermsData} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E2E4F" />
+                      <XAxis dataKey="name" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <YAxis tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} formatter={(val) => `₹${val} Cr`} />
+                      <Bar dataKey="revenueCr" fill="#38BDF8" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
 
                 <div className="chart-card">
-                  <h3>Transit Duration Binned Distribution (Days)</h3>
-                  <p>Frequency distribution of cargo shipments by order-to-delivery elapsed days.</p>
-                  <ResponsiveContainer width="100%" height={320}>
-                    <BarChart data={transitBinnedData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="bin" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#203A43" radius={[4, 4, 0, 0]} />
+                  <div className="chart-card-header">
+                    <div>
+                      <h2 className="chart-card-title">Order Value Size Tiers (Order Count)</h2>
+                      <p className="chart-card-desc">Number of shipments segmented by total commercial transaction value.</p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={orderValueTiers} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E2E4F" />
+                      <XAxis dataKey="tier" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <YAxis tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} />
+                      <Bar dataKey="count" fill="#14B8A6" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              <div className="table-container">
-                <div className="table-header">
+              {/* CATEGORY REVENUE PERFORMANCE TABLE */}
+              <div className="table-card">
+                <div className="table-toolbar">
                   <div>
-                    <h3>Fulfillment Diagnostics by Payment Terms & Credit Risk</h3>
-                    <p>Cross-tabulation of on-time fulfillment and transit averages by commercial payment terms.</p>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Category Commercial Performance</h3>
+                    <p style={{ fontSize: '12px', color: '#94A3B8' }}>Aggregated volume, revenue, and units per commodity category in da_b2b_orders.csv</p>
                   </div>
                 </div>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Payment Terms</th>
-                      <th>Total Orders</th>
-                      <th>On-Time Orders</th>
-                      <th>Delayed Orders</th>
-                      <th>SLA Rate %</th>
-                      <th>Mean Transit</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ALL_TERMS.map(term => {
-                      const subset = filteredOrders.filter(o => o.payment_terms === term);
-                      const total = subset.length;
-                      const onTime = subset.filter(o => o.on_time_delivery === 1).length;
-                      const delayed = total - onTime;
-                      const pct = total ? (onTime / total) * 100 : 0;
-                      const avgDays = total ? (subset.reduce((s, o) => s + (o.delivery_days || 0), 0) / total).toFixed(2) : 0;
-                      return (
-                        <tr key={term}>
-                          <td style={{ fontWeight: 600 }}>{term}</td>
-                          <td>{total}</td>
-                          <td>{onTime}</td>
-                          <td>{delayed}</td>
-                          <td>{pct.toFixed(2)}%</td>
-                          <td>{avgDays} d</td>
-                          <td>
-                            <span className={`badge ${pct >= 78 ? 'badge-success' : 'badge-warning'}`}>
-                              {pct >= 78 ? 'Acceptable' : 'Friction Warning'}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          {/* TAB 3: RETURNS & AUDIT */}
-          {activeTab === 'returns' && (
-            <>
-              <div className="metrics-grid">
-                <div className="metric-card accent-navy">
-                  <div className="metric-header"><span>Total Ordered Cargo</span><Box size={16} /></div>
-                  <div className="metric-value">{stats.totalUnits.toLocaleString()}</div>
-                  <div className="metric-sub">Shipped physical units</div>
-                </div>
-
-                <div className="metric-card accent-red">
-                  <div className="metric-header"><span>Total Returned Cargo</span><RotateCcw size={16} color="#DC2626" /></div>
-                  <div className="metric-value">{stats.returnUnits.toLocaleString()}</div>
-                  <div className="metric-sub">Reported buyer returns</div>
-                </div>
-
-                <div className="metric-card accent-blue">
-                  <div className="metric-header"><span>Overall Unit Return Rate</span><TrendingUp size={16} color="#2563EB" /></div>
-                  <div className="metric-value">{stats.returnRate.toFixed(2)}%</div>
-                  <div className="metric-sub">Returns / Ordered Units</div>
-                </div>
-
-                <div className="metric-card accent-red">
-                  <div className="metric-header"><span>Return Overrun Anomalies</span><ShieldAlert size={16} color="#DC2626" /></div>
-                  <div className="metric-value">{stats.invalidReturns.length} Orders</div>
-                  <div className="metric-sub">return_qty &gt; quantity_units</div>
-                </div>
-              </div>
-
-              {/* CRITICAL ALERT CALLOUT */}
-              <div className="alert-box">
-                <div className="alert-title">
-                  <AlertTriangle size={18} /> CRITICAL AUDIT EXCEPTION: RETURN QUANTITY EXCEEDS SHIPPED UNITS
-                </div>
-                <div className="alert-desc">
-                  The automated pipeline flagged orders where returned units strictly exceed original order quantities. 
-                  These represent data transposition bugs or potential inventory fraud requiring upstream ERP remediation.
-                </div>
-              </div>
-
-              <div className="table-container" style={{ marginBottom: '20px' }}>
-                <div className="table-header">
-                  <div>
-                    <h3>Flagged Return Overrun Records</h3>
-                    <p>Orders identified with data quality flags during the automated pipeline audit.</p>
-                  </div>
-                </div>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Order ID</th>
-                      <th>Buyer ID</th>
-                      <th>Category</th>
-                      <th>Order Date</th>
-                      <th>Shipped Units</th>
-                      <th>Returned Units</th>
-                      <th>Unit Price</th>
-                      <th>Total Value (₹)</th>
-                      <th>Audit Flag</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.invalidReturns.map(row => (
-                      <tr key={row.order_id} style={{ backgroundColor: '#FEF2F2' }}>
-                        <td style={{ fontWeight: 700, color: '#B91C1C' }}>{row.order_id}</td>
-                        <td>{row.buyer_id}</td>
-                        <td>{row.category}</td>
-                        <td>{row.order_date}</td>
-                        <td><strong>{row.quantity_units}</strong></td>
-                        <td style={{ color: '#DC2626', fontWeight: 700 }}>{row.return_qty}</td>
-                        <td>₹{row.unit_price_inr.toLocaleString()}</td>
-                        <td>₹{row.total_value_inr.toLocaleString()}</td>
-                        <td><span className="badge badge-danger">SUSPICIOUS_RETURN_OVERRUN</span></td>
+                <div className="data-table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Category</th>
+                        <th>Orders Count</th>
+                        <th>Total Value (₹ Cr)</th>
+                        <th>Revenue Share %</th>
+                        <th>Total Units Shipped</th>
+                        <th>Avg Units / Order</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {categoryData.map(c => {
+                        const share = stats.totalRevenue ? ((c.revenueCr * 1e7) / stats.totalRevenue * 100).toFixed(2) : 0;
+                        const avgUnits = c.total ? Math.round(c.ordered / c.total) : 0;
+                        return (
+                          <tr key={c.category}>
+                            <td style={{ fontWeight: 600, color: '#38BDF8' }}>{c.category}</td>
+                            <td>{c.total}</td>
+                            <td className="mono" style={{ fontWeight: 700 }}>₹{c.revenueCr.toFixed(2)} Cr</td>
+                            <td><span className="badge badge-teal">{share}%</span></td>
+                            <td className="mono">{c.ordered.toLocaleString()}</td>
+                            <td className="mono">{avgUnits} units</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              <div className="charts-grid">
-                <div className="chart-card">
-                  <h3>Unit Return Rate (%) by Commodity Category</h3>
-                  <p>Relative return friction percentage across product classifications.</p>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={categoryData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="category" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(value) => `${value}%`} />
-                      <Bar dataKey="returnRate" fill="#DC2626" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+              {/* UNAVAILABLE METRICS CALLOUTS */}
+              <div className="charts-grid-2">
+                <div className="na-card">
+                  <div className="na-header">
+                    <span className="na-name">Foreign Exchange (FX) Impact</span>
+                    <span className="na-tag">NOT AVAILABLE</span>
+                  </div>
+                  <p className="na-reason">
+                    <strong>Reason:</strong> All 600 orders in <code>da_b2b_orders.csv</code> are denominated purely in Indian Rupees (<code>total_value_inr</code>). 
+                    No multi-currency codes (e.g., USD, EUR), spot rates, or settlement currency rates exist in the dataset.
+                  </p>
                 </div>
 
-                <div className="chart-card">
-                  <h3>Shipped vs Returned Physical Unit Volume (Thousands)</h3>
-                  <p>Absolute volume comparison in thousands of commodity units.</p>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={categoryData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="category" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="ordered" name="Shipped Units" fill="#64748B" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="returned" name="Returned Units" fill="#DC2626" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <div className="na-card">
+                  <div className="na-header">
+                    <span className="na-name">Client Gross & Net Profit Margin</span>
+                    <span className="na-tag">NOT AVAILABLE</span>
+                  </div>
+                  <p className="na-reason">
+                    <strong>Reason:</strong> Transaction records contain gross sales prices (<code>unit_price_inr</code>) but lack Cost of Goods Sold (COGS), freight shipping charges, or port tariffs. 
+                    The retail product catalogue contains COGS but cannot be joined to B2B orders without SKU keys.
+                  </p>
                 </div>
               </div>
             </>
           )}
 
-          {/* TAB 4: BUYER SEGMENTATION */}
-          {activeTab === 'segmentation' && (
+          {/* ============================================================== */}
+          {/* SECTION 3: LOGISTICS & SLA PERFORMANCE */}
+          {/* ============================================================== */}
+          {activeSection === 'logistics' && (
             <>
-              <div className="metrics-grid">
-                <div className="metric-card" style={{ borderLeft: '4px solid #2563EB' }}>
-                  <div className="metric-header"><span>Core Stable Accounts</span><Users size={16} color="#2563EB" /></div>
-                  <div className="metric-value">75 Buyers</div>
-                  <div className="metric-sub">95.0% on-time fulfillment, core baseline</div>
+              <div className="kpi-grid">
+                <div className="kpi-card teal-top">
+                  <div className="kpi-header"><span className="kpi-title">On-Time Fulfillment Rate</span><CheckCircle size={16} color="#14B8A6" /></div>
+                  <div className="kpi-value mono">{stats.onTimeRate.toFixed(2)}%</div>
+                  <div className="kpi-sub">{stats.onTimeOrders} on-time orders (77.50%)</div>
                 </div>
 
-                <div className="metric-card" style={{ borderLeft: '4px solid #16A34A' }}>
-                  <div className="metric-header"><span>Active Growth Buyers</span><TrendingUp size={16} color="#16A34A" /></div>
-                  <div className="metric-value">68 Buyers</div>
-                  <div className="metric-sub">High purchasing velocity, repeat orders</div>
+                <div className="kpi-card rose-top">
+                  <div className="kpi-header"><span className="kpi-title">Delayed Shipments</span><AlertTriangle size={16} color="#F43F5E" /></div>
+                  <div className="kpi-value mono">{stats.delayedOrders}</div>
+                  <div className="kpi-sub">{(100 - stats.onTimeRate).toFixed(2)}% delayed orders (22.50%)</div>
                 </div>
 
-                <div className="metric-card" style={{ borderLeft: '4px solid #D97706' }}>
-                  <div className="metric-header"><span>Operationally Vulnerable</span><AlertTriangle size={16} color="#D97706" /></div>
-                  <div className="metric-value">27 Buyers</div>
-                  <div className="metric-sub">Elevated transit delays (75% delay rate)</div>
+                <div className="kpi-card cyan-top">
+                  <div className="kpi-header"><span className="kpi-title">Mean Transit Duration</span><Truck size={16} color="#06B6D4" /></div>
+                  <div className="kpi-value mono">{stats.avgDeliveryDays.toFixed(2)} Days</div>
+                  <div className="kpi-sub">Std Dev: 7.97 days</div>
                 </div>
 
-                <div className="metric-card" style={{ borderLeft: '4px solid #DC2626' }}>
-                  <div className="metric-header"><span>Lapsed Accounts</span><RotateCcw size={16} color="#DC2626" /></div>
-                  <div className="metric-value">17 Buyers</div>
-                  <div className="metric-sub">Dormant (&gt;500 days recency), churn risk</div>
+                <div className="kpi-card teal-top">
+                  <div className="kpi-header"><span className="kpi-title">Median Transit Duration</span><Calendar size={16} color="#14B8A6" /></div>
+                  <div className="kpi-value mono">{stats.medianDeliveryDays.toFixed(1)} Days</div>
+                  <div className="kpi-sub">Range: 3 to 45 Days</div>
                 </div>
               </div>
 
-              <div className="charts-grid">
+              {/* SLA BENCHMARK & TRANSIT HISTOGRAM */}
+              <div className="charts-grid-2">
                 <div className="chart-card">
-                  <h3>2D PCA Behavioral Projection of 187 Commercial Buyer Accounts</h3>
-                  <p>Dimension 1 (Fulfillment & Volume) vs Dimension 2 (Recency Inactivity & Delay Friction).</p>
-                  <ResponsiveContainer width="100%" height={360}>
-                    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-                      <XAxis type="number" dataKey="pca_x" name="PCA 1" tick={{ fontSize: 11 }} />
-                      <YAxis type="number" dataKey="pca_y" name="PCA 2" tick={{ fontSize: 11 }} />
-                      <ZAxis range={[50, 50]} />
-                      <Tooltip cursor={{ strokeDasharray: '3 3' }} />
-                      {ALL_SEGMENTS.map(seg => (
-                        <Scatter
-                          key={seg}
-                          name={seg.split('(')[0].trim()}
-                          data={filteredBuyers.filter(b => b.segment_label === seg)}
-                          fill={COLORS.cluster[seg]}
-                        />
-                      ))}
-                      <Legend />
-                    </ScatterChart>
+                  <div className="chart-card-header">
+                    <div>
+                      <h2 className="chart-card-title">Category On-Time SLA % vs 80% Benchmark</h2>
+                      <p className="chart-card-desc">Red dashed reference line indicates enterprise 80% on-time fulfillment SLA.</p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={320}>
+                    <BarChart data={categoryData} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E2E4F" />
+                      <XAxis dataKey="category" tick={{ fill: '#94A3B8', fontSize: 10.5 }} />
+                      <YAxis domain={[50, 100]} tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} formatter={(val) => `${val}%`} />
+                      <ReferenceLine y={80} stroke="#F43F5E" strokeDasharray="4 4" label={{ value: '80% Target SLA', fill: '#F43F5E', fontSize: 11 }} />
+                      <Bar dataKey="slaRate" fill="#14B8A6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
 
                 <div className="chart-card">
-                  <h3>Average Commercial Spend per Account by Segment (₹ Cr)</h3>
-                  <p>Mean gross revenue generated per commercial buyer across the 4 clusters.</p>
-                  <ResponsiveContainer width="100%" height={360}>
+                  <div className="chart-card-header">
+                    <div>
+                      <h2 className="chart-card-title">Transit Duration Binned Histogram (Days)</h2>
+                      <p className="chart-card-desc">Frequency distribution of elapsed transit days from order placement to customer delivery.</p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={320}>
+                    <BarChart data={transitHistogram} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E2E4F" />
+                      <XAxis dataKey="range" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <YAxis tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} />
+                      <Bar dataKey="count" fill="#38BDF8" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* PAYMENT TERMS LOGISTICS FRICTION TABLE */}
+              <div className="table-card">
+                <div className="table-toolbar">
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Delivery Performance by Commercial Payment Terms</h3>
+                    <p style={{ fontSize: '12px', color: '#94A3B8' }}>Evaluating whether credit term extensions correlate with fulfillment delays.</p>
+                  </div>
+                </div>
+                <div className="data-table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Payment Terms</th>
+                        <th>Total Orders</th>
+                        <th>On-Time Deliveries</th>
+                        <th>Delayed Deliveries</th>
+                        <th>On-Time SLA %</th>
+                        <th>Mean Transit (Days)</th>
+                        <th>Fulfillment Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ALL_TERMS.map(term => {
+                        const subset = filteredOrders.filter(o => o.payment_terms === term);
+                        const total = subset.length;
+                        const onTime = subset.filter(o => o.on_time_delivery === 1).length;
+                        const delayed = total - onTime;
+                        const pct = total ? (onTime / total) * 100 : 0;
+                        const avgDays = total ? subset.reduce((s, o) => s + o.delivery_days, 0) / total : 0;
+                        return (
+                          <tr key={term}>
+                            <td style={{ fontWeight: 600, color: '#38BDF8' }}>{term}</td>
+                            <td>{total}</td>
+                            <td>{onTime}</td>
+                            <td style={{ color: delayed > 25 ? '#F43F5E' : '#F1F5F9' }}>{delayed}</td>
+                            <td className="mono" style={{ fontWeight: 700 }}>{pct.toFixed(2)}%</td>
+                            <td className="mono">{avgDays.toFixed(2)} d</td>
+                            <td>
+                              <span className={`badge ${pct >= 77.5 ? 'badge-teal' : 'badge-amber'}`}>
+                                {pct >= 77.5 ? 'Baseline Compliant' : 'SLA Lagging'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ============================================================== */}
+          {/* SECTION 4: RETURNS AND DATA QUALITY */}
+          {/* ============================================================== */}
+          {activeSection === 'returns' && (
+            <>
+              <div className="kpi-grid">
+                <div className="kpi-card teal-top">
+                  <div className="kpi-header"><span className="kpi-title">Total Units Shipped</span><Box size={16} color="#14B8A6" /></div>
+                  <div className="kpi-value mono">{stats.totalUnits.toLocaleString()}</div>
+                  <div className="kpi-sub">Across 600 recorded shipments</div>
+                </div>
+
+                <div className="kpi-card rose-top">
+                  <div className="kpi-header"><span className="kpi-title">Total Returned Units</span><RotateCcw size={16} color="#F43F5E" /></div>
+                  <div className="kpi-value mono">{stats.returnUnits.toLocaleString()}</div>
+                  <div className="kpi-sub">Reported buyer cargo returns</div>
+                </div>
+
+                <div className="kpi-card cyan-top">
+                  <div className="kpi-header"><span className="kpi-title">Unit Return Rate</span><TrendingUp size={16} color="#06B6D4" /></div>
+                  <div className="kpi-value mono">{stats.returnRate.toFixed(2)}%</div>
+                  <div className="kpi-sub">1.0100% exact benchmark</div>
+                </div>
+
+                <div className="kpi-card rose-top">
+                  <div className="kpi-header"><span className="kpi-title">Return Overrun Anomalies</span><ShieldAlert size={16} color="#F43F5E" /></div>
+                  <div className="kpi-value mono">{stats.invalidReturns.length} Orders</div>
+                  <div className="kpi-sub">return_qty &gt; quantity_units</div>
+                </div>
+              </div>
+
+              {/* CRITICAL ANOMALY ALERT BANNER */}
+              <div className="banner-alert">
+                <AlertTriangle size={20} color="#F43F5E" />
+                <div>
+                  <div className="banner-title">CRITICAL DATA QUALITY EXCEPTION: RETURN OVERRUN ANOMALIES</div>
+                  <div className="banner-text">
+                    The automated data audit detected 2 order records where <code>return_qty</code> strictly exceeds <code>quantity_units</code>. 
+                    These represents an impossible physical condition (more units returned than shipped), indicating upstream ERP data entry transposition errors.
+                  </div>
+                </div>
+              </div>
+
+              {/* CRITICAL ANOMALIES TABLE */}
+              <div className="table-card">
+                <div className="table-toolbar">
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Flagged Return Overrun Records</h3>
+                    <p style={{ fontSize: '12px', color: '#94A3B8' }}>Identified records preserved for audit trail analysis (not fabricated or altered).</p>
+                  </div>
+                </div>
+                <div className="data-table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Order ID</th>
+                        <th>Buyer ID</th>
+                        <th>Seller ID</th>
+                        <th>Category</th>
+                        <th>Order Date</th>
+                        <th>Shipped Units</th>
+                        <th>Returned Units</th>
+                        <th>Unit Price</th>
+                        <th>Total Value (₹)</th>
+                        <th>Audit Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stats.invalidReturns.map(row => (
+                        <tr key={row.order_id} style={{ backgroundColor: 'rgba(244, 63, 94, 0.08)' }}>
+                          <td style={{ fontWeight: 700, color: '#F43F5E' }}>{row.order_id}</td>
+                          <td>{row.buyer_id}</td>
+                          <td>{row.seller_id}</td>
+                          <td>{row.category}</td>
+                          <td>{row.order_date}</td>
+                          <td className="mono" style={{ fontWeight: 700 }}>{row.quantity_units}</td>
+                          <td className="mono" style={{ color: '#F43F5E', fontWeight: 700 }}>{row.return_qty}</td>
+                          <td className="mono">₹{row.unit_price_inr.toLocaleString()}</td>
+                          <td className="mono">₹{row.total_value_inr.toLocaleString()}</td>
+                          <td><span className="badge badge-rose">SUSPICIOUS_RETURN_OVERRUN</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* RETURNS BY CATEGORY CHARTS */}
+              <div className="charts-grid-2">
+                <div className="chart-card">
+                  <div className="chart-card-header">
+                    <div>
+                      <h2 className="chart-card-title">Unit Return Rate (%) by Category</h2>
+                      <p className="chart-card-desc">Proportion of physical units returned across commodity categories.</p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={categoryData} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E2E4F" />
+                      <XAxis dataKey="category" tick={{ fill: '#94A3B8', fontSize: 10.5 }} />
+                      <YAxis tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} formatter={(val) => `${val}%`} />
+                      <Bar dataKey="returnRate" fill="#F43F5E" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="chart-card">
+                  <div className="chart-card-header">
+                    <div>
+                      <h2 className="chart-card-title">Shipped vs Returned Physical Units (Thousands)</h2>
+                      <p className="chart-card-desc">Absolute cargo volume compared against returned units.</p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={categoryData} margin={{ top: 10, right: 30, left: 10, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E2E4F" />
+                      <XAxis dataKey="category" tick={{ fill: '#94A3B8', fontSize: 10.5 }} />
+                      <YAxis tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} />
+                      <Legend />
+                      <Bar dataKey="ordered" name="Shipped Units" fill="#334155" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="returned" name="Returned Units" fill="#F43F5E" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* CUSTOMER PROFILE DATE ANOMALIES TABLE */}
+              <div className="table-card">
+                <div className="table-toolbar">
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Customer Profiles Chronological Anomalies ({customerStats.dateAnomalies.length} Records)</h3>
+                    <p style={{ fontSize: '12px', color: '#94A3B8' }}>Records in da_customer_profiles.csv where First_Purchase_Date is chronologically later than Last_Purchase_Date.</p>
+                  </div>
+                </div>
+                <div className="data-table-wrapper" style={{ maxHeight: '240px' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Customer ID</th>
+                        <th>City</th>
+                        <th>Channel</th>
+                        <th>First Purchase Date</th>
+                        <th>Last Purchase Date</th>
+                        <th>Total Orders</th>
+                        <th>Total Revenue (₹)</th>
+                        <th>Integrity Flag</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {customerStats.dateAnomalies.slice(0, 10).map(c => (
+                        <tr key={c.Customer_ID}>
+                          <td style={{ fontWeight: 600, color: '#38BDF8' }}>{c.Customer_ID}</td>
+                          <td>{c.City}</td>
+                          <td>{c.Acquisition_Channel}</td>
+                          <td className="mono" style={{ color: '#F43F5E' }}>{c.First_Purchase_Date}</td>
+                          <td className="mono">{c.Last_Purchase_Date}</td>
+                          <td>{c.Total_Orders}</td>
+                          <td className="mono">₹{c.Total_Revenue.toLocaleString()}</td>
+                          <td><span className="badge badge-amber">DATE_INVERSION</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ============================================================== */}
+          {/* SECTION 5: BUYER ANALYTICS */}
+          {/* ============================================================== */}
+          {activeSection === 'buyers' && (
+            <>
+              <div className="kpi-grid">
+                <div className="kpi-card teal-top">
+                  <div className="kpi-header"><span className="kpi-title">Unique Commercial Buyers</span><Users size={16} color="#14B8A6" /></div>
+                  <div className="kpi-value mono">{buyersRaw.length}</div>
+                  <div className="kpi-sub">BUY-0001 to BUY-0187</div>
+                </div>
+
+                <div className="kpi-card cyan-top">
+                  <div className="kpi-header"><span className="kpi-title">Repeat Buyer Order Share</span><TrendingUp size={16} color="#06B6D4" /></div>
+                  <div className="kpi-value mono">{stats.repeatBuyerPct.toFixed(2)}%</div>
+                  <div className="kpi-sub">227 repeat orders / 600 total</div>
+                </div>
+
+                <div className="kpi-card teal-top">
+                  <div className="kpi-header"><span className="kpi-title">Mean Buyer Total Spend</span><Box size={16} color="#14B8A6" /></div>
+                  <div className="kpi-value mono">₹2.12 Cr</div>
+                  <div className="kpi-sub">Total revenue / 187 buyers</div>
+                </div>
+
+                <div className="kpi-card amber-top">
+                  <div className="kpi-header"><span className="kpi-title">Top Buyer Spend</span><ArrowUpRight size={16} color="#F59E0B" /></div>
+                  <div className="kpi-value mono">₹4.87 Cr</div>
+                  <div className="kpi-sub">BUY-0130 (6 orders)</div>
+                </div>
+              </div>
+
+              {/* TOP BUYERS BAR CHART */}
+              <div className="chart-card">
+                <div className="chart-card-header">
+                  <div>
+                    <h2 className="chart-card-title">Top 10 Commercial Buyers by Gross Spend (₹ Lakh)</h2>
+                    <p className="chart-card-desc">Ranked by cumulative purchase value directly from da_b2b_orders.csv.</p>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart
+                    data={buyersRaw.slice(0, 10).map(b => ({
+                      buyer_id: b.buyer_id,
+                      spendLakh: parseFloat((b.total_spend_inr / 100000).toFixed(2)),
+                      orders: b.orders_count
+                    }))}
+                    margin={{ top: 10, right: 30, left: 10, bottom: 20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E2E4F" />
+                    <XAxis dataKey="buyer_id" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                    <YAxis tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                    <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} formatter={(val) => `₹${val} Lakh`} />
+                    <Bar dataKey="spendLakh" fill="#14B8A6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* SEARCHABLE BUYER DIRECTORY TABLE */}
+              <div className="table-card">
+                <div className="table-toolbar">
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Commercial Buyer Directory ({filteredBuyers.length} Accounts)</h3>
+                    <p style={{ fontSize: '12px', color: '#94A3B8' }}>Aggregated strictly from order transactions with primary categories and SLA track records.</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Search size={14} color="#94A3B8" />
+                    <input
+                      type="text"
+                      className="search-input"
+                      placeholder="Search Buyer ID or Category..."
+                      value={buyerSearch}
+                      onChange={(e) => setBuyerSearch(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="data-table-wrapper" style={{ maxHeight: '420px' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Buyer ID</th>
+                        <th>Order Count</th>
+                        <th>Total Spend (₹)</th>
+                        <th>AOV (₹)</th>
+                        <th>Shipped Units</th>
+                        <th>Returned Units</th>
+                        <th>Return Rate %</th>
+                        <th>On-Time SLA %</th>
+                        <th>Mean Transit</th>
+                        <th>Primary Category</th>
+                        <th>Primary Terms</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredBuyers.slice(0, 25).map(b => (
+                        <tr key={b.buyer_id}>
+                          <td style={{ fontWeight: 600, color: '#38BDF8' }}>{b.buyer_id}</td>
+                          <td><span className="badge badge-teal">{b.orders_count} orders</span></td>
+                          <td className="mono" style={{ fontWeight: 700 }}>₹{(b.total_spend_inr/1e5).toFixed(2)} L</td>
+                          <td className="mono">₹{(b.aov_inr/1e5).toFixed(2)} L</td>
+                          <td className="mono">{b.total_ordered_units.toLocaleString()}</td>
+                          <td className="mono">{b.total_returned_units.toLocaleString()}</td>
+                          <td className="mono">{b.return_rate}%</td>
+                          <td className="mono">{b.on_time_rate}%</td>
+                          <td className="mono">{b.avg_delivery_days.toFixed(1)} d</td>
+                          <td>{b.primary_category}</td>
+                          <td>{b.primary_terms}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ============================================================== */}
+          {/* SECTION 6: PRODUCT CATALOGUE ANALYSIS */}
+          {/* ============================================================== */}
+          {activeSection === 'products' && (
+            <>
+              <div className="kpi-grid">
+                <div className="kpi-card teal-top">
+                  <div className="kpi-header"><span className="kpi-title">Documented SKUs</span><Package size={16} color="#14B8A6" /></div>
+                  <div className="kpi-value mono">{productStats.totalProducts} Items</div>
+                  <div className="kpi-sub">P1 to P50 master items</div>
+                </div>
+
+                <div className="kpi-card cyan-top">
+                  <div className="kpi-header"><span className="kpi-title">Warehouse Stock Units</span><Box size={16} color="#06B6D4" /></div>
+                  <div className="kpi-value mono">{productStats.totalStock.toLocaleString()}</div>
+                  <div className="kpi-sub">Sum of Stock_Units in catalogue</div>
+                </div>
+
+                <div className="kpi-card teal-top">
+                  <div className="kpi-header"><span className="kpi-title">Mean Retail MRP</span><TrendingUp size={16} color="#14B8A6" /></div>
+                  <div className="kpi-value mono">₹{productStats.avgMRP.toFixed(2)}</div>
+                  <div className="kpi-sub">Mean COGS: ₹{productStats.avgCOGS.toFixed(2)}</div>
+                </div>
+
+                <div className="kpi-card emerald-top">
+                  <div className="kpi-header"><span className="kpi-title">Average Gross Margin</span><CheckCircle size={16} color="#10B981" /></div>
+                  <div className="kpi-value mono">{productStats.avgMarginPct.toFixed(2)}%</div>
+                  <div className="kpi-sub">((MRP - COGS) / MRP) * 100</div>
+                </div>
+              </div>
+
+              {/* CATALOGUE BOUNDARY CALLOUT */}
+              <div className="banner-alert info">
+                <Info size={20} color="#06B6D4" />
+                <div>
+                  <div className="banner-title">SCHEMA BOUNDARY: MASTER PRODUCT CATALOGUE (STANDALONE REFERENCE)</div>
+                  <div className="banner-text">
+                    <code>da_product_catalogue.csv</code> documents 50 retail SKU products across Beauty, Home, Fashion, Electronics, and Grocery. 
+                    It is an independent master reference table. Because <code>da_b2b_orders.csv</code> does not record SKU-level <code>Product_ID</code> foreign keys, 
+                    these catalogue metrics are presented strictly within their supported domain without unsupported joins.
+                  </div>
+                </div>
+              </div>
+
+              {/* PRODUCT MARGIN CHARTS */}
+              <div className="charts-grid-2">
+                <div className="chart-card">
+                  <div className="chart-card-header">
+                    <div>
+                      <h2 className="chart-card-title">Average Gross Margin % by Category</h2>
+                      <p className="chart-card-desc">Margin percentage derived from MRP and COGS columns in da_product_catalogue.csv.</p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={280}>
                     <BarChart
-                      data={ALL_SEGMENTS.map(seg => {
-                        const subset = buyersRaw.filter(b => b.segment_label === seg);
-                        const avg = subset.length ? (subset.reduce((s, b) => s + b.total_spend_inr, 0) / subset.length) / 10000000 : 0;
-                        return { name: seg.split('(')[0].trim(), avgSpendCr: parseFloat(avg.toFixed(2)) };
+                      data={['Beauty', 'Home', 'Apparel', 'Electronics', 'Grocery'].map(cat => {
+                        const subset = productsRaw.filter(p => p.Category === cat);
+                        const avgMargin = subset.length ? subset.reduce((s, p) => s + p.Margin_Pct, 0) / subset.length : 0;
+                        return { category: cat, margin: parseFloat(avgMargin.toFixed(2)) };
                       })}
                       margin={{ top: 10, right: 30, left: 10, bottom: 20 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(value) => `₹${value} Cr`} />
-                      <Bar dataKey="avgSpendCr" fill="#203A43" radius={[4, 4, 0, 0]} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E2E4F" />
+                      <XAxis dataKey="category" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <YAxis domain={[0, 100]} tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} formatter={(val) => `${val}%`} />
+                      <Bar dataKey="margin" fill="#14B8A6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="chart-card">
+                  <div className="chart-card-header">
+                    <div>
+                      <h2 className="chart-card-title">Warehouse Stock Units by Category</h2>
+                      <p className="chart-card-desc">Total inventory stock across product classifications.</p>
+                    </div>
+                  </div>
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart
+                      data={['Beauty', 'Home', 'Apparel', 'Electronics', 'Grocery'].map(cat => {
+                        const subset = productsRaw.filter(p => p.Category === cat);
+                        const stock = subset.reduce((s, p) => s + p.Stock_Units, 0);
+                        return { category: cat, stock };
+                      })}
+                      margin={{ top: 10, right: 30, left: 10, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1E2E4F" />
+                      <XAxis dataKey="category" tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <YAxis tick={{ fill: '#94A3B8', fontSize: 11 }} />
+                      <Tooltip contentStyle={{ backgroundColor: '#111C33', borderColor: '#1E2E4F', borderRadius: '8px' }} />
+                      <Bar dataKey="stock" fill="#06B6D4" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
-              {/* BUYER TABLE */}
-              <div className="table-container">
-                <div className="table-header">
+              {/* SEARCHABLE PRODUCT TABLE */}
+              <div className="table-card">
+                <div className="table-toolbar">
                   <div>
-                    <h3>Commercial Buyer Account Explorer ({filteredBuyers.length} Accounts)</h3>
-                    <p>Searchable buyer directory with behavioral attributes, order frequency, and SLA records.</p>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Master Product Catalogue ({filteredProducts.length} Items)</h3>
+                    <p style={{ fontSize: '12px', color: '#94A3B8' }}>Original master product inventory from da_product_catalogue.csv.</p>
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Search by Buyer ID..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{
-                      padding: '6px 12px',
-                      fontSize: '12px',
-                      borderRadius: '6px',
-                      border: '1px solid #CBD5E0',
-                      outline: 'none',
-                      width: '200px'
-                    }}
-                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Search size={14} color="#94A3B8" />
+                    <input
+                      type="text"
+                      className="search-input"
+                      placeholder="Search Product or Category..."
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Buyer ID</th>
-                      <th>RFM Segment</th>
-                      <th>Orders</th>
-                      <th>Total Spend (₹)</th>
-                      <th>AOV (₹)</th>
-                      <th>Recency</th>
-                      <th>On-Time %</th>
-                      <th>Return %</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredBuyers.slice(0, 15).map(b => (
-                      <tr key={b.buyer_id}>
-                        <td style={{ fontWeight: 600 }}>{b.buyer_id}</td>
-                        <td>
-                          <span
-                            className="badge"
-                            style={{
-                              backgroundColor: `${COLORS.cluster[b.segment_label]}15`,
-                              color: COLORS.cluster[b.segment_label]
-                            }}
-                          >
-                            {b.segment_label.split('(')[0].trim()}
-                          </span>
-                        </td>
-                        <td>{b.frequency}</td>
-                        <td>₹{(b.total_spend_inr / 100000).toFixed(2)} L</td>
-                        <td>₹{(b.avg_order_value_inr / 100000).toFixed(2)} L</td>
-                        <td>{b.recency_days} d</td>
-                        <td>{(b.on_time_rate * 100).toFixed(1)}%</td>
-                        <td>{(b.unit_return_rate * 100).toFixed(2)}%</td>
+                <div className="data-table-wrapper" style={{ maxHeight: '400px' }}>
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Product ID</th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>MRP (₹)</th>
+                        <th>COGS (₹)</th>
+                        <th>Unit Margin (₹)</th>
+                        <th>Gross Margin %</th>
+                        <th>Stock Units</th>
+                        <th>Avg Monthly Sales</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {filteredProducts.map(p => (
+                        <tr key={p.Product_ID}>
+                          <td style={{ fontWeight: 600, color: '#38BDF8' }}>{p.Product_ID}</td>
+                          <td>{p.Name}</td>
+                          <td><span className="badge badge-cyan">{p.Category}</span></td>
+                          <td className="mono">₹{p.MRP.toLocaleString()}</td>
+                          <td className="mono">₹{p.COGS.toLocaleString()}</td>
+                          <td className="mono">₹{p.Unit_Margin_INR.toLocaleString()}</td>
+                          <td className="mono" style={{ fontWeight: 700, color: p.Margin_Pct >= 60 ? '#10B981' : '#F1F5F9' }}>
+                            {p.Margin_Pct}%
+                          </td>
+                          <td className="mono">{p.Stock_Units.toLocaleString()}</td>
+                          <td className="mono">{p.Avg_Monthly_Sales.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </>
           )}
 
-          {/* TAB 5: DATA GOVERNANCE & MISSING KPIS */}
-          {activeTab === 'governance' && (
+          {/* ============================================================== */}
+          {/* SECTION 7: DATA GOVERNANCE */}
+          {/* ============================================================== */}
+          {activeSection === 'governance' && (
             <>
-              <div className="charts-grid">
-                <div className="chart-card">
-                  <h3 style={{ color: '#991B1B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <AlertTriangle size={18} /> Audit of Unavailable Business Metrics
-                  </h3>
-                  <p>In accordance with project guidelines, unavailable metrics are explicitly disclosed rather than synthetically fabricated.</p>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '12.5px' }}>
-                    <div style={{ padding: '12px', background: '#FEF2F2', borderRadius: '8px', borderLeft: '3px solid #DC2626' }}>
-                      <strong style={{ color: '#991B1B' }}>1. Foreign Exchange (FX) Impact:</strong>
-                      <p style={{ color: '#7F1D1D', marginTop: '3px' }}>
-                        All 600 orders are denominated exclusively in Indian Rupees (INR). No foreign currency code, exchange spot rate, or destination country exists in <code>da_b2b_orders.csv</code>.
-                      </p>
-                    </div>
-
-                    <div style={{ padding: '12px', background: '#FEF2F2', borderRadius: '8px', borderLeft: '3px solid #DC2626' }}>
-                      <strong style={{ color: '#991B1B' }}>2. Client Profitability & COGS Margins:</strong>
-                      <p style={{ color: '#7F1D1D', marginTop: '3px' }}>
-                        Orders record unit price and gross value but lack cost of goods sold (COGS) or freight tariffs. The master product catalogue contains retail margins but lacks transactional order-line SKU links.
-                      </p>
-                    </div>
-
-                    <div style={{ padding: '12px', background: '#FEF2F2', borderRadius: '8px', borderLeft: '3px solid #DC2626' }}>
-                      <strong style={{ color: '#991B1B' }}>3. Export Compliance Exceptions:</strong>
-                      <p style={{ color: '#7F1D1D', marginTop: '3px' }}>
-                        Zero customs declarations, shipping bill numbers, or regulatory audit flags exist in the supplied datasets.
-                      </p>
-                    </div>
+              {/* RELATIONAL ARCHITECTURE SUMMARY */}
+              <div className="chart-card">
+                <div className="chart-card-header">
+                  <div>
+                    <h2 className="chart-card-title">Enterprise Data Architecture & Disjunct Schema Audit</h2>
+                    <p className="chart-card-desc">Integrity audit of the three original files and boundary conditions governing relational joins.</p>
                   </div>
                 </div>
 
-                <div className="chart-card">
-                  <h3 style={{ color: '#15803D', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CheckCircle size={18} /> Enterprise Verified Baseline Scorecard
-                  </h3>
-                  <p>Mathematically verified operational baselines derived from 600 actual orders (2023–2024).</p>
+                <div className="charts-grid-3" style={{ marginTop: '12px' }}>
+                  <div style={{ background: '#0D1527', padding: '16px', borderRadius: '8px', border: '1px solid #1E2E4F' }}>
+                    <div style={{ color: '#14B8A6', fontWeight: 700, fontSize: '13px', marginBottom: '8px' }}>
+                      Table 1: da_b2b_orders.csv
+                    </div>
+                    <ul style={{ fontSize: '11.5px', color: '#94A3B8', listStyleType: 'disc', paddingLeft: '16px', lineHeight: 1.6 }}>
+                      <li><strong>Primary Key:</strong> <code>order_id</code> (600 rows)</li>
+                      <li><strong>Entities:</strong> <code>buyer_id</code> (187), <code>seller_id</code> (80)</li>
+                      <li><strong>Domain:</strong> 2023–2024 B2B bulk export commodities</li>
+                      <li><strong>Linking Keys:</strong> None to Product Catalogue or Customer Profiles</li>
+                    </ul>
+                  </div>
 
-                  <table>
+                  <div style={{ background: '#0D1527', padding: '16px', borderRadius: '8px', border: '1px solid #1E2E4F' }}>
+                    <div style={{ color: '#06B6D4', fontWeight: 700, fontSize: '13px', marginBottom: '8px' }}>
+                      Table 2: da_product_catalogue.csv
+                    </div>
+                    <ul style={{ fontSize: '11.5px', color: '#94A3B8', listStyleType: 'disc', paddingLeft: '16px', lineHeight: 1.6 }}>
+                      <li><strong>Primary Key:</strong> <code>Product_ID</code> (50 rows: P1–P50)</li>
+                      <li><strong>Domain:</strong> Master warehouse stock & retail product catalogue</li>
+                      <li><strong>Attributes:</strong> MRP, COGS, Stock_Units, Avg_Monthly_Sales</li>
+                      <li><strong>Boundary:</strong> Standalone reference (no foreign key in orders)</li>
+                    </ul>
+                  </div>
+
+                  <div style={{ background: '#0D1527', padding: '16px', borderRadius: '8px', border: '1px solid #1E2E4F' }}>
+                    <div style={{ color: '#3B82F6', fontWeight: 700, fontSize: '13px', marginBottom: '8px' }}>
+                      Table 3: da_customer_profiles.csv
+                    </div>
+                    <ul style={{ fontSize: '11.5px', color: '#94A3B8', listStyleType: 'disc', paddingLeft: '16px', lineHeight: 1.6 }}>
+                      <li><strong>Primary Key:</strong> <code>Customer_ID</code> (200 rows: C1–C200)</li>
+                      <li><strong>Domain:</strong> 2024–2026 retail consumer accounts</li>
+                      <li><strong>Attributes:</strong> City, Acquisition_Channel, Churn, Dates</li>
+                      <li><strong>Boundary:</strong> Disjunct from B2B wholesale buyers</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* UNAVAILABLE BUSINESS METRICS MATRIX */}
+              <div className="table-card">
+                <div className="table-toolbar">
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Audit of Unavailable Business Metrics & Engineering Fixes</h3>
+                    <p style={{ fontSize: '12px', color: '#94A3B8' }}>Strictly distinguishing calculated numbers from requirements unsupported by raw data.</p>
+                  </div>
+                </div>
+                <div className="data-table-wrapper">
+                  <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Metric</th>
-                        <th>Baseline Value</th>
-                        <th>Status</th>
+                        <th>Required Business Metric</th>
+                        <th>Current Availability Status</th>
+                        <th>Root Cause & Missing Dataset Attributes</th>
+                        <th>Recommended Schema Fix</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
+                        <td style={{ fontWeight: 600 }}>Foreign Exchange (FX) Gain/Loss</td>
+                        <td><span className="badge badge-rose">NOT AVAILABLE</span></td>
+                        <td>All orders are denominated exclusively in INR; no foreign currency code, exchange spot rate, or destination country tag.</td>
+                        <td>Add <code>currency_code</code>, <code>booking_spot_rate</code>, and <code>country_iso</code> to ERP transactions.</td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontWeight: 600 }}>Client Gross & Net Profit Margin</td>
+                        <td><span className="badge badge-rose">NOT AVAILABLE</span></td>
+                        <td>Orders contain selling price but lack landed production cost, carrier freight tariffs, or export duties.</td>
+                        <td>Implement transactional <code>order_line_items</code> table linking <code>order_id</code> to product SKUs with landed costs.</td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontWeight: 600 }}>Export Regulatory Compliance Logs</td>
+                        <td><span className="badge badge-rose">NOT AVAILABLE</span></td>
+                        <td>Zero customs clearance documents, Shipping Bill IDs, Port of Loading, or GST Export inspection flags exist.</td>
+                        <td>Deploy a customs compliance module tracking Port of Loading clearance milestones.</td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontWeight: 600 }}>Cross-Dataset Joins (Buyer ↔ Customer)</td>
+                        <td><span className="badge badge-rose">NOT SUPPORTED</span></td>
+                        <td>Customer profiles represent retail consumers (C1–C200), whereas orders represent B2B wholesale entities (BUY-0001).</td>
+                        <td>Maintain strict domain boundaries; do not create synthetic or forced relationships.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* 12-METRIC ENTERPRISE VERIFIED SCORECARD */}
+              <div className="table-card">
+                <div className="table-toolbar">
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>12-Metric Enterprise Verified Scorecard</h3>
+                    <p style={{ fontSize: '12px', color: '#94A3B8' }}>Every metric validated directly against the raw CSV datasets without fabrication.</p>
+                  </div>
+                </div>
+                <div className="data-table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Domain</th>
+                        <th>Metric Name</th>
+                        <th>Verified Source Value</th>
+                        <th>Calculation Formula / Source Column</th>
+                        <th>Validation Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Commercial</td>
                         <td>Total Gross Export Value</td>
-                        <td>₹3,968,829,214.20 INR</td>
-                        <td><span className="badge badge-success">VERIFIED 100%</span></td>
+                        <td className="mono" style={{ fontWeight: 700 }}>₹3,968,829,214.20 INR</td>
+                        <td>SUM(total_value_inr) across all 600 orders</td>
+                        <td><span className="badge badge-teal">VERIFIED 100%</span></td>
                       </tr>
                       <tr>
-                        <td>Total Orders Recorded</td>
-                        <td>600 Transactions</td>
-                        <td><span className="badge badge-success">VERIFIED 100%</span></td>
+                        <td>Commercial</td>
+                        <td>Total Export Orders</td>
+                        <td className="mono">600 Transactions</td>
+                        <td>COUNT(order_id) across 2023–2024</td>
+                        <td><span className="badge badge-teal">VERIFIED 100%</span></td>
                       </tr>
                       <tr>
+                        <td>Commercial</td>
                         <td>Average Order Value (AOV)</td>
-                        <td>₹6,614,715.36 INR</td>
-                        <td><span className="badge badge-success">VERIFIED 100%</span></td>
+                        <td className="mono">₹6,614,715.36 INR</td>
+                        <td>Total Revenue / Total Orders</td>
+                        <td><span className="badge badge-teal">VERIFIED 100%</span></td>
                       </tr>
                       <tr>
+                        <td>Commercial</td>
+                        <td>Median Order Value</td>
+                        <td className="mono">₹4,817,483.05 INR</td>
+                        <td>MEDIAN(total_value_inr)</td>
+                        <td><span className="badge badge-teal">VERIFIED 100%</span></td>
+                      </tr>
+                      <tr>
+                        <td>Logistics</td>
                         <td>On-Time Delivery Rate</td>
-                        <td>77.50% (465/600)</td>
-                        <td><span className="badge badge-success">VERIFIED 100%</span></td>
+                        <td className="mono">77.50% (465/600)</td>
+                        <td>COUNT(on_time_delivery=1) / Total Orders</td>
+                        <td><span className="badge badge-teal">VERIFIED 100%</span></td>
                       </tr>
                       <tr>
+                        <td>Logistics</td>
                         <td>Mean Transit Duration</td>
-                        <td>23.49 Days</td>
-                        <td><span className="badge badge-success">VERIFIED 100%</span></td>
+                        <td className="mono">23.49 Days</td>
+                        <td>MEAN(delivery_days)</td>
+                        <td><span className="badge badge-teal">VERIFIED 100%</span></td>
                       </tr>
                       <tr>
-                        <td>Unit Return Rate</td>
-                        <td>1.01% (15,242 units)</td>
-                        <td><span className="badge badge-success">VERIFIED 100%</span></td>
+                        <td>Logistics</td>
+                        <td>Median Transit Duration</td>
+                        <td className="mono">23.50 Days</td>
+                        <td>MEDIAN(delivery_days)</td>
+                        <td><span className="badge badge-teal">VERIFIED 100%</span></td>
                       </tr>
                       <tr>
+                        <td>Quality</td>
+                        <td>Physical Unit Return Rate</td>
+                        <td className="mono">1.0100% (15,242 units)</td>
+                        <td>SUM(return_qty) / SUM(quantity_units)</td>
+                        <td><span className="badge badge-teal">VERIFIED 100%</span></td>
+                      </tr>
+                      <tr>
+                        <td>Quality</td>
                         <td>Return Overrun Anomalies</td>
-                        <td>2 Orders (B2B-00131/188)</td>
-                        <td><span className="badge badge-danger">FLAGGED AUDIT</span></td>
+                        <td className="mono" style={{ color: '#F43F5E' }}>2 Orders (B2B-00131/188)</td>
+                        <td>WHERE return_qty &gt; quantity_units</td>
+                        <td><span className="badge badge-rose">FLAGGED AUDIT</span></td>
+                      </tr>
+                      <tr>
+                        <td>Buyers</td>
+                        <td>Unique Commercial Buyers</td>
+                        <td className="mono">187 Accounts</td>
+                        <td>DISTINCTCOUNT(buyer_id)</td>
+                        <td><span className="badge badge-teal">VERIFIED 100%</span></td>
+                      </tr>
+                      <tr>
+                        <td>Catalogue</td>
+                        <td>Master Product SKUs</td>
+                        <td className="mono">50 Items (P1–P50)</td>
+                        <td>COUNT(Product_ID) in da_product_catalogue.csv</td>
+                        <td><span className="badge badge-teal">VERIFIED 100%</span></td>
+                      </tr>
+                      <tr>
+                        <td>Customers</td>
+                        <td>Retail Customer Profiles</td>
+                        <td className="mono">200 Accounts (C1–C200)</td>
+                        <td>COUNT(Customer_ID) in da_customer_profiles.csv</td>
+                        <td><span className="badge badge-teal">VERIFIED 100%</span></td>
                       </tr>
                     </tbody>
                   </table>
@@ -960,8 +1526,9 @@ export default function App() {
               </div>
             </>
           )}
+
         </div>
-      </main>
+      </div>
     </div>
   );
 }
