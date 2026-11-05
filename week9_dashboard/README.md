@@ -1,8 +1,9 @@
 # TradeSight Export Analytics — Week 9: Dashboard V1 & Peer Review
 
-**Milestone:** Cynaris Data Analyst Internship — Capstone Week 9  
+**Milestone:** Cynaris Data Analyst Internship — Capstone Final Dashboard & Strategic Brief  
 **Lead Analyst:** Krupa B T  
-**Technology Stack:** Python, Streamlit, Plotly, Pandas, Power BI Desktop, PostgreSQL, Git, GitHub  
+**Live Production Dashboard:** [https://tradesight-export-analytics.vercel.app](https://tradesight-export-analytics.vercel.app)  
+**Technology Stack:** React 18, Vite, Recharts, Python 3.12, Pandas, Pytest, ReportLab, PostgreSQL, Git, GitHub  
 **Repository:** [https://github.com/krupabt/TradeSight-Export-Analytics](https://github.com/krupabt/TradeSight-Export-Analytics)  
 
 ---
@@ -20,10 +21,11 @@ Alongside the working dashboard, Week 9 establishes a rigorous **Peer Review Pro
 ```text
 D:\TradeSight-Export-Analytics\week9_dashboard\
 ├── app.py                           # Working interactive Streamlit Dashboard application
-├── dashboard_v1_report.pdf          # Multi-page executive PDF report (< 10 MB, 1.47 MB actual)
+├── dashboard_v1_report.pdf          # Multi-page executive PDF report (< 10 MB, 1.21 MB actual, 7 pages)
+├── final_strategic_brief.pdf        # 2-page Executive Strategic Brief (Situation, Findings, Recommendations)
 ├── peer_review_template.md          # 6-dimension evaluation rubric for 1 real peer reviewer
-├── peer_feedback_log.md             # Formal tracking log (marked 'Pending Real Peer Review Session')
-├── revision_list.md                 # Actionable continuous improvement backlog (REV-001 to REV-008)
+├── peer_feedback_log.md             # Formal tracking log (sole reviewer Priya, confirmed 4.0/5)
+├── revision_list.md                 # Actionable continuous improvement backlog (Sections A, B, C)
 ├── README.md                        # Complete implementation, execution, and publishing guide
 ├── powerbi\
 │   ├── dashboard_specification_v1.md # Power BI 5-page layout, visual properties & formatting guide
@@ -37,7 +39,8 @@ D:\TradeSight-Export-Analytics\week9_dashboard\
 │   └── 05_data_governance_missing_kpis.png # High-resolution capture: Missing KPI audit & verified scorecard
 └── src\
     ├── generate_screenshots.py      # Automated high-resolution screenshot generation script
-    └── generate_pdf_report.py       # ReportLab PDF report generation engine
+    ├── generate_pdf_report.py       # ReportLab PDF report generation engine
+    └── generate_strategic_brief.py  # 2-page Strategic Brief generation script
 ```
 
 ---

@@ -171,3 +171,15 @@ def test_revision_list_structure():
 
     # Pending status assertion
     assert "Pending" in content
+
+
+def test_strategic_brief_deliverable():
+    """Verify Final Strategic Brief PDF exists, is strictly under 10 MB, and is exactly 2 pages."""
+    import fitz
+    brief_path = WEEK9_DIR / "final_strategic_brief.pdf"
+    assert brief_path.exists(), "final_strategic_brief.pdf does not exist."
+    file_size_bytes = brief_path.stat().st_size
+    assert 0 < file_size_bytes < 10 * 1024 * 1024, f"Brief size ({file_size_bytes} bytes) invalid."
+    doc = fitz.open(str(brief_path))
+    assert len(doc) == 2, f"Expected exactly 2 pages, found {len(doc)}"
+
