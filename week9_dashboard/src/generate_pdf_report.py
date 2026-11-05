@@ -442,108 +442,87 @@ def create_dashboard_v1_pdf():
     # =========================================================================
     # 6. FORMAL PEER HEURISTIC REVIEW & EVALUATION RECORD
     # =========================================================================
-    story.append(Paragraph("6. Formal Peer Heuristic Review & Evaluation Record", h1_style))
+    story.append(Paragraph("6. Formal Peer Review Record (Sole Reviewer: Priya)", h1_style))
     story.append(Paragraph(
-        "<b>Sole Peer Reviewer Participation:</b> Formal peer review was conducted with <b>Priya</b> as the only peer reviewer. "
-        "Her latest verified overall evaluation confirms an average rating of <b>4.0 / 5</b>.<br/>"
-        "<b>Strict Non-Fabrication Compliance:</b> Reviewer Priya confirmed an overall average rating of <b>4.0 / 5</b> without submitting "
-        "individual criterion score breakdowns or written qualitative comments. "
-        "In strict adherence to academic and enterprise integrity guidelines, <b>no individual criterion scores or written comments have been invented</b>. "
-        "Only the verified overall average rating of 4.0 / 5 is recorded. "
-        "All proactive dashboard improvements (spacing, chart subtitles, horizontal quick-nav bar, formula tooltips, and filter presets) "
-        "are fully retained and validated in the live production application.",
+        "<b>Peer Reviewer Verification:</b> Formal peer review was conducted with <b>Priya</b> as the sole peer reviewer (1 reviewer total). "
+        "Her confirmed overall rating for the application is <b>4.0 / 5</b>.<br/>"
+        "<b>Strict Non-Fabrication Protocol:</b> Reviewer Priya confirmed an overall rating of <b>4.0 / 5</b> without submitting "
+        "individual criterion score breakdowns, written qualitative comments, or specific suggestions. "
+        "In strict adherence to data integrity and academic honesty guidelines, <b>no individual criterion ratings, written comments, or quotes have been invented</b>. "
+        "No claim is made that Priya personally identified specific dashboard issues. "
+        "All proactive dashboard improvements detailed in Section 7 were <b>independently identified and implemented by the developer</b>.",
         body_style
     ))
 
-    # Review Ratings Table
-    review_table_data = [
-        [Paragraph("<b>Evaluation Dimension / Heuristic</b>", table_cell_bold), Paragraph("<b>Confirmed Score / Status</b>", table_cell_bold), Paragraph("<b>Verification Note & Engineering Implementation</b>", table_cell_bold)],
+    # Review Summary Table
+    review_summary_data = [
+        [Paragraph("<b>Evaluation Field</b>", table_cell_bold), Paragraph("<b>Confirmed Record</b>", table_cell_bold), Paragraph("<b>Verification & Integrity Status</b>", table_cell_bold)],
         [
-            Paragraph("<b>Confirmed Overall Average Rating</b>", table_cell_bold),
+            Paragraph("<b>Reviewer Name</b>", table_cell_bold),
+            Paragraph("<b>Priya</b>", table_cell_bold),
+            Paragraph("Verified sole peer reviewer (1 peer reviewer total).", table_cell)
+        ],
+        [
+            Paragraph("<b>Confirmed Overall Rating</b>", table_cell_bold),
             Paragraph("<b>4.0 / 5</b>", table_cell_bold),
-            Paragraph("<b>Latest confirmed rating actually provided by sole reviewer Priya. Meets high enterprise standard.</b>", table_cell_bold)
+            Paragraph("<b>Confirmed overall rating actually provided by reviewer Priya.</b>", table_cell_bold)
         ],
         [
-            Paragraph("<b>Visual Layout & Spacing</b>", table_cell_bold),
-            Paragraph("<i>4.0 / 5 Overall</i>", table_cell),
-            Paragraph("Evaluated under confirmed 4.0 / 5 rating. Enhanced padding in <code>.content-body</code> (32px/36px) and <code>.kpi-grid</code> (20px gap).", table_cell)
+            Paragraph("<b>Individual Criterion Ratings</b>", table_cell_bold),
+            Paragraph("<i>Not provided</i>", table_cell),
+            Paragraph("Not individually broken down; not invented per strict compliance rules.", table_cell)
         ],
         [
-            Paragraph("<b>KPI Accuracy & Clarity</b>", table_cell_bold),
-            Paragraph("<i>4.0 / 5 Overall</i>", table_cell),
-            Paragraph("Evaluated under confirmed 4.0 / 5 rating. Added interactive formula tooltips ($ℹ$) adjacent to executive cards.", table_cell)
+            Paragraph("<b>Written Qualitative Comments</b>", table_cell_bold),
+            Paragraph("<i>Not provided</i>", table_cell),
+            Paragraph("No written comments or quotes provided; none fabricated.", table_cell)
         ],
         [
-            Paragraph("<b>Chart Readability</b>", table_cell_bold),
-            Paragraph("<i>4.0 / 5 Overall</i>", table_cell),
-            Paragraph("Evaluated under confirmed 4.0 / 5 rating. Added analytical subtitles, tuned axis contrast, and formatted currency units.", table_cell)
-        ],
-        [
-            Paragraph("<b>Filter Usability</b>", table_cell_bold),
-            Paragraph("<i>4.0 / 5 Overall</i>", table_cell),
-            Paragraph("Evaluated under confirmed 4.0 / 5 rating. Deployed illuminated quick-preset filter buttons with live record counter.", table_cell)
-        ],
-        [
-            Paragraph("<b>Navigation & Orientation</b>", table_cell_bold),
-            Paragraph("<i>4.0 / 5 Overall</i>", table_cell),
-            Paragraph("Evaluated under confirmed 4.0 / 5 rating. Built sticky horizontal Section Quick-Nav Bar with 7 tab pills and URL query sync.", table_cell)
-        ],
-        [
-            Paragraph("<b>Overall User Experience</b>", table_cell_bold),
-            Paragraph("<i>4.0 / 5 Overall</i>", table_cell),
-            Paragraph("Evaluated under confirmed 4.0 / 5 rating. Deployed warning banners for return anomalies and polished dark theme.", table_cell)
-        ],
-        [
-            Paragraph("<b>Qualitative Written Comments</b>", table_cell_bold),
-            Paragraph("<i>None provided</i>", table_cell),
-            Paragraph("Per non-fabrication protocol, no written statements or quotes were invented. Recorded transparently as none provided.", table_cell)
+            Paragraph("<b>Review Status</b>", table_cell_bold),
+            Paragraph("<b>Completed</b>", table_cell_bold),
+            Paragraph("Formal peer review completed and reconciled.", table_cell)
         ],
     ]
-    t_rev = Table(review_table_data, colWidths=[120, 65, 355])
+    t_rev = Table(review_summary_data, colWidths=[130, 95, 315])
     t_rev.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), c_navy),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E0")),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
-        ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor("#F0FDF4")),
+        ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#F0FDF4")),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('TOPPADDING', (0, 0), (-1, -1), 2.2),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.2),
+        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
     ]))
     story.append(t_rev)
     story.append(Spacer(1, 4))
 
-    story.append(Paragraph("6.1 Summary of Retained Dashboard Improvements Aligned with Confirmed 4.0 / 5 Rating", h2_style))
-    story.append(Paragraph("• <b>Visual Layout Polish:</b> Re-engineered CSS layout with generous whitespace, 20px card grid spacing, and glowing teal focus borders.", bullet_style))
-    story.append(Paragraph("• <b>Chart Readability Polish:</b> Added contextual subtitles, calibrated Recharts axis bottom margins, and formatted currency tooltips.", bullet_style))
-    story.append(Paragraph("• <b>Section Navigation Polish:</b> Deployed top horizontal quick-nav bar enabling instant one-click switching across all 7 views with URL query sync.", bullet_style))
-    story.append(Paragraph("• <b>KPI Clarity Polish:</b> Added interactive tooltips ($ℹ$) revealing exact mathematical formulas (e.g. SUM(total_value_inr)) and source columns.", bullet_style))
-    story.append(Paragraph("• <b>Filter Usability Polish:</b> Implemented 5 illuminated one-touch quick preset buttons with active state indicators and real-time order counters.", bullet_style))
-    story.append(Spacer(1, 4))
+    story.append(Paragraph("6.1 Delineation of Peer Feedback vs. Developer-Identified Improvements", h2_style))
+    story.append(Paragraph(
+        "To ensure analytical transparency, peer review input is strictly delineated from developer engineering work. "
+        "Reviewer Priya confirmed an overall rating of 4.0/5. The developer independently identified usability, "
+        "spacing, and formatting opportunities across the six criteria below, implementing genuine enhancements across the codebase.",
+        body_style
+    ))
     story.append(PageBreak())
 
     # =========================================================================
-    # 7. ACTIONABLE REVISION LIST
+    # 7. ACTIONABLE REVISION LIST (SECTIONS A, B, C)
     # =========================================================================
-    story.append(Paragraph("7. Actionable Revision List (Separating Completed vs Pending Improvements)", h1_style))
-    backlog_data = [
-        [Paragraph("<b>ID</b>", table_cell_bold), Paragraph("<b>Feedback Received / Dimension</b>", table_cell_bold), Paragraph("<b>Issue Identified</b>", table_cell_bold), Paragraph("<b>Proposed Improvement / Action Taken</b>", table_cell_bold), Paragraph("<b>Component Changed</b>", table_cell_bold), Paragraph("<b>Status</b>", table_cell_bold)],
-        [Paragraph("REV-001", table_cell), Paragraph("Priya Confirmed: 4.0/5<br/>Visual Layout", table_cell), Paragraph("Container padding and card gaps tight on widescreen viewports.", table_cell), Paragraph("Expanded .content-body padding to 32px/36px, set .kpi-grid gap to 20px.", table_cell), Paragraph("frontend/index.css", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-002", table_cell), Paragraph("Priya Confirmed: 4.0/5<br/>Chart Readability", table_cell), Paragraph("Dense longitudinal charts lacked contextual subtitles.", table_cell), Paragraph("Added analytical subtitles, formatted currency units (₹ L/Cr), tuned axis ticks.", table_cell), Paragraph("frontend/App.jsx", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-003", table_cell), Paragraph("Priya Confirmed: 4.0/5<br/>Navigation", table_cell), Paragraph("Cross-section switching relied solely on vertical sidebar.", table_cell), Paragraph("Built horizontal Section Quick-Nav Bar with 7 tab pills and URL query sync.", table_cell), Paragraph("frontend/App.jsx", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-004", table_cell), Paragraph("Priya Confirmed: 4.0/5<br/>KPI Clarity", table_cell), Paragraph("Stakeholders benefit from instant calculation formula clarity.", table_cell), Paragraph("Added interactive formula tooltips ($ℹ$) detailing math and source columns.", table_cell), Paragraph("frontend/App.jsx", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-005", table_cell), Paragraph("Priya Confirmed: 4.0/5<br/>Filter Usability", table_cell), Paragraph("Filter exploration required separate clicks per dimension.", table_cell), Paragraph("Built illuminated quick-preset filter buttons (Delayed, Repeat, High Value).", table_cell), Paragraph("frontend/App.jsx", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-006", table_cell), Paragraph("Priya Confirmed: 4.0/5<br/>Overall UX", table_cell), Paragraph("Data quality anomalies required stronger visual emphasis.", table_cell), Paragraph("Added warning alert banners, anomaly badges, and polished dark theme.", table_cell), Paragraph("frontend/App.jsx", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-007", table_cell), Paragraph("Audit Requirement<br/>Data Verification", table_cell), Paragraph("Independent verification required against raw CSV datasets.", table_cell), Paragraph("Created kpi_verification_report.md proving 100% calculation match.", table_cell), Paragraph("kpi_verification_report", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-008", table_cell), Paragraph("Quality Audit<br/>Return Overruns", table_cell), Paragraph("Return overruns in orders B2B-00131 & B2B-00188 (return > units).", table_cell), Paragraph("Preserved intact for audit trail; quarantined in exception table with badge.", table_cell), Paragraph("App.jsx / cleaning_log", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-009", table_cell), Paragraph("Deployment Audit<br/>Cloud Hosting", table_cell), Paragraph("Permanent public HTTPS hosting requirement without local tunnels.", table_cell), Paragraph("Engineered React + Vite app deployed to Vercel production permanently.", table_cell), Paragraph("frontend / Vercel", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-010", table_cell), Paragraph("Evidence Capture<br/>Screenshots", table_cell), Paragraph("Need genuine visual evidence of live dashboard sections.", table_cell), Paragraph("Automated headless Chrome capture generating 1920x1080 live screenshots.", table_cell), Paragraph("generate_screenshots.py", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-011", table_cell), Paragraph("Architecture Roadmap<br/>FX Governance", table_cell), Paragraph("Unsupported FX impact due to orders recorded solely in INR.", table_cell), Paragraph("Architect upstream ERP schema capturing currency_code and spot rates.", table_cell), Paragraph("PDF report / schema", table_cell), Paragraph("Pending", table_cell_bold)],
-        [Paragraph("REV-012", table_cell), Paragraph("Architecture Roadmap<br/>Order Margins", table_cell), Paragraph("Unsupported order profit margin; orders lack landed costs.", table_cell), Paragraph("Implement relational order_line_items bridging order_id to Product_ID.", table_cell), Paragraph("PDF report / schema", table_cell), Paragraph("Pending", table_cell_bold)],
-        [Paragraph("REV-013", table_cell), Paragraph("Architecture Roadmap<br/>Customs Tracking", table_cell), Paragraph("Unsupported customs compliance; zero customs data in CSVs.", table_cell), Paragraph("Deploy customs documentation tracking module for Port of Loading clearance.", table_cell), Paragraph("PDF report / schema", table_cell), Paragraph("Pending", table_cell_bold)],
+    story.append(Paragraph("7. Actionable Revision List (Organized into Sections A, B, and C)", h1_style))
+    story.append(Paragraph("<b>Section A: Implemented Dashboard Improvements (Developer-Identified)</b>", h2_style))
+
+    sec_a_data = [
+        [Paragraph("<b>ID</b>", table_cell_bold), Paragraph("<b>Improvement Dimension</b>", table_cell_bold), Paragraph("<b>Peer Review Reference / Feedback Received</b>", table_cell_bold), Paragraph("<b>Issue Identified / Opportunity</b>", table_cell_bold), Paragraph("<b>Proposed Improvement / Implementation</b>", table_cell_bold), Paragraph("<b>Status</b>", table_cell_bold)],
+        [Paragraph("REV-001", table_cell), Paragraph("Visual Layout & Spacing", table_cell_bold), Paragraph("Not individually rated by Priya; developer-identified.", table_cell), Paragraph("Container padding and KPI grid gaps were tight on widescreen viewports.", table_cell), Paragraph("Expanded .content-body padding to 32px/36px, set .kpi-grid gap to 20px, added card hover elevation.", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-002", table_cell), Paragraph("Chart Readability & Context", table_cell_bold), Paragraph("Not individually rated by Priya; developer-identified.", table_cell), Paragraph("Dense longitudinal Recharts lacked descriptive subtitles and axis contrast.", table_cell), Paragraph("Added analytical subtitles to all charts, tuned XAxis/YAxis contrast, formatted currency units.", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-003", table_cell), Paragraph("Horizontal Section Navigation", table_cell_bold), Paragraph("Not individually rated by Priya; developer-identified.", table_cell), Paragraph("Navigating across 7 sections relied solely on the sidebar, causing vertical friction.", table_cell), Paragraph("Implemented persistent sticky Section Quick-Nav Bar with 7 tab pills and URL query routing (?section=...).", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-004", table_cell), Paragraph("KPI Formula Tooltips", table_cell_bold), Paragraph("Not individually rated by Priya; developer-identified.", table_cell), Paragraph("Stakeholders had to check external docs to verify exact metric math formulas.", table_cell), Paragraph("Embedded interactive formula tooltips ($ℹ$) adjacent to executive cards detailing math and source columns.", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-005", table_cell), Paragraph("Quick Filter Presets & Counts", table_cell_bold), Paragraph("Not individually rated by Priya; developer-identified.", table_cell), Paragraph("Filtering common operational states required multiple individual dropdown clicks.", table_cell), Paragraph("Built illuminated quick-preset filter buttons (Delayed, Repeat, High Value, Returns) with live record counter.", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-006", table_cell), Paragraph("Anomaly Callouts & Styling", table_cell_bold), Paragraph("Not individually rated by Priya; developer-identified.", table_cell), Paragraph("Physical return overruns and schema boundaries required clearer visual isolation.", table_cell), Paragraph("Deployed high-visibility warning alert banners for return overruns, schema alerts, and polished dark theme.", table_cell), Paragraph("Completed", table_cell_bold)],
     ]
-    t_backlog = Table(backlog_data, colWidths=[38, 72, 130, 165, 80, 55])
-    t_backlog.setStyle(TableStyle([
+    t_sec_a = Table(sec_a_data, colWidths=[36, 75, 105, 140, 134, 50])
+    t_sec_a.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), c_navy),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E0")),
@@ -552,7 +531,48 @@ def create_dashboard_v1_pdf():
         ('TOPPADDING', (0, 0), (-1, -1), 1.8),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 1.8),
     ]))
-    story.append(t_backlog)
+    story.append(t_sec_a)
+    story.append(Spacer(1, 4))
+
+    story.append(Paragraph("<b>Section B: Completed Data Quality & Technical Improvements</b>", h2_style))
+    sec_b_data = [
+        [Paragraph("<b>ID</b>", table_cell_bold), Paragraph("<b>Improvement Dimension</b>", table_cell_bold), Paragraph("<b>Audit Requirement / Feedback Received</b>", table_cell_bold), Paragraph("<b>Issue Identified / Opportunity</b>", table_cell_bold), Paragraph("<b>Proposed Improvement / Implementation</b>", table_cell_bold), Paragraph("<b>Status</b>", table_cell_bold)],
+        [Paragraph("REV-007", table_cell), Paragraph("KPI Data Verification", table_cell_bold), Paragraph("Audit Requirement", table_cell), Paragraph("Independent verification required against raw CSV datasets.", table_cell), Paragraph("Created kpi_verification_report.md proving 100% calculation match across all 600 orders.", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-008", table_cell), Paragraph("Return Anomaly Handling", table_cell_bold), Paragraph("Data Quality Audit", table_cell), Paragraph("Return overruns in orders B2B-00131 & B2B-00188 (return > units).", table_cell), Paragraph("Preserved intact for audit trail; quarantined in dedicated exception table with SUSPICIOUS badge.", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-009", table_cell), Paragraph("Production Cloud Hosting", table_cell_bold), Paragraph("Hosting Requirement", table_cell), Paragraph("Permanent public HTTPS hosting requirement without local tunnels.", table_cell), Paragraph("Engineered React + Vite web application deployed to Vercel production at verified public URL.", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-010", table_cell), Paragraph("Screenshot Evidence", table_cell_bold), Paragraph("Submission Requirement", table_cell), Paragraph("Need genuine visual evidence of live dashboard sections.", table_cell), Paragraph("Automated headless Chrome capture generating 1920x1080 full-resolution live screenshots.", table_cell), Paragraph("Completed", table_cell_bold)],
+    ]
+    t_sec_b = Table(sec_b_data, colWidths=[36, 75, 105, 140, 134, 50])
+    t_sec_b.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#0D5257")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E0")),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 1.8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1.8),
+    ]))
+    story.append(t_sec_b)
+    story.append(Spacer(1, 4))
+
+    story.append(Paragraph("<b>Section C: Pending Enterprise Architecture Roadmap (Documented Dataset Limitations)</b>", h2_style))
+    sec_c_data = [
+        [Paragraph("<b>ID</b>", table_cell_bold), Paragraph("<b>Improvement Dimension</b>", table_cell_bold), Paragraph("<b>Roadmap Requirement / Feedback Received</b>", table_cell_bold), Paragraph("<b>Issue Identified / Opportunity</b>", table_cell_bold), Paragraph("<b>Proposed Improvement / Implementation</b>", table_cell_bold), Paragraph("<b>Status</b>", table_cell_bold)],
+        [Paragraph("REV-011", table_cell), Paragraph("Foreign Exchange Governance", table_cell_bold), Paragraph("Architecture Roadmap", table_cell), Paragraph("Unsupported FX impact because transactions are recorded solely in INR.", table_cell), Paragraph("Architect upstream ERP schema capturing currency_code, booking_spot_rate, and country ISO.", table_cell), Paragraph("Pending", table_cell_bold)],
+        [Paragraph("REV-012", table_cell), Paragraph("Order-Level Profitability", table_cell_bold), Paragraph("Architecture Roadmap", table_cell), Paragraph("Unsupported order profit margin; orders lack landed production costs.", table_cell), Paragraph("Implement relational order_line_items bridging order_id to Product_ID with landed unit costs.", table_cell), Paragraph("Pending", table_cell_bold)],
+        [Paragraph("REV-013", table_cell), Paragraph("Customs Documentation", table_cell_bold), Paragraph("Architecture Roadmap", table_cell), Paragraph("Unsupported customs compliance; zero customs data in CSV files.", table_cell), Paragraph("Deploy customs documentation tracking module capturing Port of Loading clearance milestones.", table_cell), Paragraph("Pending", table_cell_bold)],
+    ]
+    t_sec_c = Table(sec_c_data, colWidths=[36, 75, 105, 140, 134, 50])
+    t_sec_c.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#4A5568")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E0")),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 1.8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1.8),
+    ]))
+    story.append(t_sec_c)
     story.append(Spacer(1, 4))
 
     # =========================================================================
@@ -562,11 +582,11 @@ def create_dashboard_v1_pdf():
     test_summary_text = (
         "<b>Automated Pytest Suite Execution:</b> The complete automated testing suite was executed across data pipeline idempotency, "
         "baseline metric calculations, Week 6 buyer clustering, and Week 9 dashboard deliverable integrity. "
-        "<b>All 34 automated tests passed successfully (100% pass rate in 7.79s).</b> Zero test regressions or pipeline failures exist.<br/><br/>"
+        "<b>All 34 automated tests passed successfully (100% pass rate in 8.66s).</b> Zero test regressions or pipeline failures exist.<br/><br/>"
         "<b>Final Conclusion:</b> TradeSight Export Analytics Dashboard V1 achieves production readiness on Vercel "
         "(<font color='#0D5257'><u>https://tradesight-export-analytics.vercel.app</u></font>). "
         "Every displayed number is 100% mathematically verified against source CSV files, unsupported metrics are clearly isolated, "
-        "and formal peer review by sole reviewer Priya confirms a strong 4.0 / 5 overall average rating. "
+        "and formal peer review by sole reviewer Priya confirms a verified 4.0 / 5 overall rating. "
         "The project stands fully auditable, rigorously tested, and ready for stakeholder presentation."
     )
     story.append(Paragraph(test_summary_text, body_style))
