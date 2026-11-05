@@ -30,11 +30,15 @@ def capture_live_screenshots():
         return False
 
     targets = [
+        # 7 Comprehensive Sections & Test Deliverables
         ("01_executive_overview.png", "https://tradesight-export-analytics.vercel.app/?section=overview"),
+        ("02_export_revenue.png", "https://tradesight-export-analytics.vercel.app/?section=revenue"),
         ("02_logistics_fulfillment.png", "https://tradesight-export-analytics.vercel.app/?section=logistics"),
         ("03_returns_quality_audit.png", "https://tradesight-export-analytics.vercel.app/?section=returns"),
         ("04_buyer_segmentation.png", "https://tradesight-export-analytics.vercel.app/?section=buyers"),
         ("05_data_governance_missing_kpis.png", "https://tradesight-export-analytics.vercel.app/?section=governance"),
+        ("06_product_catalogue.png", "https://tradesight-export-analytics.vercel.app/?section=products"),
+        ("07_data_governance.png", "https://tradesight-export-analytics.vercel.app/?section=governance"),
     ]
 
     for filename, url in targets:

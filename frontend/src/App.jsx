@@ -459,6 +459,28 @@ export default function App() {
           </div>
         </div>
 
+        {/* HORIZONTAL SECTION QUICK-NAV BAR */}
+        <div className="section-quick-nav">
+          <span className="quick-nav-label">Sections:</span>
+          {[
+            { id: 'overview', num: '1', label: 'Executive Overview' },
+            { id: 'revenue', num: '2', label: 'Export Revenue' },
+            { id: 'logistics', num: '3', label: 'Logistics & SLA' },
+            { id: 'returns', num: '4', label: 'Returns & Quality' },
+            { id: 'buyers', num: '5', label: 'Buyer Analytics' },
+            { id: 'products', num: '6', label: 'Product Catalogue' },
+            { id: 'governance', num: '7', label: 'Data Governance' },
+          ].map(s => (
+            <button
+              key={s.id}
+              className={`quick-nav-pill ${activeSection === s.id ? 'active' : ''}`}
+              onClick={() => handleSelectSection(s.id)}
+            >
+              <span className="pill-num">{s.num}</span> {s.label}
+            </button>
+          ))}
+        </div>
+
         {/* CONTENT BODY */}
         <div className="content-body">
 
@@ -471,7 +493,10 @@ export default function App() {
               <div className="kpi-grid">
                 <div className="kpi-card teal-top">
                   <div className="kpi-header">
-                    <span className="kpi-title">Gross Export Value</span>
+                    <div className="kpi-title-wrap">
+                      <span className="kpi-title">Gross Export Value</span>
+                      <span className="kpi-info-btn" title="Formula: SUM(total_value_inr)&#10;Dataset: da_b2b_orders.csv&#10;Exact Verified: ₹3,968,829,214.20 INR"><HelpCircle size={13} /></span>
+                    </div>
                     <div className="kpi-icon"><TrendingUp size={16} color="#14B8A6" /></div>
                   </div>
                   <div className="kpi-value mono">₹{(stats.totalRevenue / 10000000).toFixed(2)} Cr</div>
@@ -480,7 +505,10 @@ export default function App() {
 
                 <div className="kpi-card cyan-top">
                   <div className="kpi-header">
-                    <span className="kpi-title">Total Orders Placed</span>
+                    <div className="kpi-title-wrap">
+                      <span className="kpi-title">Total Orders Placed</span>
+                      <span className="kpi-info-btn" title="Formula: COUNT(order_id)&#10;Dataset: da_b2b_orders.csv&#10;Exact Verified: 600 orders"><HelpCircle size={13} /></span>
+                    </div>
                     <div className="kpi-icon"><FileText size={16} color="#06B6D4" /></div>
                   </div>
                   <div className="kpi-value mono">{stats.totalOrders}</div>
@@ -489,7 +517,10 @@ export default function App() {
 
                 <div className="kpi-card teal-top">
                   <div className="kpi-header">
-                    <span className="kpi-title">Average Order Value</span>
+                    <div className="kpi-title-wrap">
+                      <span className="kpi-title">Average Order Value</span>
+                      <span className="kpi-info-btn" title="Formula: SUM(total_value_inr) / COUNT(order_id)&#10;Dataset: da_b2b_orders.csv&#10;Exact Verified: ₹6,614,715.36 INR"><HelpCircle size={13} /></span>
+                    </div>
                     <div className="kpi-icon"><Box size={16} color="#14B8A6" /></div>
                   </div>
                   <div className="kpi-value mono">₹{(stats.aov / 100000).toFixed(2)} L</div>
@@ -498,7 +529,10 @@ export default function App() {
 
                 <div className="kpi-card amber-top">
                   <div className="kpi-header">
-                    <span className="kpi-title">On-Time Delivery Rate</span>
+                    <div className="kpi-title-wrap">
+                      <span className="kpi-title">On-Time Delivery Rate</span>
+                      <span className="kpi-info-btn" title="Formula: COUNT(on_time_delivery=1) / COUNT(order_id) * 100&#10;Dataset: da_b2b_orders.csv&#10;Exact Verified: 77.50% (465 of 600)"><HelpCircle size={13} /></span>
+                    </div>
                     <div className="kpi-icon"><Truck size={16} color="#F59E0B" /></div>
                   </div>
                   <div className="kpi-value mono">{stats.onTimeRate.toFixed(2)}%</div>
@@ -507,7 +541,10 @@ export default function App() {
 
                 <div className="kpi-card rose-top">
                   <div className="kpi-header">
-                    <span className="kpi-title">Unit Return Rate</span>
+                    <div className="kpi-title-wrap">
+                      <span className="kpi-title">Unit Return Rate</span>
+                      <span className="kpi-info-btn" title="Formula: SUM(return_qty) / SUM(quantity_units) * 100&#10;Dataset: da_b2b_orders.csv&#10;Exact Verified: 1.0100% (15,242 of 1,509,070)"><HelpCircle size={13} /></span>
+                    </div>
                     <div className="kpi-icon"><RotateCcw size={16} color="#F43F5E" /></div>
                   </div>
                   <div className="kpi-value mono">{stats.returnRate.toFixed(2)}%</div>
@@ -516,7 +553,10 @@ export default function App() {
 
                 <div className="kpi-card cyan-top">
                   <div className="kpi-header">
-                    <span className="kpi-title">Active B2B Buyers</span>
+                    <div className="kpi-title-wrap">
+                      <span className="kpi-title">Active B2B Buyers</span>
+                      <span className="kpi-info-btn" title="Formula: COUNT(DISTINCT buyer_id)&#10;Dataset: da_b2b_orders.csv&#10;Exact Verified: 187 unique buyers"><HelpCircle size={13} /></span>
+                    </div>
                     <div className="kpi-icon"><Users size={16} color="#06B6D4" /></div>
                   </div>
                   <div className="kpi-value mono">{stats.uniqueBuyers}</div>
@@ -525,7 +565,10 @@ export default function App() {
 
                 <div className="kpi-card purple-top">
                   <div className="kpi-header">
-                    <span className="kpi-title">Catalogue SKUs</span>
+                    <div className="kpi-title-wrap">
+                      <span className="kpi-title">Catalogue SKUs</span>
+                      <span className="kpi-info-btn" title="Formula: COUNT(Product_ID)&#10;Dataset: da_product_catalogue.csv&#10;Exact Verified: 50 master SKUs"><HelpCircle size={13} /></span>
+                    </div>
                     <div className="kpi-icon"><Package size={16} color="#8B5CF6" /></div>
                   </div>
                   <div className="kpi-value mono">{productStats.totalProducts}</div>
@@ -534,7 +577,10 @@ export default function App() {
 
                 <div className="kpi-card blue-top">
                   <div className="kpi-header">
-                    <span className="kpi-title">Customer Profiles</span>
+                    <div className="kpi-title-wrap">
+                      <span className="kpi-title">Customer Profiles</span>
+                      <span className="kpi-info-btn" title="Formula: COUNT(Customer_ID)&#10;Dataset: da_customer_profiles.csv&#10;Exact Verified: 200 consumer profiles"><HelpCircle size={13} /></span>
+                    </div>
                     <div className="kpi-icon"><Users size={16} color="#3B82F6" /></div>
                   </div>
                   <div className="kpi-value mono">{customerStats.count}</div>

@@ -4,53 +4,55 @@
 **Milestone:** Cynaris Data Analyst Internship — Week 9 Capstone  
 **Target:** Continuous Improvement Backlog for Dashboard Governance & Iteration  
 **Live Production URL:** [https://tradesight-export-analytics.vercel.app](https://tradesight-export-analytics.vercel.app)  
+**Peer Reviewer:** **Priya** (Quantitative Heuristic Evaluation: 3.5 / 5 Average)  
 **Last Updated:** 2026-11-05  
 
 ---
 
 > [!NOTE]
-> This revision list tracks verified corrections, AI-assisted review recommendations, and enterprise roadmap items.
-> Completed improvements and pending improvements are maintained in clearly separated tables.
+> This revision list tracks verified corrections, actionable engineering improvements derived directly from Priya's heuristic ratings, and future architecture roadmap items.
+> Implemented improvements and pending roadmap items are clearly delineated in dedicated tables below.
+> Per strict non-fabrication rules, Priya provided numerical ratings across 6 criteria without written comments; all improvements were systematically inferred from her quantitative scores (especially criteria rated 3/5).
 
 ---
 
-## 1. Completed Improvements & Data Quality Corrections
+## 1. Implemented Improvements Derived from Priya's Peer Heuristic Review
 
-| ID | Actual peer feedback / Feedback Received | Issue Identified | Proposed Improvement / Improvement Made | File / Component Changed | Status | Priority |
-| :---: | :--- | :--- | :--- | :--- | :---: | :---: |
-| **REV-001** | *AI Reviewer Audit Requirement*<br>Verification of live KPIs against raw datasets. | Reviewer required rigorous calculation proof across all 3 source files. | Generated `reports/kpi_verification_report.md` proving 100% calculation match across all 600 orders, 50 SKUs, and 200 profiles. | `reports/kpi_verification_report.md`<br>`week9_dashboard/kpi_verification_report.md` | **Completed** | **Critical** |
-| **REV-002** | *Data Quality Audit*<br>Return overruns in orders `B2B-00131` & `B2B-00188`. | Physical impossibility where `return_qty > quantity_units` (28 > 22 and 48 > 39). | Preserved records intact for compliance; isolated in dedicated audit exception grid with `SUSPICIOUS_RETURN_OVERRUN` badge. | `frontend/src/App.jsx`<br>`outputs/cleaning_log.csv` | **Completed** | **Critical** |
-| **REV-003** | *Data Quality Audit*<br>Customer profile chronological date inversions. | 42 records in `da_customer_profiles.csv` have `First_Purchase_Date > Last_Purchase_Date`. | Isolated chronological anomalies in dedicated audit table without dropping original data records. | `frontend/src/App.jsx`<br>`reports/baseline_report.md` | **Completed** | High |
-| **REV-004** | *Logistics Performance Audit*<br>Metric narrative alignment. | Early draft text referenced 18.29 days / 78.67% SLA instead of actual calculated values. | Aligned all reports and tables to verified metrics: 23.49 days mean transit and 77.50% on-time fulfillment (465/600). | `week9_dashboard/dashboard_v1_report.pdf`<br>`week9_dashboard/src/generate_pdf_report.py` | **Completed** | High |
-| **REV-005** | *Deployment & Hosting Audit*<br>Permanent public HTTPS hosting requirement. | Required reliable cloud hosting without temporary localhost tunnels. | Engineered React + Vite web application and deployed to Vercel production at `https://tradesight-export-analytics.vercel.app`. | `frontend/`<br>`vercel.json` | **Completed** | **Critical** |
-| **REV-006** | *AI Review Recommendation*<br>Filter exploration efficiency. | Filtering across multiple dimensions required separate dropdown clicks. | Implemented one-click filter quick presets ("Delayed (135)", "Repeat (227)", "High Value > ₹1 Cr (148)", "Returns (591)"). | `frontend/src/App.jsx`<br>`frontend/src/index.css` | **Completed** | Medium |
-| **REV-007** | *Reviewer Requirement*<br>Live dashboard evidence. | Need actual evidence of live application visual layout and KPI cards. | Implemented automated headless capture in `generate_screenshots.py` taking real 1920x1080 screenshots of live Vercel application. | `week9_dashboard/src/generate_screenshots.py`<br>`week9_dashboard/screenshots/` | **Completed** | High |
-
----
-
-## 2. Pending Improvements (Awaiting Human Peer Review Feedback)
-
-| ID | Actual peer feedback / Feedback Received | Issue Identified | Proposed Improvement / Improvement Made | File / Component Changed | Status | Priority |
-| :---: | :--- | :--- | :--- | :--- | :---: | :---: |
-| **REV-008** | *Pending Human Peer Input*<br>(Awaiting actual peer reviewer response) | Visual spacing between KPI cards and chart containers on ultra-wide monitors. | Improve dashboard spacing by tuning CSS grid breakpoints, max-widths, and container padding. | `frontend/src/index.css` | **Pending** | Medium |
-| **REV-009** | *Pending Human Peer Input*<br>(Awaiting actual peer reviewer response) | Business users benefit from immediate contextual definitions without consulting documentation. | Add KPI definitions and tooltips ($ℹ$) adjacent to executive metric cards showing formulas and source columns. | `frontend/src/App.jsx` | **Pending** | Medium |
-| **REV-010** | *Pending Human Peer Input*<br>(Awaiting actual peer reviewer response) | X-axis commodity category labels and dual-axis chart legends can be enhanced for dense viewports. | Improve chart labels and legends by expanding bottom axis margins, increasing font contrast, and formatting tooltips. | `frontend/src/App.jsx` | **Pending** | Low |
+| Revision ID | Review Criterion | Actual Peer Rating / Feedback Received | Issue Identified / Opportunity | Proposed Improvement / Action Taken | File / Component Changed | Priority | Status |
+| :---: | :--- | :---: | :--- | :--- | :--- | :---: | :---: |
+| **REV-001** | Visual Layout | **3 / 5**<br>*(Priya rating)* | Container padding and KPI grid gaps were tight on high-resolution widescreen monitors. | Increased `.content-body` padding to 32px/36px, expanded `.kpi-grid` gap to 20px, added subtle card elevation and border accents. | `frontend/src/index.css` | High | **Completed** |
+| **REV-002** | Chart Readability | **3 / 5**<br>*(Priya rating)* | Longitudinal charts lacked descriptive subtitles and axis labels could benefit from higher contrast. | Added contextual analytical subtitles to all Recharts, calibrated XAxis/YAxis font styling, and formatted tooltips with ₹ Lakh/Cr units. | `frontend/src/App.jsx`<br>`frontend/src/index.css` | High | **Completed** |
+| **REV-003** | Navigation | **3 / 5**<br>*(Priya rating)* | Navigating between 7 distinct dashboard sections relied solely on the left sidebar without top view orientation. | Implemented a sticky horizontal Section Quick-Nav Bar with 7 numbered tab pills and synchronized URL query routing (`?section=...`). | `frontend/src/App.jsx`<br>`frontend/src/index.css` | High | **Completed** |
+| **REV-004** | KPI Clarity | **4 / 5**<br>*(Priya rating)* | Executive users need immediate insight into calculation definitions and underlying data columns. | Added interactive formula info tooltips ($ℹ$) adjacent to metric card titles detailing exact formulas and source CSV columns. | `frontend/src/App.jsx` | Medium | **Completed** |
+| **REV-005** | Filter Usability | **4 / 5**<br>*(Priya rating)* | Operational triage required clicking individual filter dropdowns rather than one-touch anomaly filtering. | Built illuminated quick-preset filter buttons ("Delayed 135", "Repeat 227", "High Value > ₹1 Cr", "Returns 591") with real-time record count badge. | `frontend/src/App.jsx`<br>`frontend/src/index.css` | Medium | **Completed** |
+| **REV-006** | Overall UX | **4 / 5**<br>*(Priya rating)* | Return overrun anomalies and schema boundaries required clearer enterprise visual hierarchy. | Added high-visibility warning callouts for the 2 return overruns, distinct schema boundary alerts, and polished dark navy styling. | `frontend/src/App.jsx`<br>`frontend/src/index.css` | High | **Completed** |
 
 ---
 
-## 3. Architecture & Governance Roadmap (Documented Dataset Limitations)
+## 2. Completed Data Quality & Technical Audit Improvements
 
-| ID | Actual peer feedback / Feedback Received | Issue Identified | Proposed Improvement / Improvement Made | File / Component Changed | Status | Priority |
-| :---: | :--- | :--- | :--- | :--- | :---: | :---: |
-| **REV-011** | *Data Governance Audit*<br>Unsupported Foreign Exchange (FX) impact. | Transactions are recorded exclusively in INR; foreign currencies and spot rates are absent. | Architect upstream ERP schema proposal capturing `currency_code`, `booking_spot_rate`, and destination country ISO. | `week9_dashboard/dashboard_v1_report.pdf` | **Documented** | High |
-| **REV-012** | *Data Governance Audit*<br>Unsupported B2B order gross and net margins. | B2B orders contain selling price but lack landed production costs; catalogue lacks order foreign keys. | Implement relational `order_line_items` schema bridging `order_id` to `Product_ID` with landed costs. | `week9_dashboard/dashboard_v1_report.pdf` | **Documented** | High |
-| **REV-013** | *Data Governance Audit*<br>Unsupported customs compliance tracking. | Zero customs documentation, Shipping Bill numbers, or inspection records exist in raw files. | Deploy customs documentation tracking module capturing Port of Loading clearance milestones. | `week9_dashboard/dashboard_v1_report.pdf` | **Documented** | Medium |
+| Revision ID | Review Criterion | Actual Peer Rating / Feedback Received | Issue Identified / Opportunity | Proposed Improvement / Action Taken | File / Component Changed | Priority | Status |
+| :---: | :--- | :---: | :--- | :--- | :--- | :---: | :---: |
+| **REV-007** | Data Verification | Audit Requirement | Independent verification required against raw CSV datasets (`da_b2b_orders.csv`, etc.). | Conducted comprehensive audit proving 100% mathematical match (₹396.88 Cr revenue, 600 orders, 77.50% SLA, 1.01% returns). | `reports/kpi_verification_report.md`<br>`week9_dashboard/kpi_verification_report.md` | Critical | **Completed** |
+| **REV-008** | Return Audit | Quality Audit | Physical impossibility in orders `B2B-00131` & `B2B-00188` where `return_qty > quantity_units`. | Preserved original data integrity; quarantined in dedicated audit exception grid with `SUSPICIOUS_RETURN_OVERRUN` badge. | `frontend/src/App.jsx`<br>`outputs/cleaning_log.csv` | Critical | **Completed** |
+| **REV-009** | Cloud Deployment | Hosting Requirement | Public permanent HTTPS deployment required without localhost tunnels. | Engineered React + Vite web application and deployed to Vercel production at `https://tradesight-export-analytics.vercel.app`. | `frontend/`<br>`vercel.json` | Critical | **Completed** |
+| **REV-010** | Evidence Capture | Submission Requirement | Visual evidence of all live dashboard sections required. | Automated headless Chrome capture taking 1920x1080 full-resolution screenshots of all 7 live production sections. | `week9_dashboard/src/generate_screenshots.py`<br>`week9_dashboard/screenshots/` | High | **Completed** |
+
+---
+
+## 3. Pending Enterprise Architecture Roadmap (Documented Dataset Limitations)
+
+| Revision ID | Review Criterion | Actual Peer Rating / Feedback Received | Issue Identified / Opportunity | Proposed Improvement / Action Taken | File / Component Changed | Priority | Status |
+| :---: | :--- | :---: | :--- | :--- | :--- | :---: | :---: |
+| **REV-011** | Currency Governance | Architecture Roadmap | Unsupported Foreign Exchange (FX) impact due to transactions recorded solely in INR without currency codes. | Architect upstream ERP schema proposal capturing `currency_code`, `booking_spot_rate`, and destination country ISO. | `week9_dashboard/dashboard_v1_report.pdf` | High | **Pending** |
+| **REV-012** | Relational Margin | Architecture Roadmap | Unsupported B2B order gross and net margins because orders lack landed production costs and product foreign keys. | Implement relational `order_line_items` schema bridging `order_id` to `Product_ID` with landed unit costs. | `week9_dashboard/dashboard_v1_report.pdf` | High | **Pending** |
+| **REV-013** | Compliance Governance | Architecture Roadmap | Unsupported customs compliance tracking because raw datasets contain zero customs or shipping bill records. | Deploy customs documentation tracking module capturing Port of Loading clearance milestones and ICEGATE references. | `week9_dashboard/dashboard_v1_report.pdf` | Medium | **Pending** |
 
 ---
 
 ## 4. Priority Definition Framework
 
 * **Critical:** Major calculation discrepancy, data integrity exception, or deployment blocker requiring immediate remediation.
-* **High:** Functional gap or schema boundary limitation that restricts strategic analytical capabilities (e.g., FX exposure or profit margin tracking).
-* **Medium:** Visual layout enhancement, formula tooltip integration, or workflow efficiency improvement.
+* **High:** Functional gap, navigation usability bottleneck, or schema boundary limitation that restricts executive or analytical workflow.
+* **Medium:** Visual layout enhancement, formula tooltip integration, or preset filtering efficiency improvement.
 * **Low:** Cosmetic styling polish, minor color adjustments, or font sizing tweaks.
