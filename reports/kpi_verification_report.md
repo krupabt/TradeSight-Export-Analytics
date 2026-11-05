@@ -9,7 +9,7 @@
 **Source Datasets Inspected:**
 1. `data/da_b2b_orders.csv` (600 rows, 13 columns)
 2. `data/da_product_catalogue.csv` (50 rows, 7 columns)
-3. `data/da_customer_profiles.csv` (200 rows, 7 columns)
+3. `data/da_customer_profiles.csv` (200 rows, 10 columns)
 
 ---
 

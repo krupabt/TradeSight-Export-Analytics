@@ -5,6 +5,7 @@ independent AI-assisted review ratings, updated revision list, and testing resul
 Guarantees file size strictly under 10 MB.
 """
 
+import os
 from pathlib import Path
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
@@ -22,10 +23,52 @@ from reportlab.platypus import (
     TableStyle,
 )
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SCREENSHOT_DIR = BASE_DIR / "week9_dashboard" / "screenshots"
 OUTPUT_PDF = BASE_DIR / "week9_dashboard" / "dashboard_v1_report.pdf"
+
+# Register TrueType font family with full Unicode & Indian Rupee (₹ / U+20B9) support
+FONT_REGULAR = "Helvetica"
+FONT_BOLD = "Helvetica-Bold"
+FONT_ITALIC = "Helvetica-Oblique"
+FONT_BOLD_ITALIC = "Helvetica-Bold"
+
+segoe_paths = {
+    'regular': r"C:\Windows\Fonts\segoeui.ttf",
+    'bold': r"C:\Windows\Fonts\segoeuib.ttf",
+    'italic': r"C:\Windows\Fonts\segoeuii.ttf",
+    'boldItalic': r"C:\Windows\Fonts\segoeuiz.ttf",
+}
+arial_paths = {
+    'regular': r"C:\Windows\Fonts\arial.ttf",
+    'bold': r"C:\Windows\Fonts\arialbd.ttf",
+    'italic': r"C:\Windows\Fonts\ariali.ttf",
+    'boldItalic': r"C:\Windows\Fonts\arialbi.ttf",
+}
+
+if all(os.path.exists(p) for p in segoe_paths.values()):
+    pdfmetrics.registerFont(TTFont('SegoeUI', segoe_paths['regular']))
+    pdfmetrics.registerFont(TTFont('SegoeUI-Bold', segoe_paths['bold']))
+    pdfmetrics.registerFont(TTFont('SegoeUI-Italic', segoe_paths['italic']))
+    pdfmetrics.registerFont(TTFont('SegoeUI-BoldItalic', segoe_paths['boldItalic']))
+    pdfmetrics.registerFontFamily('SegoeUI', normal='SegoeUI', bold='SegoeUI-Bold', italic='SegoeUI-Italic', boldItalic='SegoeUI-BoldItalic')
+    FONT_REGULAR = "SegoeUI"
+    FONT_BOLD = "SegoeUI-Bold"
+    FONT_ITALIC = "SegoeUI-Italic"
+    FONT_BOLD_ITALIC = "SegoeUI-BoldItalic"
+elif all(os.path.exists(p) for p in arial_paths.values()):
+    pdfmetrics.registerFont(TTFont('Arial', arial_paths['regular']))
+    pdfmetrics.registerFont(TTFont('Arial-Bold', arial_paths['bold']))
+    pdfmetrics.registerFont(TTFont('Arial-Italic', arial_paths['italic']))
+    pdfmetrics.registerFont(TTFont('Arial-BoldItalic', arial_paths['boldItalic']))
+    pdfmetrics.registerFontFamily('Arial', normal='Arial', bold='Arial-Bold', italic='Arial-Italic', boldItalic='Arial-BoldItalic')
+    FONT_REGULAR = "Arial"
+    FONT_BOLD = "Arial-Bold"
+    FONT_ITALIC = "Arial-Italic"
+    FONT_BOLD_ITALIC = "Arial-BoldItalic"
 
 
 class NumberedCanvas(canvas.Canvas):
@@ -49,7 +92,7 @@ class NumberedCanvas(canvas.Canvas):
 
     def draw_page_decorations(self, page_count):
         self.saveState()
-        self.setFont("Helvetica", 8)
+        self.setFont(FONT_REGULAR, 8)
         self.setFillColor(colors.HexColor("#718096"))
         
         # Header (Pages 2+)
@@ -95,7 +138,7 @@ def create_dashboard_v1_pdf():
     title_style = ParagraphStyle(
         "CoverTitle",
         parent=styles["Normal"],
-        fontName="Helvetica-Bold",
+        fontName=FONT_BOLD,
         fontSize=18,
         leading=22,
         textColor=c_primary,
@@ -103,7 +146,7 @@ def create_dashboard_v1_pdf():
     subtitle_style = ParagraphStyle(
         "CoverSubtitle",
         parent=styles["Normal"],
-        fontName="Helvetica-Bold",
+        fontName=FONT_BOLD,
         fontSize=10,
         leading=14,
         textColor=colors.HexColor("#0D5257"),
@@ -111,7 +154,7 @@ def create_dashboard_v1_pdf():
     meta_style = ParagraphStyle(
         "CoverMeta",
         parent=styles["Normal"],
-        fontName="Helvetica",
+        fontName=FONT_REGULAR,
         fontSize=8,
         leading=11.5,
         textColor=c_muted,
@@ -119,31 +162,31 @@ def create_dashboard_v1_pdf():
     h1_style = ParagraphStyle(
         "H1_Custom",
         parent=styles["Heading1"],
-        fontName="Helvetica-Bold",
-        fontSize=11.5,
-        leading=15,
+        fontName=FONT_BOLD,
+        fontSize=11,
+        leading=14.5,
         textColor=c_primary,
-        spaceBefore=10,
-        spaceAfter=4,
+        spaceBefore=6,
+        spaceAfter=2,
     )
     h2_style = ParagraphStyle(
         "H2_Custom",
         parent=styles["Heading2"],
-        fontName="Helvetica-Bold",
+        fontName=FONT_BOLD,
         fontSize=9.5,
         leading=13,
         textColor=c_navy,
-        spaceBefore=6,
-        spaceAfter=3,
+        spaceBefore=5,
+        spaceAfter=2,
     )
     body_style = ParagraphStyle(
         "Body_Custom",
         parent=styles["Normal"],
-        fontName="Helvetica",
+        fontName=FONT_REGULAR,
         fontSize=7.8,
-        leading=11,
+        leading=10.8,
         textColor=colors.HexColor("#2D3748"),
-        spaceAfter=4,
+        spaceAfter=2.5,
     )
     bullet_style = ParagraphStyle(
         "Bullet_Custom",
@@ -155,7 +198,7 @@ def create_dashboard_v1_pdf():
     callout_style = ParagraphStyle(
         "Callout_Custom",
         parent=styles["Normal"],
-        fontName="Helvetica-Oblique",
+        fontName=FONT_ITALIC,
         fontSize=7.5,
         leading=10.5,
         textColor=colors.HexColor("#742A2A"),
@@ -163,7 +206,7 @@ def create_dashboard_v1_pdf():
     table_cell = ParagraphStyle(
         "TableCell",
         parent=styles["Normal"],
-        fontName="Helvetica",
+        fontName=FONT_REGULAR,
         fontSize=7,
         leading=9.5,
         textColor=colors.HexColor("#1A202C"),
@@ -171,7 +214,7 @@ def create_dashboard_v1_pdf():
     table_cell_bold = ParagraphStyle(
         "TableCellBold",
         parent=styles["Normal"],
-        fontName="Helvetica-Bold",
+        fontName=FONT_BOLD,
         fontSize=7,
         leading=9.5,
         textColor=colors.HexColor("#1A202C"),
@@ -183,26 +226,26 @@ def create_dashboard_v1_pdf():
     # HEADER BANNER
     # =========================================================================
     story.append(Paragraph("TradeSight Export Analytics", title_style))
-    story.append(Paragraph("Executive Dashboard V1 Report: Verified KPI Audit, AI-Assisted Review & Continuous Revision", subtitle_style))
-    story.append(Spacer(1, 2))
+    story.append(Paragraph("Executive Dashboard V1 Report: Verified KPI Audit, Peer Review & Continuous Revision", subtitle_style))
+    story.append(Spacer(1, 1))
     story.append(Paragraph("<b>Cynaris Data Analyst Internship — Capstone Milestone Week 9</b> | Author: <b>Krupa B T</b>", meta_style))
     story.append(Paragraph("<b>Live Production Dashboard:</b> <font color='#0D5257'><u>https://tradesight-export-analytics.vercel.app</u></font> | <b>GitHub:</b> krupabt/TradeSight-Export-Analytics", meta_style))
-    story.append(Paragraph("<b>Technology Stack:</b> React 18, Vite, Recharts, Python 3.12, Pandas, PostgreSQL, Power BI, Git | <b>Date:</b> November 2026", meta_style))
-    story.append(Spacer(1, 4))
-    story.append(HRFlowable(width="100%", thickness=1.5, color=c_primary, spaceBefore=2, spaceAfter=6))
+    story.append(Paragraph("<b>Production Dashboard Stack:</b> React 18, Vite, Recharts | <b>Data & Analytics:</b> Python 3.12, Pandas | <b>Reference Architecture:</b> PostgreSQL, Power BI | <b>Platform:</b> Vercel, Git", meta_style))
+    story.append(Spacer(1, 2))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=c_primary, spaceBefore=1, spaceAfter=4))
 
     # =========================================================================
     # 1. PROJECT & DASHBOARD OVERVIEW
     # =========================================================================
     story.append(Paragraph("1. Project & Production Dashboard Overview", h1_style))
     story.append(Paragraph(
-        "TradeSight Export Management is a premier export management enterprise headquartered in Chennai, India, "
-        "employing approximately 45 operational personnel and managing 50 institutional clients across 12 destination countries. "
+        "Under the Cynaris capstone business scenario, TradeSight Export Management is modeled as a simulated Chennai-based export management enterprise "
+        "(modeled with ~45 operational personnel, 50 institutional clients across 12 destination countries). "
         "The primary mandate of the Week 9 milestone is to deliver <b>Dashboard V1</b>: a permanent, verified production web analytics application "
         "providing commercial export intelligence, delivery performance diagnostics, return audits, and master catalogue analysis. "
         "The application is deployed publicly on Vercel at <b>https://tradesight-export-analytics.vercel.app</b> with zero reliance on temporary localhost tunnels. "
         "Concurrently, this report documents the <b>100% reconciliation of baseline KPIs</b> against the original CSV datasets, transparently audits unsupported "
-        "business metrics, and records an <b>independent AI-assisted evaluation</b> with an actionable revision backlog.",
+        "business metrics, and records a verified <b>formal peer review</b> with an actionable revision backlog.",
         body_style
     ))
 
@@ -223,11 +266,11 @@ def create_dashboard_v1_pdf():
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#BBF7D0")),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
     ]))
     story.append(t_high)
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 3))
 
     # =========================================================================
     # 2. DATA SOURCES: THREE ORIGINAL CSV DATASETS
@@ -255,8 +298,8 @@ def create_dashboard_v1_pdf():
         ],
         [
             Paragraph("<code>da_customer_profiles.csv</code>", table_cell_bold),
-            Paragraph("200 rows, 7 columns<br/>PK: <code>Customer_ID</code>", table_cell),
-            Paragraph("Direct retail consumer profiles (C1–C200), acquisition channels, churn status, and purchase dates.", table_cell),
+            Paragraph("200 rows, 10 columns<br/>PK: <code>Customer_ID</code>", table_cell),
+            Paragraph("Direct retail consumer profiles (C1–C200) across 10 demographic/CRM attributes: City, Age_Band, Gender, Acquisition_Channel, First/Last Dates, Orders, Revenue, and Churn.", table_cell),
             Paragraph("Retail consumer domain (₹49.93 L total revenue, 3.0% churn). Disjunct from wholesale B2B buyer entities.", table_cell)
         ],
     ]
@@ -267,11 +310,11 @@ def create_dashboard_v1_pdf():
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E0")),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('TOPPADDING', (0, 0), (-1, -1), 2.0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.0),
     ]))
     story.append(t_data)
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 3))
 
     # =========================================================================
     # 3. VERIFIED KPI RESULTS & MATHEMATICAL AUDIT
@@ -301,8 +344,8 @@ def create_dashboard_v1_pdf():
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E0")),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+        ('TOPPADDING', (0, 0), (-1, -1), 1.6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1.6),
     ]))
     story.append(t_score)
 
@@ -582,7 +625,7 @@ def create_dashboard_v1_pdf():
     test_summary_text = (
         "<b>Automated Pytest Suite Execution:</b> The complete automated testing suite was executed across data pipeline idempotency, "
         "baseline metric calculations, Week 6 buyer clustering, and Week 9 dashboard deliverable integrity. "
-        "<b>All 34 automated tests passed successfully (100% pass rate in 8.66s).</b> Zero test regressions or pipeline failures exist.<br/><br/>"
+        "<b>All 34 automated tests passed successfully (100% pass rate in 18.15s).</b> Zero test regressions or pipeline failures exist.<br/><br/>"
         "<b>Final Conclusion:</b> TradeSight Export Analytics Dashboard V1 achieves production readiness on Vercel "
         "(<font color='#0D5257'><u>https://tradesight-export-analytics.vercel.app</u></font>). "
         "Every displayed number is 100% mathematically verified against source CSV files, unsupported metrics are clearly isolated, "
