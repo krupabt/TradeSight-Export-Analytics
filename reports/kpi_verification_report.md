@@ -4,7 +4,7 @@
 **Milestone:** Cynaris Data Analyst Internship — Week 9 Capstone  
 **Target Application:** Enterprise React + Vite Dashboard  
 **Live Production URL:** [https://tradesight-export-analytics.vercel.app](https://tradesight-export-analytics.vercel.app)  
-**Audit Date:** 2026-11-03  
+**Audit Date:** 2026-11-05  
 **Lead Analyst:** Krupa B T  
 **Source Datasets Inspected:**
 1. `data/da_b2b_orders.csv` (600 rows, 13 columns)
@@ -21,100 +21,64 @@ Every metric presented in the TradeSight Export Analytics live dashboard was aud
 * **Calculation Accuracy:** **100%** (zero discrepancies between python raw data aggregations and dashboard live values).
 * **Synthetic Data / Joins:** **0** (strictly zero fabricated records, simulated exchange rates, or unverified foreign keys).
 * **Live Dashboard Status:** Verified operating over HTTPS on Vercel at [https://tradesight-export-analytics.vercel.app](https://tradesight-export-analytics.vercel.app).
+* **Visual Verification Evidence:** Real headless 1920x1080 screenshots captured from the live deployment and archived in `week9_dashboard/screenshots/`.
 
 ---
 
-## 2. Comprehensive KPI Verification Matrix
+## 2. KPI Verification Table (Calculated vs Dashboard Live Values)
 
-### 2.1 B2B Orders Domain (`data/da_b2b_orders.csv`)
-
-| KPI Name | Source Column(s) | Mathematical Formula | Calculated Value (Python / Raw Data) | Dashboard Value (Live Web UI) | Verification Status |
-| :--- | :--- | :--- | :---: | :---: | :---: |
-| **Total Export Revenue** | `total_value_inr` | $\sum \text{total\_value\_inr}$ | ₹3,968,829,214.20 | ₹396.88 Cr (₹3,968,829,214.20) | **VERIFIED (100%)** |
-| **Total Orders** | `order_id` | $\text{COUNT}(\text{order\_id})$ | 600 Orders | 600 Orders | **VERIFIED (100%)** |
-| **Average Order Value (AOV)** | `total_value_inr`, `order_id` | $\frac{\text{Total Revenue}}{\text{Total Orders}}$ | ₹6,614,715.36 | ₹66.15 L | **VERIFIED (100%)** |
-| **Median Order Value** | `total_value_inr` | $\text{MEDIAN}(\text{total\_value\_inr})$ | ₹4,817,483.05 | ₹48.17 L | **VERIFIED (100%)** |
-| **Minimum Order Value** | `total_value_inr` | $\min(\text{total\_value\_inr})$ | ₹28,360.80 | ₹28,360.80 | **VERIFIED (100%)** |
-| **Maximum Order Value** | `total_value_inr` | $\max(\text{total\_value\_inr})$ | ₹24,380,230.92 | ₹2.44 Cr | **VERIFIED (100%)** |
-| **Total Shipped Units** | `quantity_units` | $\sum \text{quantity\_units}$ | 1,509,070 Units | 1,509,070 Units | **VERIFIED (100%)** |
-| **Total Returned Units** | `return_qty` | $\sum \text{return\_qty}$ | 15,242 Units | 15,242 Units | **VERIFIED (100%)** |
-| **Unit Return Rate** | `return_qty`, `quantity_units` | $\frac{\sum \text{return\_qty}}{\sum \text{quantity\_units}} \times 100$ | 1.010026% | 1.01% (1.0100% exact) | **VERIFIED (100%)** |
-| **Orders with Returns** | `return_qty` | $\text{COUNT}(\text{return\_qty} > 0)$ | 591 Orders | 591 Orders (98.50%) | **VERIFIED (100%)** |
-| **On-Time Deliveries Count** | `on_time_delivery` | $\text{COUNT}(\text{on\_time\_delivery} = 1)$ | 465 Orders | 465 Orders | **VERIFIED (100%)** |
-| **On-Time Delivery SLA %** | `on_time_delivery` | $\frac{465}{600} \times 100$ | 77.5000% | 77.50% | **VERIFIED (100%)** |
-| **Delayed Shipments Count** | `on_time_delivery` | $\text{COUNT}(\text{on\_time\_delivery} = 0)$ | 135 Orders | 135 Orders | **VERIFIED (100%)** |
-| **Delayed Delivery Rate %** | `on_time_delivery` | $\frac{135}{600} \times 100$ | 22.5000% | 22.50% | **VERIFIED (100%)** |
-| **Mean Transit Duration** | `delivery_days` | $\frac{1}{N}\sum \text{delivery\_days}$ | 23.4933 Days | 23.49 Days | **VERIFIED (100%)** |
-| **Median Transit Duration** | `delivery_days` | $\text{MEDIAN}(\text{delivery\_days})$ | 23.5000 Days | 23.5 Days | **VERIFIED (100%)** |
-| **Transit Duration Range** | `delivery_days` | $[\min, \max]$ | [3, 45] Days | 3 to 45 Days | **VERIFIED (100%)** |
-| **Unique Commercial Buyers** | `buyer_id` | $\text{DISTINCTCOUNT}(\text{buyer\_id})$ | 187 Buyers | 187 Buyers | **VERIFIED (100%)** |
-| **Unique Sellers / Suppliers** | `seller_id` | $\text{DISTINCTCOUNT}(\text{seller\_id})$ | 80 Sellers | 80 Sellers | **VERIFIED (100%)** |
-| **Repeat Buyer Orders** | `repeat_buyer` | $\text{COUNT}(\text{repeat\_buyer} = 1)$ | 227 Orders | 227 Orders | **VERIFIED (100%)** |
-| **Repeat Buyer Order Rate** | `repeat_buyer` | $\frac{227}{600} \times 100$ | 37.8333% | 37.83% | **VERIFIED (100%)** |
-| **Return Overrun Anomalies** | `return_qty`, `quantity_units` | $\text{WHERE } \text{return\_qty} > \text{quantity\_units}$ | 2 Records | 2 Records (B2B-00131/188) | **FLAGGED & PRESERVED** |
-
----
-
-### 2.2 Product Catalogue Domain (`data/da_product_catalogue.csv`)
-
-| KPI Name | Source Column(s) | Mathematical Formula | Calculated Value (Python / Raw Data) | Dashboard Value (Live Web UI) | Verification Status |
-| :--- | :--- | :--- | :---: | :---: | :---: |
-| **Documented SKUs** | `Product_ID` | $\text{COUNT}(\text{Product\_ID})$ | 50 SKUs | 50 Items | **VERIFIED (100%)** |
-| **Warehouse Stock Units** | `Stock_Units` | $\sum \text{Stock\_Units}$ | 13,857 Units | 13,857 Units | **VERIFIED (100%)** |
-| **Average MRP** | `MRP` | $\text{MEAN}(\text{MRP})$ | ₹2,262.94 | ₹2,262.94 | **VERIFIED (100%)** |
-| **Average COGS** | `COGS` | $\text{MEAN}(\text{COGS})$ | ₹939.08 | ₹939.08 | **VERIFIED (100%)** |
-| **Mean Product Margin %** | `MRP`, `COGS` | $\text{MEAN}\left(\frac{\text{MRP} - \text{COGS}}{\text{MRP}}\right) \times 100$ | 58.62% | 58.62% | **VERIFIED (100%)** |
-| **Aggregate Catalogue Margin %** | `MRP`, `COGS` | $\frac{\sum \text{MRP} - \sum \text{COGS}}{\sum \text{MRP}} \times 100$ | 58.50% | 58.50% | **VERIFIED (100%)** |
+| KPI Name | Calculation | Expected Value | Dashboard Value | Status | Evidence / Notes |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Total Export Revenue** | $\sum \text{total\_value\_inr}$ | ₹3,968,829,214.20 | ₹396.88 Cr | **Verified** | Exact match. Formatted as ₹396.88 Cr in executive card. |
+| **Total Orders** | $\text{COUNT}(\text{order\_id})$ | 600 Orders | 600 Orders | **Verified** | Exact match across 2023–2024 orders log. |
+| **Average Order Value (AOV)** | $\frac{\text{Total Revenue}}{\text{Total Orders}}$ | ₹6,614,715.36 | ₹66.15 L | **Verified** | Exact match. Sub-label displays median: ₹48.17 L. |
+| **Median Order Value** | $\text{MEDIAN}(\text{total\_value\_inr})$ | ₹4,817,483.05 | ₹48.17 L | **Verified** | Exact match. |
+| **Minimum Order Value** | $\min(\text{total\_value\_inr})$ | ₹28,360.80 | ₹28,360.80 | **Verified** | Exact match in revenue analytics breakdown. |
+| **Maximum Order Value** | $\max(\text{total\_value\_inr})$ | ₹24,380,230.92 | ₹2.44 Cr | **Verified** | Exact match in revenue analytics breakdown. |
+| **Total Shipped Units** | $\sum \text{quantity\_units}$ | 1,509,070 Units | 1,509,070 Units | **Verified** | Exact sum across all bulk export commodity consignments. |
+| **Total Returned Units** | $\sum \text{return\_qty}$ | 15,242 Units | 15,242 Units | **Verified** | Exact sum across all reported customer return quantities. |
+| **Unit Return Rate** | $\frac{\sum \text{return\_qty}}{\sum \text{quantity\_units}} \times 100$ | 1.010026% | 1.01% | **Verified** | Exact match (1.0100% exact benchmark). |
+| **Orders with Returns Count** | $\text{COUNT}(\text{return\_qty} > 0)$ | 591 Orders | 591 Orders (98.50%) | **Verified** | Exact match in quick preset filter and quality audit tab. |
+| **On-Time Fulfillment Count** | $\text{COUNT}(\text{on\_time\_delivery} = 1)$ | 465 Orders | 465 Orders | **Verified** | Exact match in fulfillment tracking. |
+| **On-Time Delivery SLA %** | $\frac{465}{600} \times 100$ | 77.5000% | 77.50% | **Verified** | Exact match (missing 80.0% target by 2.50%). |
+| **Delayed Shipments Count** | $\text{COUNT}(\text{on\_time\_delivery} = 0)$ | 135 Orders | 135 Orders | **Verified** | Exact match in quick preset filter and logistics tab. |
+| **Delayed Delivery Rate %** | $\frac{135}{600} \times 100$ | 22.5000% | 22.50% | **Verified** | Exact match. |
+| **Mean Transit Duration** | $\frac{1}{N}\sum \text{delivery\_days}$ | 23.4933 Days | 23.49 Days | **Verified** | Exact arithmetic mean (Std Dev: 7.97 days). |
+| **Median Transit Duration** | $\text{MEDIAN}(\text{delivery\_days})$ | 23.5000 Days | 23.5 Days | **Verified** | Exact median transit days. Range: 3 to 45 days. |
+| **Unique Commercial Buyers** | $\text{DISTINCTCOUNT}(\text{buyer\_id})$ | 187 Buyers | 187 Buyers | **Verified** | BUY-0001 to BUY-0187 distinct institutional accounts. |
+| **Unique Sellers / Suppliers** | $\text{DISTINCTCOUNT}(\text{seller\_id})$ | 80 Sellers | 80 Sellers | **Verified** | Distinct supplier entities recorded in order logs. |
+| **Repeat Buyer Orders Count** | $\text{COUNT}(\text{repeat\_buyer} = 1)$ | 227 Orders | 227 Orders | **Verified** | Verified recurring institutional procurement orders. |
+| **Repeat Buyer Order Rate %** | $\frac{227}{600} \times 100$ | 37.8333% | 37.83% | **Verified** | Exact match. |
+| **Return Overrun Anomalies** | $\text{WHERE } \text{return\_qty} > \text{quantity\_units}$ | 2 Orders | 2 Orders | **Verified (Audit)** | Records B2B-00131 (28>22) and B2B-00188 (48>39) isolated. |
+| **Documented SKUs** | $\text{COUNT}(\text{Product\_ID})$ | 50 SKUs | 50 Items | **Verified** | Master product items P1 to P50 in catalogue. |
+| **Warehouse Stock Units** | $\sum \text{Stock\_Units}$ | 13,857 Units | 13,857 Units | **Verified** | Sum of warehouse inventory stock in catalogue. |
+| **Average Retail MRP** | $\text{MEAN}(\text{MRP})$ | ₹2,262.94 | ₹2,262.94 | **Verified** | Mean catalogue retail price. |
+| **Average Wholesale COGS** | $\text{MEAN}(\text{COGS})$ | ₹939.08 | ₹939.08 | **Verified** | Mean catalogue wholesale production cost. |
+| **Average Gross Margin %** | $\text{MEAN}\left(\frac{\text{MRP} - \text{COGS}}{\text{MRP}}\right) \times 100$ | 58.62% | 58.62% | **Verified** | Mean unit gross margin in product catalogue tab. |
+| **Customer Accounts Count** | $\text{COUNT}(\text{Customer\_ID})$ | 200 Profiles | 200 Profiles | **Verified** | Retail customer profiles C1 to C200. |
+| **Reported Customer Revenue** | $\sum \text{Total\_Revenue}$ | ₹4,992,621.00 | ₹49.93 L | **Verified** | Sum of lifetime revenue across customer accounts. |
+| **Customer Churn Rate %** | $\frac{6}{200} \times 100$ | 3.00% | 3.00% | **Verified** | 6 churned profiles out of 200 total accounts. |
+| **Customer Date Inversions** | $\text{WHERE } \text{First} > \text{Last}$ | 42 Profiles | 42 Profiles | **Verified (Audit)** | Flagged as DATE_INVERSION; tenure days set to NaN. |
 
 ---
 
-### 2.3 Customer Profiles Domain (`data/da_customer_profiles.csv`)
+## 3. Audit of Unsupported Metrics (Documented Dataset Limitations)
 
-| KPI Name | Source Column(s) | Mathematical Formula | Calculated Value (Python / Raw Data) | Dashboard Value (Live Web UI) | Verification Status |
-| :--- | :--- | :--- | :---: | :---: | :---: |
-| **Customer Accounts Count** | `Customer_ID` | $\text{COUNT}(\text{Customer\_ID})$ | 200 Profiles | 200 Profiles | **VERIFIED (100%)** |
-| **Reported Customer Revenue** | `Total_Revenue` | $\sum \text{Total\_Revenue}$ | ₹4,992,621.00 | ₹49.93 L | **VERIFIED (100%)** |
-| **Average Customer Revenue** | `Total_Revenue` | $\text{MEAN}(\text{Total\_Revenue})$ | ₹24,963.11 | ₹24,963.11 | **VERIFIED (100%)** |
-| **Customer Churn Rate %** | `Churned` | $\frac{\text{COUNT}(\text{Churned} = 1)}{\text{COUNT}(\text{Customer\_ID})} \times 100$ | 3.00% (6/200) | 3.00% | **VERIFIED (100%)** |
-| **Chronological Date Inversions** | `First_Purchase_Date`, `Last_Purchase_Date` | $\text{WHERE } \text{First} > \text{Last}$ | 42 Profiles | 42 Profiles | **FLAGGED & PRESERVED** |
-
----
-
-## 3. Audit of Unsupported Metrics (Separated & Labeled "Not Available")
-
-In accordance with strict data integrity standards, the following business metrics cannot be calculated from the source datasets. The live dashboard explicitly flags each as **`NOT AVAILABLE`** with transparent engineering justifications:
-
-```
-┌───────────────────────────────────────┬───────────────┬─────────────────────────────────────────────────────────────┐
-│ Business Requirement                  │ Status        │ Underlying Dataset Limitation                               │
-├───────────────────────────────────────┼───────────────┼─────────────────────────────────────────────────────────────┤
-│ 1. Foreign Exchange (FX) Gain/Loss    │ NOT AVAILABLE │ da_b2b_orders.csv transactions are purely in INR.           │
-│                                       │               │ Zero foreign currency codes, spot rates, or country tags.   │
-├───────────────────────────────────────┼───────────────┼─────────────────────────────────────────────────────────────┤
-│ 2. B2B Order Gross & Net Margins      │ NOT AVAILABLE │ Orders dataset records selling price but lacks COGS.        │
-│                                       │               │ da_product_catalogue.csv lacks order-line foreign keys.     │
-├───────────────────────────────────────┼───────────────┼─────────────────────────────────────────────────────────────┤
-│ 3. Customs / Export Compliance Logs   │ NOT AVAILABLE │ No Shipping Bill IDs, Port of Loading, HS codes,            │
-│                                       │               │ or customs clearance inspection timestamps exist.           │
-├───────────────────────────────────────┼───────────────┼─────────────────────────────────────────────────────────────┤
-│ 4. Order-to-Customer Joins            │ NOT SUPPORTED │ da_customer_profiles represents retail consumers (C1-C200), │
-│                                       │               │ while orders represent B2B wholesale buyers (BUY-0001).     │
-└───────────────────────────────────────┴───────────────┴─────────────────────────────────────────────────────────────┘
-```
+| Business Requirement | Status | Underlying Dataset Limitation | Recommended Upstream Schema Fix |
+| :--- | :---: | :--- | :--- |
+| **Foreign Exchange (FX) Impact** | **Not Available** | All 600 orders in `da_b2b_orders.csv` are denominated exclusively in INR. Zero foreign currency codes, spot exchange rates, or country destination tags exist. | Extend ERP schema with `currency_code`, `booking_spot_rate`, and `country_iso`. |
+| **B2B Order Gross/Net Margins** | **Not Available** | Orders record selling price (`unit_price_inr`) but lack landed production costs, freight tariffs, or export duties. `da_product_catalogue.csv` lacks order-line foreign keys. | Implement relational `order_line_items` schema linking `order_id` to product SKUs with landed costs. |
+| **Export Compliance Tracking** | **Not Available** | Zero regulatory attributes (Shipping Bill numbers, Port of Loading, GST Export invoicing, or inspection flags) exist in the datasets. | Deploy customs documentation tracking module capturing Port of Loading clearance milestones. |
+| **Order-to-Customer Joins** | **Not Supported** | `da_customer_profiles.csv` represents retail consumers (C1–C200), whereas orders represent wholesale B2B institutional buyers (BUY-0001). | Maintain strict domain separation; do not force synthetic joins between disparate entities. |
 
 ---
 
-## 4. Physical Anomaly Records Audit
+## 4. Visual Evidence from Live Production Deployment
 
-1. **`B2B-00131`**: Shipped Quantity = 22 units, Reported Returned Quantity = 28 units.
-2. **`B2B-00188`**: Shipped Quantity = 39 units, Reported Returned Quantity = 48 units.
+High-resolution visual evidence was captured directly from the live Vercel production dashboard ([https://tradesight-export-analytics.vercel.app](https://tradesight-export-analytics.vercel.app)) using headless browser automation at 1920x1080 resolution:
 
-*Action Taken:* Both records are preserved intact to maintain compliance audit trails. They are displayed in the dashboard's dedicated **Returns & Exception Audit** view with badge `SUSPICIOUS_RETURN_OVERRUN`.
-
----
-
-## 5. Peer Review & Feedback Protocol Alignment
-
-* **Peer Feedback Log Status:** Initialized and formatted in [`week9_dashboard/peer_feedback_log.md`](file:///d:/TradeSight-Export-Analytics/week9_dashboard/peer_feedback_log.md).
-* **Current Review Status:** **Awaiting Actual Peer Feedback Entry**. In accordance with guidelines, no peer feedback is simulated or marked complete until actual reviewer evaluation is provided by the user.
-* **Revision List:** Maintained in [`week9_dashboard/revision_list.md`](file:///d:/TradeSight-Export-Analytics/week9_dashboard/revision_list.md) with prioritized issues (REV-001 through REV-010).
+1. **Executive Overview (`01_executive_overview.png`):** Validates all 8 executive KPI cards, 24-month revenue/volume trends, category revenue bars, and payment terms breakdown.
+2. **Logistics & Fulfillment (`02_logistics_fulfillment.png`):** Validates the 77.50% On-Time SLA metric, 23.49 days mean transit, transit duration histogram, and payment terms logistics table.
+3. **Returns & Quality Audit (`03_returns_quality_audit.png`):** Validates the 15,242 units returned (1.01%), the isolated `B2B-00131` & `B2B-00188` overrun table, and 42 customer profile date inversions.
+4. **Buyer Analytics (`04_buyer_segmentation.png`):** Validates the 187 unique buyers, 37.83% repeat buyer share, top buyers ranking, and searchable buyer directory.
+5. **Data Governance (`05_data_governance_missing_kpis.png`):** Validates the transparent disclosure of unsupported metrics (*FX*, *Margins*, *Compliance*), schema boundaries, and verified scorecard.
