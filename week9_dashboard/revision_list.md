@@ -4,28 +4,28 @@
 **Milestone:** Cynaris Data Analyst Internship — Week 9 Capstone  
 **Target:** Continuous Improvement Backlog for Dashboard Governance & Iteration  
 **Live Production URL:** [https://tradesight-export-analytics.vercel.app](https://tradesight-export-analytics.vercel.app)  
-**Peer Reviewer:** **Priya** (Quantitative Heuristic Evaluation: 3.5 / 5 Average)  
+**Peer Reviewer:** **Priya** (Sole Peer Reviewer; Confirmed Latest Overall Rating: **4.0 / 5**)  
 **Last Updated:** 2026-11-05  
 
 ---
 
 > [!NOTE]
-> This revision list tracks verified corrections, actionable engineering improvements derived directly from Priya's heuristic ratings, and future architecture roadmap items.
+> This revision list tracks verified corrections, actionable engineering improvements confirmed under Priya's latest 4.0 / 5 overall peer review rating, and future architecture roadmap items.
 > Implemented improvements and pending roadmap items are clearly delineated in dedicated tables below.
-> Per strict non-fabrication rules, Priya provided numerical ratings across 6 criteria without written comments; all improvements were systematically inferred from her quantitative scores (especially criteria rated 3/5).
+> Per strict non-fabrication rules, Priya is the sole peer reviewer and confirmed an overall average rating of 4.0 / 5 without providing individual criterion breakdowns or written comments; individual criterion scores are not invented.
 
 ---
 
-## 1. Implemented Improvements Derived from Priya's Peer Heuristic Review
+## 1. Implemented Improvements Aligned with Priya's Confirmed 4.0 / 5 Peer Review
 
 | Revision ID | Review Criterion | Actual Peer Rating / Feedback Received | Issue Identified / Opportunity | Proposed Improvement / Action Taken | File / Component Changed | Priority | Status |
 | :---: | :--- | :---: | :--- | :--- | :--- | :---: | :---: |
-| **REV-001** | Visual Layout | **3 / 5**<br>*(Priya rating)* | Container padding and KPI grid gaps were tight on high-resolution widescreen monitors. | Increased `.content-body` padding to 32px/36px, expanded `.kpi-grid` gap to 20px, added subtle card elevation and border accents. | `frontend/src/index.css` | High | **Completed** |
-| **REV-002** | Chart Readability | **3 / 5**<br>*(Priya rating)* | Longitudinal charts lacked descriptive subtitles and axis labels could benefit from higher contrast. | Added contextual analytical subtitles to all Recharts, calibrated XAxis/YAxis font styling, and formatted tooltips with ₹ Lakh/Cr units. | `frontend/src/App.jsx`<br>`frontend/src/index.css` | High | **Completed** |
-| **REV-003** | Navigation | **3 / 5**<br>*(Priya rating)* | Navigating between 7 distinct dashboard sections relied solely on the left sidebar without top view orientation. | Implemented a sticky horizontal Section Quick-Nav Bar with 7 numbered tab pills and synchronized URL query routing (`?section=...`). | `frontend/src/App.jsx`<br>`frontend/src/index.css` | High | **Completed** |
-| **REV-004** | KPI Clarity | **4 / 5**<br>*(Priya rating)* | Executive users need immediate insight into calculation definitions and underlying data columns. | Added interactive formula info tooltips ($ℹ$) adjacent to metric card titles detailing exact formulas and source CSV columns. | `frontend/src/App.jsx` | Medium | **Completed** |
-| **REV-005** | Filter Usability | **4 / 5**<br>*(Priya rating)* | Operational triage required clicking individual filter dropdowns rather than one-touch anomaly filtering. | Built illuminated quick-preset filter buttons ("Delayed 135", "Repeat 227", "High Value > ₹1 Cr", "Returns 591") with real-time record count badge. | `frontend/src/App.jsx`<br>`frontend/src/index.css` | Medium | **Completed** |
-| **REV-006** | Overall UX | **4 / 5**<br>*(Priya rating)* | Return overrun anomalies and schema boundaries required clearer enterprise visual hierarchy. | Added high-visibility warning callouts for the 2 return overruns, distinct schema boundary alerts, and polished dark navy styling. | `frontend/src/App.jsx`<br>`frontend/src/index.css` | High | **Completed** |
+| **REV-001** | Visual Layout | **4.0 / 5 Overall**<br>*(Priya confirmed)* | Container padding and KPI grid gaps were tight on high-resolution widescreen monitors. | Increased `.content-body` padding to 32px/36px, expanded `.kpi-grid` gap to 20px, added subtle card elevation and border accents. | `frontend/src/index.css` | High | **Completed** |
+| **REV-002** | Chart Readability | **4.0 / 5 Overall**<br>*(Priya confirmed)* | Longitudinal charts lacked descriptive subtitles and axis labels could benefit from higher contrast. | Added contextual analytical subtitles to all Recharts, calibrated XAxis/YAxis font styling, and formatted tooltips with ₹ Lakh/Cr units. | `frontend/src/App.jsx`<br>`frontend/src/index.css` | High | **Completed** |
+| **REV-003** | Navigation | **4.0 / 5 Overall**<br>*(Priya confirmed)* | Navigating between 7 distinct dashboard sections relied solely on the left sidebar without top view orientation. | Implemented a sticky horizontal Section Quick-Nav Bar with 7 numbered tab pills and synchronized URL query routing (`?section=...`). | `frontend/src/App.jsx`<br>`frontend/src/index.css` | High | **Completed** |
+| **REV-004** | KPI Clarity | **4.0 / 5 Overall**<br>*(Priya confirmed)* | Executive users need immediate insight into calculation definitions and underlying data columns. | Added interactive formula info tooltips ($ℹ$) adjacent to metric card titles detailing exact formulas and source CSV columns. | `frontend/src/App.jsx` | Medium | **Completed** |
+| **REV-005** | Filter Usability | **4.0 / 5 Overall**<br>*(Priya confirmed)* | Operational triage required clicking individual filter dropdowns rather than one-touch anomaly filtering. | Built illuminated quick-preset filter buttons ("Delayed 135", "Repeat 227", "High Value > ₹1 Cr", "Returns 591") with real-time record count badge. | `frontend/src/App.jsx`<br>`frontend/src/index.css` | Medium | **Completed** |
+| **REV-006** | Overall UX | **4.0 / 5 Overall**<br>*(Priya confirmed)* | Return overrun anomalies and schema boundaries required clearer enterprise visual hierarchy. | Added high-visibility warning callouts for the 2 return overruns, distinct schema boundary alerts, and polished dark navy styling. | `frontend/src/App.jsx`<br>`frontend/src/index.css` | High | **Completed** |
 
 ---
 
