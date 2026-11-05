@@ -33,11 +33,29 @@ const COLORS = {
 };
 
 export default function App() {
-  const [activeSection, setActiveSection] = useState('overview');
+  const [activeSection, setActiveSection] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search).get('section');
+      if (p) return p;
+      const h = window.location.hash.replace('#', '');
+      if (h) return h;
+    }
+    return 'overview';
+  });
+
+  const handleSelectSection = (s) => {
+    setActiveSection(s);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location);
+      url.searchParams.set('section', s);
+      window.history.replaceState({}, '', url);
+    }
+  };
 
   // Interactive Filters
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedTerm, setSelectedTerm] = useState('ALL');
+  const [quickFilter, setQuickFilter] = useState('ALL');
   const [buyerSearch, setBuyerSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
@@ -47,6 +65,10 @@ export default function App() {
     return ordersRaw.filter(order => {
       if (selectedCategory !== 'ALL' && order.category !== selectedCategory) return false;
       if (selectedTerm !== 'ALL' && order.payment_terms !== selectedTerm) return false;
+      if (quickFilter === 'DELAYED' && order.on_time_delivery !== 0) return false;
+      if (quickFilter === 'REPEAT' && order.repeat_buyer !== 1) return false;
+      if (quickFilter === 'HIGH_VALUE' && (order.total_value_inr || 0) < 10000000) return false;
+      if (quickFilter === 'RETURNS' && (order.return_qty || 0) <= 0) return false;
       if (orderSearch) {
         const q = orderSearch.toLowerCase();
         return (
@@ -57,7 +79,7 @@ export default function App() {
       }
       return true;
     });
-  }, [selectedCategory, selectedTerm, orderSearch]);
+  }, [selectedCategory, selectedTerm, quickFilter, orderSearch]);
 
   // Orders Aggregations
   const stats = useMemo(() => {
@@ -248,6 +270,7 @@ export default function App() {
   const resetFilters = () => {
     setSelectedCategory('ALL');
     setSelectedTerm('ALL');
+    setQuickFilter('ALL');
     setOrderSearch('');
   };
 
@@ -287,43 +310,43 @@ export default function App() {
         <nav className="sidebar-nav">
           <button
             className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveSection('overview')}
+            onClick={() => handleSelectSection('overview')}
           >
             <TrendingUp size={16} /> 1. Executive Overview
           </button>
           <button
             className={`nav-item ${activeSection === 'revenue' ? 'active' : ''}`}
-            onClick={() => setActiveSection('revenue')}
+            onClick={() => handleSelectSection('revenue')}
           >
             <Layers size={16} /> 2. Export Revenue
           </button>
           <button
             className={`nav-item ${activeSection === 'logistics' ? 'active' : ''}`}
-            onClick={() => setActiveSection('logistics')}
+            onClick={() => handleSelectSection('logistics')}
           >
             <Truck size={16} /> 3. Logistics & SLA
           </button>
           <button
             className={`nav-item ${activeSection === 'returns' ? 'active' : ''}`}
-            onClick={() => setActiveSection('returns')}
+            onClick={() => handleSelectSection('returns')}
           >
             <RotateCcw size={16} /> 4. Returns & Quality
           </button>
           <button
             className={`nav-item ${activeSection === 'buyers' ? 'active' : ''}`}
-            onClick={() => setActiveSection('buyers')}
+            onClick={() => handleSelectSection('buyers')}
           >
             <Users size={16} /> 5. Buyer Analytics
           </button>
           <button
             className={`nav-item ${activeSection === 'products' ? 'active' : ''}`}
-            onClick={() => setActiveSection('products')}
+            onClick={() => handleSelectSection('products')}
           >
             <Package size={16} /> 6. Product Catalogue
           </button>
           <button
             className={`nav-item ${activeSection === 'governance' ? 'active' : ''}`}
-            onClick={() => setActiveSection('governance')}
+            onClick={() => handleSelectSection('governance')}
           >
             <ShieldAlert size={16} /> 7. Data Governance
           </button>
@@ -366,7 +389,7 @@ export default function App() {
         {/* FILTER TOOLBAR (Supported across orders) */}
         <div className="filter-toolbar">
           <div className="filter-label">
-            <Filter size={14} /> Data Filters:
+            <Filter size={14} /> Filters:
           </div>
 
           <div>
@@ -375,7 +398,7 @@ export default function App() {
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
             >
-              <option value="ALL">All Product Categories ({ALL_CATEGORIES.length})</option>
+              <option value="ALL">All Categories ({ALL_CATEGORIES.length})</option>
               {ALL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -386,14 +409,48 @@ export default function App() {
               value={selectedTerm}
               onChange={(e) => setSelectedTerm(e.target.value)}
             >
-              <option value="ALL">All Payment Terms ({ALL_TERMS.length})</option>
+              <option value="ALL">All Terms ({ALL_TERMS.length})</option>
               {ALL_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
 
-          {(selectedCategory !== 'ALL' || selectedTerm !== 'ALL') && (
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Presets:</span>
+            <button 
+              className={`preset-btn ${quickFilter === 'ALL' ? 'active' : ''}`} 
+              onClick={() => setQuickFilter('ALL')}
+            >
+              All (600)
+            </button>
+            <button 
+              className={`preset-btn ${quickFilter === 'DELAYED' ? 'active' : ''}`} 
+              onClick={() => setQuickFilter('DELAYED')}
+            >
+              Delayed (135)
+            </button>
+            <button 
+              className={`preset-btn ${quickFilter === 'REPEAT' ? 'active' : ''}`} 
+              onClick={() => setQuickFilter('REPEAT')}
+            >
+              Repeat (227)
+            </button>
+            <button 
+              className={`preset-btn ${quickFilter === 'HIGH_VALUE' ? 'active' : ''}`} 
+              onClick={() => setQuickFilter('HIGH_VALUE')}
+            >
+              &gt; ₹1 Cr (148)
+            </button>
+            <button 
+              className={`preset-btn ${quickFilter === 'RETURNS' ? 'active' : ''}`} 
+              onClick={() => setQuickFilter('RETURNS')}
+            >
+              Returns (591)
+            </button>
+          </div>
+
+          {(selectedCategory !== 'ALL' || selectedTerm !== 'ALL' || quickFilter !== 'ALL') && (
             <button className="action-btn" onClick={resetFilters}>
-              <RefreshCw size={12} /> Reset Filters
+              <RefreshCw size={12} /> Reset
             </button>
           )}
 

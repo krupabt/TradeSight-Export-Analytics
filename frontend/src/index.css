@@ -252,6 +252,30 @@ body {
   border-color: var(--teal);
 }
 
+.preset-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-btn:hover {
+  color: var(--text-main);
+  border-color: var(--border-focus);
+}
+
+.preset-btn.active {
+  background: rgba(20, 184, 166, 0.15);
+  border-color: var(--teal);
+  color: var(--teal);
+  font-weight: 700;
+}
+
 .action-btn {
   background-color: var(--bg-card);
   border: 1px solid var(--border-subtle);
