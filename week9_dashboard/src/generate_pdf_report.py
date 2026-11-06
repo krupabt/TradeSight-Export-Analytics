@@ -488,11 +488,11 @@ def create_dashboard_v1_pdf():
     story.append(Paragraph("6. Formal Peer Review Record (Sole Reviewer: Priya)", h1_style))
     story.append(Paragraph(
         "<b>Peer Reviewer Verification:</b> Formal peer review was conducted with <b>Priya</b> as the sole peer reviewer (1 reviewer total). "
-        "Her confirmed overall rating for the application is <b>4.0 / 5</b>.<br/>"
-        "<b>Strict Non-Fabrication Protocol:</b> Reviewer Priya confirmed an overall rating of <b>4.0 / 5</b> without submitting "
-        "individual criterion score breakdowns, written qualitative comments, or specific suggestions. "
-        "In strict adherence to data integrity and academic honesty guidelines, <b>no individual criterion ratings, written comments, or quotes have been invented</b>. "
-        "No claim is made that Priya personally identified specific dashboard issues. "
+        "Her confirmed evaluation ratings across all six evaluation dimensions are <b>4 / 5</b>, yielding an overall confirmed average rating of <b>4.0 / 5</b>.<br/>"
+        "<b>Strict Non-Fabrication Protocol:</b> Reviewer Priya confirmed numeric evaluation ratings across each criterion without submitting "
+        "written qualitative comments, verbal narrative notes, or textual suggestions. "
+        "In strict adherence to academic honesty and data integrity guidelines, <b>no written comments, quotes, or additional reviewers have been invented</b>. "
+        "No claim is made that Priya personally identified specific dashboard code issues. "
         "All proactive dashboard improvements detailed in Section 7 were <b>independently identified and implemented by the developer</b>.",
         body_style
     ))
@@ -503,22 +503,52 @@ def create_dashboard_v1_pdf():
         [
             Paragraph("<b>Reviewer Name</b>", table_cell_bold),
             Paragraph("<b>Priya</b>", table_cell_bold),
-            Paragraph("Verified sole peer reviewer (1 peer reviewer total).", table_cell)
+            Paragraph("Verified sole peer reviewer (Priya is the ONLY peer reviewer).", table_cell)
+        ],
+        [
+            Paragraph("<b>Number of Reviewers</b>", table_cell_bold),
+            Paragraph("<b>1</b>", table_cell_bold),
+            Paragraph("Sole peer reviewer; no additional reviewers added.", table_cell)
         ],
         [
             Paragraph("<b>Confirmed Overall Rating</b>", table_cell_bold),
             Paragraph("<b>4.0 / 5</b>", table_cell_bold),
-            Paragraph("<b>Confirmed overall rating actually provided by reviewer Priya.</b>", table_cell_bold)
+            Paragraph("<b>Confirmed overall average rating (mathematical mean: 24 / 6 = 4.0).</b>", table_cell_bold)
         ],
         [
-            Paragraph("<b>Individual Criterion Ratings</b>", table_cell_bold),
-            Paragraph("<i>Not provided</i>", table_cell),
-            Paragraph("Not individually broken down; not invented per strict compliance rules.", table_cell)
+            Paragraph("<b>1. Visual Layout Rating</b>", table_cell_bold),
+            Paragraph("<b>4 / 5</b>", table_cell),
+            Paragraph("Confirmed criterion rating provided by reviewer Priya.", table_cell)
+        ],
+        [
+            Paragraph("<b>2. KPI Clarity Rating</b>", table_cell_bold),
+            Paragraph("<b>4 / 5</b>", table_cell),
+            Paragraph("Confirmed criterion rating provided by reviewer Priya.", table_cell)
+        ],
+        [
+            Paragraph("<b>3. Chart Readability Rating</b>", table_cell_bold),
+            Paragraph("<b>4 / 5</b>", table_cell),
+            Paragraph("Confirmed criterion rating provided by reviewer Priya.", table_cell)
+        ],
+        [
+            Paragraph("<b>4. Filter Usability Rating</b>", table_cell_bold),
+            Paragraph("<b>4 / 5</b>", table_cell),
+            Paragraph("Confirmed criterion rating provided by reviewer Priya.", table_cell)
+        ],
+        [
+            Paragraph("<b>5. Navigation Rating</b>", table_cell_bold),
+            Paragraph("<b>4 / 5</b>", table_cell),
+            Paragraph("Confirmed criterion rating provided by reviewer Priya.", table_cell)
+        ],
+        [
+            Paragraph("<b>6. Overall UX Rating</b>", table_cell_bold),
+            Paragraph("<b>4 / 5</b>", table_cell),
+            Paragraph("Confirmed criterion rating provided by reviewer Priya.", table_cell)
         ],
         [
             Paragraph("<b>Written Qualitative Comments</b>", table_cell_bold),
             Paragraph("<i>Not provided</i>", table_cell),
-            Paragraph("No written comments or quotes provided; none fabricated.", table_cell)
+            Paragraph("No written qualitative comments provided; transparently uninvented.", table_cell)
         ],
         [
             Paragraph("<b>Review Status</b>", table_cell_bold),
@@ -532,10 +562,10 @@ def create_dashboard_v1_pdf():
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E0")),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor("#F8FAFC")]),
-        ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#F0FDF4")),
+        ('BACKGROUND', (0, 3), (-1, 3), colors.HexColor("#F0FDF4")),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+        ('TOPPADDING', (0, 0), (-1, -1), 2.0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.0),
     ]))
     story.append(t_rev)
     story.append(Spacer(1, 4))
@@ -543,7 +573,7 @@ def create_dashboard_v1_pdf():
     story.append(Paragraph("6.1 Delineation of Peer Feedback vs. Developer-Identified Improvements", h2_style))
     story.append(Paragraph(
         "To ensure analytical transparency, peer review input is strictly delineated from developer engineering work. "
-        "Reviewer Priya confirmed an overall rating of 4.0/5. The developer independently identified usability, "
+        "Reviewer Priya confirmed ratings of 4/5 across all six criteria (Overall Average: 4.0/5). The developer independently identified usability, "
         "spacing, and formatting opportunities across the six criteria below, implementing genuine enhancements across the codebase.",
         body_style
     ))
@@ -557,12 +587,12 @@ def create_dashboard_v1_pdf():
 
     sec_a_data = [
         [Paragraph("<b>ID</b>", table_cell_bold), Paragraph("<b>Improvement Dimension</b>", table_cell_bold), Paragraph("<b>Peer Review Reference / Feedback Received</b>", table_cell_bold), Paragraph("<b>Issue Identified / Opportunity</b>", table_cell_bold), Paragraph("<b>Proposed Improvement / Implementation</b>", table_cell_bold), Paragraph("<b>Status</b>", table_cell_bold)],
-        [Paragraph("REV-001", table_cell), Paragraph("Visual Layout & Spacing", table_cell_bold), Paragraph("Not individually rated by Priya; developer-identified.", table_cell), Paragraph("Container padding and KPI grid gaps were tight on widescreen viewports.", table_cell), Paragraph("Expanded .content-body padding to 32px/36px, set .kpi-grid gap to 20px, added card hover elevation.", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-002", table_cell), Paragraph("Chart Readability & Context", table_cell_bold), Paragraph("Not individually rated by Priya; developer-identified.", table_cell), Paragraph("Dense longitudinal Recharts lacked descriptive subtitles and axis contrast.", table_cell), Paragraph("Added analytical subtitles to all charts, tuned XAxis/YAxis contrast, formatted currency units.", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-003", table_cell), Paragraph("Horizontal Section Navigation", table_cell_bold), Paragraph("Not individually rated by Priya; developer-identified.", table_cell), Paragraph("Navigating across 7 sections relied solely on the sidebar, causing vertical friction.", table_cell), Paragraph("Implemented persistent sticky Section Quick-Nav Bar with 7 tab pills and URL query routing (?section=...).", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-004", table_cell), Paragraph("KPI Formula Tooltips", table_cell_bold), Paragraph("Not individually rated by Priya; developer-identified.", table_cell), Paragraph("Stakeholders had to check external docs to verify exact metric math formulas.", table_cell), Paragraph("Embedded interactive formula tooltips ($ℹ$) adjacent to executive cards detailing math and source columns.", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-005", table_cell), Paragraph("Quick Filter Presets & Counts", table_cell_bold), Paragraph("Not individually rated by Priya; developer-identified.", table_cell), Paragraph("Filtering common operational states required multiple individual dropdown clicks.", table_cell), Paragraph("Built illuminated quick-preset filter buttons (Delayed, Repeat, High Value, Returns) with live record counter.", table_cell), Paragraph("Completed", table_cell_bold)],
-        [Paragraph("REV-006", table_cell), Paragraph("Anomaly Callouts & Styling", table_cell_bold), Paragraph("Not individually rated by Priya; developer-identified.", table_cell), Paragraph("Physical return overruns and schema boundaries required clearer visual isolation.", table_cell), Paragraph("Deployed high-visibility warning alert banners for return overruns, schema alerts, and polished dark theme.", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-001", table_cell), Paragraph("Visual Layout & Spacing", table_cell_bold), Paragraph("Rated 4/5 by Priya (Visual layout). Developer-identified.", table_cell), Paragraph("Container padding and KPI grid gaps were tight on widescreen viewports.", table_cell), Paragraph("Expanded .content-body padding to 32px/36px, set .kpi-grid gap to 20px, added card hover elevation.", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-002", table_cell), Paragraph("Chart Readability & Context", table_cell_bold), Paragraph("Rated 4/5 by Priya (Chart readability). Developer-identified.", table_cell), Paragraph("Dense longitudinal Recharts lacked descriptive subtitles and axis contrast.", table_cell), Paragraph("Added analytical subtitles to all charts, tuned XAxis/YAxis contrast, formatted currency units.", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-003", table_cell), Paragraph("Horizontal Section Navigation", table_cell_bold), Paragraph("Rated 4/5 by Priya (Navigation). Developer-identified.", table_cell), Paragraph("Navigating across 7 sections relied solely on the sidebar, causing vertical friction.", table_cell), Paragraph("Implemented persistent sticky Section Quick-Nav Bar with 7 tab pills and URL query routing (?section=...).", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-004", table_cell), Paragraph("KPI Formula Tooltips", table_cell_bold), Paragraph("Rated 4/5 by Priya (KPI clarity). Developer-identified.", table_cell), Paragraph("Stakeholders had to check external docs to verify exact metric math formulas.", table_cell), Paragraph("Embedded interactive formula tooltips ($ℹ$) adjacent to executive cards detailing math and source columns.", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-005", table_cell), Paragraph("Quick Filter Presets & Counts", table_cell_bold), Paragraph("Rated 4/5 by Priya (Filter usability). Developer-identified.", table_cell), Paragraph("Filtering common operational states required multiple individual dropdown clicks.", table_cell), Paragraph("Built illuminated quick-preset filter buttons (Delayed, Repeat, High Value, Returns) with live record counter.", table_cell), Paragraph("Completed", table_cell_bold)],
+        [Paragraph("REV-006", table_cell), Paragraph("Anomaly Callouts & Styling", table_cell_bold), Paragraph("Rated 4/5 by Priya (Overall UX). Developer-identified.", table_cell), Paragraph("Physical return overruns and schema boundaries required clearer visual isolation.", table_cell), Paragraph("Deployed high-visibility warning alert banners for return overruns, schema alerts, and polished dark theme.", table_cell), Paragraph("Completed", table_cell_bold)],
     ]
     t_sec_a = Table(sec_a_data, colWidths=[36, 75, 105, 140, 134, 50])
     t_sec_a.setStyle(TableStyle([
