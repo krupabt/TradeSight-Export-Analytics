@@ -1,0 +1,74 @@
+name: Weekly Operational Exception & Compliance Report
+
+on:
+  schedule:
+    # Run every Monday at 08:00 UTC (01:30 PM IST)
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Run in test mode (validates report generation without external SMTP dispatch)'
+        required: true
+        type: boolean
+        default: true
+      recipient_email:
+        description: 'Authorized recipient email for manual dispatch test'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  generate-and-dispatch-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run automated validation & test suite
+        run: |
+          pytest -q tests/test_validation.py tests/test_reporting.py
+
+      - name: Generate weekly operational exception reports
+        env:
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+          SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS || 'True' }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          ALERT_RECIPIENTS: ${{ github.event.inputs.recipient_email || secrets.ALERT_RECIPIENTS }}
+          APP_ENV: ${{ github.event.inputs.test_mode == false && 'production' || 'test' }}
+        run: |
+          python -c "
+          import os, sys
+          from src.pipeline import run_pipeline
+
+          test_mode = os.environ.get('APP_ENV', 'test') == 'test'
+          print(f'Starting automated weekly reporting job (Test Mode: {test_mode})...')
+
+          # Run data pipeline and exception report generation
+          results = run_pipeline()
+          print('Pipeline executed successfully.')
+          print('Baseline Metrics generated:', len(results['baseline_metrics']))
+          print('Weekly Exceptions flagged:', len(results['weekly_exceptions']))
+          "
+
+      - name: Upload weekly exception reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-exception-reports
+          path: |
+            outputs/weekly_exception_report_*.csv
+            reports/weekly_exception_report_*.md
+          retention-days: 30
