@@ -24,19 +24,23 @@ import exceptionsRaw from './data/exceptions.json';
 const ALL_CATEGORIES = [...new Set(ordersRaw.map(o => o.category))].sort();
 const ALL_TERMS = [...new Set(ordersRaw.map(o => o.payment_terms))].sort();
 
-// Clean Professional Light Theme Palette
+// Color Hunt Reference Palette: https://colorhunt.co/palette/3368a066a3bfc8dfdbf2efe7
 const THEME_COLORS = {
-  primaryAccent: '#287D78',
-  secondaryAccent: '#5FA5A0',
-  primaryText: '#242424',
-  secondaryText: '#616161',
-  summaryPanelBg: '#FFFFFF',
+  primaryBlue: '#3368A0',
+  softBlue: '#66A3BF',
+  pastelMint: '#C8DFDB',
+  warmCream: '#F2EFE7',
+  primaryAccent: '#3368A0',
+  secondaryAccent: '#66A3BF',
+  mintHighlight: '#C8DFDB',
+  primaryText: '#202C33',
+  secondaryText: '#5C6770',
   cardBg: '#FFFFFF',
-  border: '#E0E3E7',
-  success: '#2E7D32',
+  border: '#E2DFD8',
+  success: '#2A7B4C',
   warning: '#B7791F',
-  error: '#C62828',
-  piePalette: ['#287D78', '#3D948F', '#57ABA5', '#76C2BC', '#9AD7D2', '#C2EAE6']
+  error: '#C24141',
+  piePalette: ['#3368A0', '#66A3BF', '#C8DFDB', '#275280', '#4F88A3', '#89C2BC']
 };
 
 export default function App() {
@@ -574,244 +578,153 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      {/* CLEAN HORIZONTAL NAVIGATION HEADER */}
-      <header className="top-horizontal-nav">
-        {/* Minimal TradeSight Brand Logo & Wordmark */}
-        <div className="brand-area" onClick={() => handleSelectSection('overview')}>
-          <div className="brand-logo-mark" title="TradeSight Export Analytics">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-            </svg>
-          </div>
-          <div className="brand-typography">
-            <div className="brand-name">
-              TradeSight <span className="brand-name-tag">BI</span>
-            </div>
-            <div className="brand-tagline">Export Intelligence &amp; Business Analytics</div>
-          </div>
-        </div>
-
-        {/* Horizontal Navigation Menu with Working Dropdowns */}
-        <nav className="nav-menu-horizontal">
-          {/* 1. Overview */}
-          <button
-            className={`nav-link-btn ${activeSection === 'overview' ? 'active' : ''}`}
-            onClick={() => handleSelectSection('overview')}
-          >
-            <Activity size={14} /> Overview
-          </button>
-
-          {/* 2. Core Operations Dropdown */}
-          <div className="nav-dropdown-wrapper">
-            <button
-              className={`nav-dropdown-trigger ${['revenue', 'logistics', 'shipment', 'returns', 'compliance', 'buyers', 'clients', 'catalogue', 'products'].includes(activeSection) ? 'has-active' : ''} ${openDropdown === 'operations' ? 'open' : ''}`}
-              onClick={() => setOpenDropdown(prev => prev === 'operations' ? null : 'operations')}
-            >
-              <TrendingUp size={14} /> Core Operations
-              <ChevronDown size={13} className="nav-dropdown-chevron" />
-            </button>
-            {openDropdown === 'operations' && (
-              <div className="nav-dropdown-menu">
-                <button
-                  className={`dropdown-item ${activeSection === 'revenue' ? 'active' : ''}`}
-                  onClick={() => handleSelectSection('revenue')}
-                >
-                  <TrendingUp size={14} /> Export Revenue
-                </button>
-                <button
-                  className={`dropdown-item ${(activeSection === 'logistics' || activeSection === 'shipment') ? 'active' : ''}`}
-                  onClick={() => handleSelectSection('logistics')}
-                >
-                  <Truck size={14} /> Logistics &amp; SLA
-                </button>
-                <button
-                  className={`dropdown-item ${(activeSection === 'returns' || activeSection === 'compliance') ? 'active' : ''}`}
-                  onClick={() => handleSelectSection('returns')}
-                >
-                  <RotateCcw size={14} /> Returns &amp; Quality
-                </button>
-                <button
-                  className={`dropdown-item ${(activeSection === 'buyers' || activeSection === 'clients') ? 'active' : ''}`}
-                  onClick={() => handleSelectSection('buyers')}
-                >
-                  <Users size={14} /> Buyer Analytics
-                </button>
-                <button
-                  className={`dropdown-item ${(activeSection === 'catalogue' || activeSection === 'products') ? 'active' : ''}`}
-                  onClick={() => handleSelectSection('catalogue')}
-                >
-                  <Package size={14} /> Product Catalogue
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 3. Strategic Intelligence Dropdown */}
-          <div className="nav-dropdown-wrapper">
-            <button
-              className={`nav-dropdown-trigger ${['country', 'currency', 'reports'].includes(activeSection) ? 'has-active' : ''} ${openDropdown === 'strategic' ? 'open' : ''}`}
-              onClick={() => setOpenDropdown(prev => prev === 'strategic' ? null : 'strategic')}
-            >
-              <Globe size={14} /> Strategic Intelligence
-              <ChevronDown size={13} className="nav-dropdown-chevron" />
-            </button>
-            {openDropdown === 'strategic' && (
-              <div className="nav-dropdown-menu">
-                <button
-                  className={`dropdown-item ${activeSection === 'country' ? 'active' : ''}`}
-                  onClick={() => handleSelectSection('country')}
-                >
-                  <Globe size={14} /> Country Analysis
-                </button>
-                <button
-                  className={`dropdown-item ${activeSection === 'currency' ? 'active' : ''}`}
-                  onClick={() => handleSelectSection('currency')}
-                >
-                  <DollarSign size={14} /> Currency Impact
-                </button>
-                <button
-                  className={`dropdown-item ${activeSection === 'reports' ? 'active' : ''}`}
-                  onClick={() => handleSelectSection('reports')}
-                >
-                  <FileSpreadsheet size={14} /> Reports Hub
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 4. Data & Compliance */}
-          <button
-            className={`nav-link-btn ${activeSection === 'governance' ? 'active' : ''}`}
-            onClick={() => handleSelectSection('governance')}
-          >
-            <ShieldAlert size={14} /> Data Governance
-          </button>
-        </nav>
-
-        {/* Header Right Action Area */}
-        <div className="nav-actions-right">
-          <button 
-            className="theme-toggle-btn" 
-            onClick={toggleTheme} 
-            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
-            aria-label="Toggle Theme"
-          >
-            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-          </button>
-          <button className="action-btn primary" onClick={handleExportCSV}>
-            <Download size={13} /> Export Report
-          </button>
-          <button 
-            className="mobile-menu-btn" 
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open Mobile Menu"
-          >
-            <Menu size={18} />
-          </button>
-        </div>
-      </header>
-
-      {/* MOBILE NAVIGATION DRAWER & BACKDROP */}
+      {/* Mobile Drawer Overlay */}
       <div 
-        className={`mobile-nav-overlay ${sidebarOpen ? 'open' : ''}`}
+        className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
         onClick={() => setSidebarOpen(false)}
       />
-      <aside className={`mobile-nav-drawer ${sidebarOpen ? 'open' : ''}`}>
-        <div className="mobile-nav-header">
-          <div className="brand-area" onClick={() => handleSelectSection('overview')}>
-            <div className="brand-logo-mark">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
-                <circle cx="12" cy="12" r="10" />
-                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-              </svg>
-            </div>
-            <div className="brand-typography">
-              <div className="brand-name">TradeSight</div>
-              <div className="brand-tagline">Export Intelligence</div>
-            </div>
+
+      {/* LEFT SIDEBAR NAVIGATION (#3368A0 with White Text) */}
+      <aside className={`app-sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-brand">
+          <div className="brand-icon">
+            <Globe size={20} />
           </div>
-          <button className="modal-close-btn" onClick={() => setSidebarOpen(false)}>
-            <X size={18} />
-          </button>
+          <div className="brand-text">
+            <div className="brand-title">TradeSight</div>
+            <div className="brand-subtitle">Export Intelligence</div>
+          </div>
         </div>
 
-        <div className="mobile-nav-group-title">Overview</div>
-        <button
-          className={`dropdown-item ${activeSection === 'overview' ? 'active' : ''}`}
-          onClick={() => handleSelectSection('overview')}
-        >
-          <Activity size={14} /> Executive Overview
-        </button>
+        <nav className="sidebar-nav">
+          {/* Group 1: Overview */}
+          <div className="nav-group">
+            <div className="nav-group-title">Overview</div>
+            <button
+              className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`}
+              onClick={() => handleSelectSection('overview')}
+            >
+              <Activity size={16} className="nav-icon" /> Executive Overview
+            </button>
+          </div>
 
-        <div className="mobile-nav-group-title">Core Operations</div>
-        <button
-          className={`dropdown-item ${activeSection === 'revenue' ? 'active' : ''}`}
-          onClick={() => handleSelectSection('revenue')}
-        >
-          <TrendingUp size={14} /> Export Revenue
-        </button>
-        <button
-          className={`dropdown-item ${(activeSection === 'logistics' || activeSection === 'shipment') ? 'active' : ''}`}
-          onClick={() => handleSelectSection('logistics')}
-        >
-          <Truck size={14} /> Logistics &amp; SLA
-        </button>
-        <button
-          className={`dropdown-item ${(activeSection === 'returns' || activeSection === 'compliance') ? 'active' : ''}`}
-          onClick={() => handleSelectSection('returns')}
-        >
-          <RotateCcw size={14} /> Returns &amp; Quality
-        </button>
-        <button
-          className={`dropdown-item ${(activeSection === 'buyers' || activeSection === 'clients') ? 'active' : ''}`}
-          onClick={() => handleSelectSection('buyers')}
-        >
-          <Users size={14} /> Buyer Analytics
-        </button>
-        <button
-          className={`dropdown-item ${(activeSection === 'catalogue' || activeSection === 'products') ? 'active' : ''}`}
-          onClick={() => handleSelectSection('catalogue')}
-        >
-          <Package size={14} /> Product Catalogue
-        </button>
+          {/* Group 2: Core Operations */}
+          <div className="nav-group">
+            <div className="nav-group-title">Core Operations</div>
+            <button
+              className={`nav-item ${activeSection === 'revenue' ? 'active' : ''}`}
+              onClick={() => handleSelectSection('revenue')}
+            >
+              <TrendingUp size={16} className="nav-icon" /> Export Revenue
+            </button>
+            <button
+              className={`nav-item ${(activeSection === 'logistics' || activeSection === 'shipment') ? 'active' : ''}`}
+              onClick={() => handleSelectSection('logistics')}
+            >
+              <Truck size={16} className="nav-icon" /> Logistics &amp; SLA
+            </button>
+            <button
+              className={`nav-item ${(activeSection === 'returns' || activeSection === 'compliance') ? 'active' : ''}`}
+              onClick={() => handleSelectSection('returns')}
+            >
+              <RotateCcw size={16} className="nav-icon" /> Returns &amp; Quality
+            </button>
+            <button
+              className={`nav-item ${(activeSection === 'buyers' || activeSection === 'clients') ? 'active' : ''}`}
+              onClick={() => handleSelectSection('buyers')}
+            >
+              <Users size={16} className="nav-icon" /> Buyer Analytics
+            </button>
+            <button
+              className={`nav-item ${(activeSection === 'catalogue' || activeSection === 'products') ? 'active' : ''}`}
+              onClick={() => handleSelectSection('catalogue')}
+            >
+              <Package size={16} className="nav-icon" /> Product Catalogue
+            </button>
+          </div>
 
-        <div className="mobile-nav-group-title">Strategic Intelligence</div>
-        <button
-          className={`dropdown-item ${activeSection === 'country' ? 'active' : ''}`}
-          onClick={() => handleSelectSection('country')}
-        >
-          <Globe size={14} /> Country Analysis
-        </button>
-        <button
-          className={`dropdown-item ${activeSection === 'currency' ? 'active' : ''}`}
-          onClick={() => handleSelectSection('currency')}
-        >
-          <DollarSign size={14} /> Currency Impact
-        </button>
-        <button
-          className={`dropdown-item ${activeSection === 'reports' ? 'active' : ''}`}
-          onClick={() => handleSelectSection('reports')}
-        >
-          <FileSpreadsheet size={14} /> Reports Hub
-        </button>
+          {/* Group 3: Strategic Intelligence */}
+          <div className="nav-group">
+            <div className="nav-group-title">Strategic Intelligence</div>
+            <button
+              className={`nav-item ${activeSection === 'country' ? 'active' : ''}`}
+              onClick={() => handleSelectSection('country')}
+            >
+              <Globe size={16} className="nav-icon" /> Country Analysis
+            </button>
+            <button
+              className={`nav-item ${activeSection === 'currency' ? 'active' : ''}`}
+              onClick={() => handleSelectSection('currency')}
+            >
+              <DollarSign size={16} className="nav-icon" /> Currency Impact
+            </button>
+            <button
+              className={`nav-item ${activeSection === 'reports' ? 'active' : ''}`}
+              onClick={() => handleSelectSection('reports')}
+            >
+              <FileSpreadsheet size={16} className="nav-icon" /> Reports Hub
+            </button>
+          </div>
 
-        <div className="mobile-nav-group-title">Data &amp; Compliance</div>
-        <button
-          className={`dropdown-item ${activeSection === 'governance' ? 'active' : ''}`}
-          onClick={() => handleSelectSection('governance')}
-        >
-          <ShieldAlert size={14} /> Data Governance
-        </button>
+          {/* Group 4: Data & Compliance */}
+          <div className="nav-group">
+            <div className="nav-group-title">Data &amp; Compliance</div>
+            <button
+              className={`nav-item ${activeSection === 'governance' ? 'active' : ''}`}
+              onClick={() => handleSelectSection('governance')}
+            >
+              <ShieldAlert size={16} className="nav-icon" /> Data Governance
+            </button>
+          </div>
+        </nav>
 
-        <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid var(--border-subtle)', fontSize: 11, color: 'var(--text-muted)' }}>
-          Cynaris Solutions • Chennai Export Operations
+        <div className="sidebar-footer">
+          <div className="sidebar-footer-title">
+            <Database size={13} color="var(--pastel-mint)" /> TradeSight Platform
+          </div>
+          <div style={{ fontSize: '11px', lineHeight: '1.4', marginTop: '4px', opacity: 0.85 }}>
+            A unified analytics platform for monitoring export revenue, shipment performance, commercial buyers and data quality.
+          </div>
+          <div style={{ marginTop: '8px', fontSize: '10px', opacity: 0.65 }}>
+            Cynaris Solutions • Chennai Export Operations
+          </div>
         </div>
       </aside>
 
       {/* MAIN VIEWPORT */}
       <div className="app-main">
-        {/* RELEVANT FILTER TOOLBAR */}
+        {/* TOP HEADER BAR (White #FFFFFF Header) */}
+        <header className="top-bar">
+          <div className="header-left">
+            <button 
+              className="sidebar-toggle-btn"
+              onClick={() => setSidebarOpen(prev => !prev)}
+              aria-label="Toggle Navigation"
+            >
+              <Menu size={18} />
+            </button>
+            <div className="breadcrumbs">
+              <span>{breadcrumb.group}</span>
+              <span>/</span>
+              <span className="breadcrumbs-current">{breadcrumb.page}</span>
+            </div>
+          </div>
+
+          <div className="header-right">
+            <button 
+              className="theme-toggle-btn" 
+              onClick={toggleTheme} 
+              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+            >
+              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <button className="action-btn primary" onClick={handleExportCSV}>
+              <Download size={13} /> Export Report
+            </button>
+          </div>
+        </header>
+
+        {/* RELEVANT FILTER TOOLBAR (#FFFFFF) */}
         <div className="filter-toolbar">
           <div className="filter-group">
             <span className="filter-label"><Filter size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />Period:</span>
