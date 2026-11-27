@@ -30,23 +30,21 @@ const formatCategoryName = (cat) => {
   return cat.replace(/([a-z])([A-Z])/g, '$1 $2');
 };
 
-// Color Hunt Reference Palette: https://colorhunt.co/palette/3368a066a3bfc8dfdbf2efe7
+// New Design System Palette: Navy & Light Theme
 const THEME_COLORS = {
-  primaryBlue: '#3368A0',
-  softBlue: '#66A3BF',
-  pastelMint: '#C8DFDB',
-  warmCream: '#F2EFE7',
-  primaryAccent: '#3368A0',
-  secondaryAccent: '#66A3BF',
-  mintHighlight: '#C8DFDB',
-  primaryText: '#202C33',
-  secondaryText: '#5C6770',
+  navy: '#172B4D',
+  primaryBlue: '#3674B5',
+  softBlue: '#8CB8E0',
+  mainBg: '#F5F7FA',
+  iconBg: '#E8F1FA',
+  primaryText: '#172B4D',
+  secondaryText: '#64748B',
   cardBg: '#FFFFFF',
-  border: '#E2DFD8',
-  success: '#2A7B4C',
-  warning: '#B7791F',
-  error: '#C24141',
-  piePalette: ['#3368A0', '#66A3BF', '#C8DFDB', '#275280', '#4F88A3', '#89C2BC']
+  border: '#E2E8F0',
+  success: '#25805A',
+  warning: '#E0A35A',
+  error: '#C94C4C',
+  piePalette: ['#3674B5', '#8CB8E0', '#5B93C7', '#A8CEEF', '#1E4B7A', '#3C82B8']
 };
 
 export default function App() {
@@ -78,12 +76,14 @@ export default function App() {
     return () => document.removeEventListener('click', handleGlobalClick);
   }, []);
 
-  // Theme State (Default: Light Mode per strict requirement)
+  // Theme State (Default: Light Mode per strict requirement, resolving legacy conflicts)
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('tradesight_theme');
+      // Clear legacy theme preferences to ensure light mode is default
+      localStorage.removeItem('tradesight_theme');
+      const saved = localStorage.getItem('tradesight_theme_v2');
       if (saved) return saved;
-      return 'light'; // Default Light Mode per requirement
+      return 'light';
     }
     return 'light';
   });
@@ -95,7 +95,7 @@ export default function App() {
       } else {
         document.body.classList.remove('dark-theme');
       }
-      localStorage.setItem('tradesight_theme', theme);
+      localStorage.setItem('tradesight_theme_v2', theme);
     }
   }, [theme]);
 
@@ -667,10 +667,10 @@ export default function App() {
 
         <div className="sidebar-footer">
           <div className="sidebar-footer-title">
-            <Database size={13} color="var(--primary-blue)" /> TradeSight
+            <Database size={13} color="var(--secondary-accent)" /> 600 Export Orders
           </div>
-          <div style={{ marginTop: '2px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-            Dataset: 2023 – 2024 (600 Orders)
+          <div style={{ marginTop: '2px', fontSize: '11px', color: '#8CB8E0' }}>
+            Jan 2023 – Dec 2024
           </div>
         </div>
       </aside>
@@ -687,7 +687,7 @@ export default function App() {
             >
               <Menu size={18} />
             </button>
-            <div className="header-page-title">{pageTitle}</div>
+            <div className="header-page-title">{activeSection === 'overview' ? 'Export Analytics' : pageTitle}</div>
           </div>
 
           <div className="header-right">
@@ -795,9 +795,6 @@ export default function App() {
               <div className="section-header-block">
                 <div>
                   <h1 className="section-title">Dashboard</h1>
-                  <p className="section-subtitle">
-                    Overview of export sales, shipments and buyers.
-                  </p>
                 </div>
                 <div className="section-period-badge">
                   <Calendar size={13} color="var(--primary-accent)" />
@@ -805,110 +802,91 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 8 Primary Key Metrics Grid (4 columns x 2 rows) */}
+              {/* 8 Primary Key Metrics Grid (4 columns x 2 rows, Compact, No Subtext) */}
               <div className="dashboard-kpi-grid">
                 {/* 1. Total Revenue */}
                 <div className="kpi-card">
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Total Revenue</span>
-                    <div className="kpi-card-icon"><TrendingUp size={14} /></div>
+                    <div className="kpi-card-icon"><TrendingUp size={16} /></div>
                   </div>
                   <div className="kpi-card-value">₹{(stats.totalRevenue / 1e7).toFixed(2)} Cr</div>
-                  <div className="kpi-card-subtext">Jan 2023 – Dec 2024</div>
                 </div>
 
                 {/* 2. Total Orders */}
                 <div className="kpi-card">
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Total Orders</span>
-                    <div className="kpi-card-icon"><Box size={14} /></div>
+                    <div className="kpi-card-icon"><Box size={16} /></div>
                   </div>
                   <div className="kpi-card-value">{stats.totalOrders}</div>
-                  <div className="kpi-card-subtext">Across 10 categories</div>
                 </div>
 
                 {/* 3. Average Order Value */}
                 <div className="kpi-card">
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Average Order Value</span>
-                    <div className="kpi-card-icon"><DollarSign size={14} /></div>
+                    <div className="kpi-card-icon"><DollarSign size={16} /></div>
                   </div>
                   <div className="kpi-card-value">₹{(stats.aov / 1e5).toFixed(2)} L</div>
-                  <div className="kpi-card-subtext">Per export shipment</div>
                 </div>
 
                 {/* 4. On-Time Delivery */}
                 <div className="kpi-card">
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">On-Time Delivery</span>
-                    <div className="kpi-card-icon" style={{ color: stats.onTimeRate >= 80 ? 'var(--status-success)' : 'var(--status-warning)' }}>
-                      <Truck size={14} />
+                    <div className="kpi-card-icon" style={{ color: 'var(--status-success)', backgroundColor: 'var(--status-success-bg)' }}>
+                      <Truck size={16} />
                     </div>
                   </div>
-                  <div className="kpi-card-value" style={{ color: stats.onTimeRate >= 80 ? 'var(--status-success)' : 'var(--status-warning)' }}>
+                  <div className="kpi-card-value" style={{ color: 'var(--status-success)' }}>
                     {stats.onTimeRate.toFixed(2)}%
                   </div>
-                  <div className="kpi-card-subtext">{stats.onTimeOrders} on-time shipments</div>
                 </div>
 
                 {/* 5. Return Rate */}
                 <div className="kpi-card">
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Return Rate</span>
-                    <div className="kpi-card-icon"><RotateCcw size={14} /></div>
+                    <div className="kpi-card-icon"><RotateCcw size={16} /></div>
                   </div>
                   <div className="kpi-card-value">{stats.returnRate.toFixed(2)}%</div>
-                  <div className="kpi-card-subtext">{stats.returnUnits.toLocaleString()} units returned</div>
                 </div>
 
                 {/* 6. Total Buyers */}
                 <div className="kpi-card">
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Total Buyers</span>
-                    <div className="kpi-card-icon"><Users size={14} /></div>
+                    <div className="kpi-card-icon"><Users size={16} /></div>
                   </div>
                   <div className="kpi-card-value">{stats.uniqueBuyers}</div>
-                  <div className="kpi-card-subtext">Active commercial buyers</div>
                 </div>
 
                 {/* 7. Total Products */}
                 <div className="kpi-card">
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Total Products</span>
-                    <div className="kpi-card-icon"><Package size={14} /></div>
+                    <div className="kpi-card-icon"><Package size={16} /></div>
                   </div>
                   <div className="kpi-card-value">{productStats.totalProducts}</div>
-                  <div className="kpi-card-subtext">5 commodity categories</div>
                 </div>
 
-                {/* 8. Average Catalogue Margin */}
+                {/* 8. Catalogue Margin */}
                 <div className="kpi-card">
                   <div className="kpi-card-header">
-                    <span className="kpi-card-label">Average Catalogue Margin</span>
-                    <div className="kpi-card-icon" style={{ color: 'var(--status-success)' }}><Activity size={14} /></div>
+                    <span className="kpi-card-label">Catalogue Margin</span>
+                    <div className="kpi-card-icon" style={{ color: 'var(--status-success)', backgroundColor: 'var(--status-success-bg)' }}>
+                      <Activity size={16} />
+                    </div>
                   </div>
                   <div className="kpi-card-value" style={{ color: 'var(--status-success)' }}>
                     {productStats.avgMarginPct.toFixed(2)}%
                   </div>
-                  <div className="kpi-card-subtext">Retail catalogue margin</div>
                 </div>
               </div>
 
-              {/* Compact Dynamic Needs Attention Alert */}
-              {stats.delayedOrders > 0 && (
-                <div className="needs-attention-banner">
-                  <div className="needs-attention-content">
-                    <AlertTriangle size={15} color="#B45309" />
-                    <span><strong>Needs Attention:</strong> Delayed shipments: {stats.delayedOrders} of {stats.totalOrders} ({((stats.delayedOrders / (stats.totalOrders || 1)) * 100).toFixed(1)}%).</span>
-                  </div>
-                  <button className="action-btn" onClick={() => handleSelectSection('logistics')} style={{ padding: '3px 10px', fontSize: '11.5px', background: 'var(--bg-card)' }}>
-                    View Shipments
-                  </button>
-                </div>
-              )}
-
-              {/* Main Analytics Area: Chart Grid 1 */}
-              <div className="chart-grid-2">
+              {/* Main Analytics Area: Chart Row 1 (60% Monthly Revenue / 40% Delivery Performance) */}
+              <div className="chart-row-60-40">
                 {/* Chart 1: Monthly Revenue */}
                 <div className="panel-card">
                   <div className="panel-header">
@@ -1028,7 +1006,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Bar dataKey="revenueCr" fill="var(--secondary-accent)" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="revenueCr" fill="var(--primary-accent)" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1054,7 +1032,7 @@ export default function App() {
                               return (
                                 <div className="chart-tooltip">
                                   <div className="chart-tooltip-title">{payload[0].payload.term}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--supporting-gold)' }}>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--secondary-accent)' }}>
                                     Revenue: ₹{payload[0].value} Crore
                                   </div>
                                   <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -1066,7 +1044,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Bar dataKey="revenueCr" fill="var(--supporting-gold)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="revenueCr" fill="var(--secondary-accent)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1118,7 +1096,7 @@ export default function App() {
                   <div className="panel-header">
                     <div>
                       <div className="panel-title">Buyer Order Activity</div>
-                      <div className="panel-subtitle">227 repeat buyer orders (37.83%) vs 373 first-time orders</div>
+                      <div className="panel-subtitle">Repeat buyers ({stats.repeatBuyerOrders}) vs first-time buyers ({stats.totalOrders - stats.repeatBuyerOrders})</div>
                     </div>
                   </div>
                   <div style={{ height: 240 }}>
@@ -1126,8 +1104,8 @@ export default function App() {
                       <PieChart>
                         <Pie
                           data={[
-                            { name: 'Repeat Buyer Orders', value: stats.repeatBuyerOrders, fill: 'var(--secondary-accent)' },
-                            { name: 'First-Time Orders', value: stats.totalOrders - stats.repeatBuyerOrders, fill: 'var(--supporting-gold)' }
+                            { name: 'Repeat Buyer Orders', value: stats.repeatBuyerOrders, fill: 'var(--primary-blue)' },
+                            { name: 'First-Time Orders', value: stats.totalOrders - stats.repeatBuyerOrders, fill: 'var(--secondary-accent)' }
                           ]}
                           cx="50%"
                           cy="50%"
@@ -1136,8 +1114,8 @@ export default function App() {
                           paddingAngle={3}
                           dataKey="value"
                         >
+                          <Cell fill="var(--primary-blue)" />
                           <Cell fill="var(--secondary-accent)" />
-                          <Cell fill="var(--supporting-gold)" />
                         </Pie>
                         <Tooltip 
                           content={({ active, payload }) => {
