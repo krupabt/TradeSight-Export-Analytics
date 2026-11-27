@@ -1,9 +1,31 @@
-# TradeSight Export Analytics
+# TradeSight — Export Intelligence & Business Analytics Platform
 
-**Capstone Milestone:** Week 3 — Reusable Data Pipeline & Baseline Metrics  
-**Program:** Cynaris Data Analyst Internship  
+**Production Platform:** https://tradesight-export-analytics.vercel.app  
+**GitHub Repository:** https://github.com/krupabt/TradeSight-Export-Analytics  
+**Program:** Cynaris Solutions Data Analyst Internship & Final Presentation  
 **Client Scenario:** Chennai-based export management enterprise (~45 employees, 50 clients across 12 countries)  
-**Technology Stack:** Python 3.12, pandas, PostgreSQL, SQL, Power BI Desktop, Git, GitHub  
+**Technology Stack:** Python 3.12, Pandas, NumPy, SQL, React.js (Vite), Recharts, PostCSS, Git, GitHub Actions, Vercel  
+
+---
+
+## Quick Start / Local Presentation Mode
+
+To run TradeSight locally for presentations (with 100% offline support):
+
+```bash
+# 1. Clone repository
+git clone https://github.com/krupabt/TradeSight-Export-Analytics.git
+cd TradeSight-Export-Analytics
+
+# 2. Run Python test suite (35 automated tests)
+pytest -q
+
+# 3. Launch the presentation web dashboard
+cd frontend
+npm install
+npm run dev
+# Dashboard opens instantly at http://localhost:5173
+```  
 
 ---
 

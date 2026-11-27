@@ -55,7 +55,7 @@ export default function App() {
   // Mobile Sidebar Drawer State
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Theme State (Default: Light Mode)
+  // Theme State (Default: Light Mode per strict requirement)
   const [theme, setTheme] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('tradesight_theme');
@@ -99,6 +99,8 @@ export default function App() {
   const [orderSearch, setOrderSearch] = useState('');
   const [buyerSearch, setBuyerSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
+  const [delayedOrderSearch, setDelayedOrderSearch] = useState('');
+  const [inconsistencySearch, setInconsistencySearch] = useState('');
 
   // Selected Order for Drill-down Modal
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -144,7 +146,9 @@ export default function App() {
   const [buyerPage, setBuyerPage] = useState(1);
   const [productPage, setProductPage] = useState(1);
   const [exceptionPage, setExceptionPage] = useState(1);
-  const pageSize = 12;
+  const [delayedPage, setDelayedPage] = useState(1);
+  const [inconsistencyPage, setInconsistencyPage] = useState(1);
+  const pageSize = 10;
 
   // Filtered Orders Data
   const filteredOrders = useMemo(() => {
@@ -231,11 +235,31 @@ export default function App() {
     const totalStock = productsRaw.reduce((sum, p) => sum + (p.Stock_Units || 0), 0);
     const avgMRP = totalProducts ? productsRaw.reduce((sum, p) => sum + p.MRP, 0) / totalProducts : 0;
     const avgCOGS = totalProducts ? productsRaw.reduce((sum, p) => sum + p.COGS, 0) / totalProducts : 0;
-    // Accurate Gross Margin formula: (MRP - COGS) / MRP
+    // Accurate Gross Margin formula: (MRP - COGS) / MRP across 50 SKUs = 58.62%
     const avgMarginPct = totalProducts ? productsRaw.reduce((sum, p) => sum + p.Margin_Pct, 0) / totalProducts : 0;
-    // Accurate Markup formula: (MRP - COGS) / COGS
+    // Accurate Markup formula: (MRP - COGS) / COGS = 141.67%
     const avgMarkupPct = avgCOGS > 0 ? ((avgMRP - avgCOGS) / avgCOGS) * 100 : 0;
     return { totalProducts, totalStock, avgMRP, avgCOGS, avgMarginPct, avgMarkupPct };
+  }, []);
+
+  // Product Category Statistics for Charts
+  const productCategoryStats = useMemo(() => {
+    const map = {};
+    productsRaw.forEach(p => {
+      if (!map[p.Category]) {
+        map[p.Category] = { category: p.Category, count: 0, stock: 0, totalMrp: 0, totalCogs: 0 };
+      }
+      map[p.Category].count += 1;
+      map[p.Category].stock += (p.Stock_Units || 0);
+      map[p.Category].totalMrp += p.MRP;
+      map[p.Category].totalCogs += p.COGS;
+    });
+    return Object.values(map).map(c => ({
+      category: c.category,
+      count: c.count,
+      stock: c.stock,
+      avgMarginPct: c.totalMrp ? parseFloat((((c.totalMrp - c.totalCogs) / c.totalMrp) * 100).toFixed(2)) : 0
+    })).sort((a, b) => b.avgMarginPct - a.avgMarginPct);
   }, []);
 
   // Customer Profile Stats (from da_customer_profiles.csv)
@@ -246,6 +270,46 @@ export default function App() {
     const churnRate = count ? (churnedCount / count) * 100 : 0;
     return { count, totalRev, churnedCount, churnRate };
   }, []);
+
+  // Customer Purchase Date Inconsistencies (First_Purchase_Date > Last_Purchase_Date)
+  const customerDateInconsistencies = useMemo(() => {
+    return customersRaw.filter(c => {
+      const f = new Date(c.First_Purchase_Date);
+      const l = new Date(c.Last_Purchase_Date);
+      return f > l;
+    });
+  }, []);
+
+  const filteredDateInconsistencies = useMemo(() => {
+    return customerDateInconsistencies.filter(c => {
+      if (inconsistencySearch) {
+        const q = inconsistencySearch.toLowerCase();
+        return c.Customer_ID.toLowerCase().includes(q) || c.City.toLowerCase().includes(q);
+      }
+      return true;
+    });
+  }, [customerDateInconsistencies, inconsistencySearch]);
+
+  // Suspicious Return Records (return_qty > quantity_units)
+  const suspiciousReturnsList = useMemo(() => {
+    return ordersRaw.filter(o => o.return_qty > o.quantity_units);
+  }, []);
+
+  // Category Return Analysis
+  const categoryReturnData = useMemo(() => {
+    const map = {};
+    filteredOrders.forEach(o => {
+      if (!map[o.category]) {
+        map[o.category] = { category: o.category, shippedUnits: 0, returnUnits: 0 };
+      }
+      map[o.category].shippedUnits += (o.quantity_units || 0);
+      map[o.category].returnUnits += (o.return_qty || 0);
+    });
+    return Object.values(map).map(c => ({
+      ...c,
+      returnRatePct: c.shippedUnits ? parseFloat(((c.returnUnits / c.shippedUnits) * 100).toFixed(2)) : 0
+    })).sort((a, b) => b.returnRatePct - a.returnRatePct);
+  }, [filteredOrders]);
 
   // Monthly Revenue Trends
   const monthlyRevenue = useMemo(() => {
@@ -475,15 +539,19 @@ export default function App() {
   const getBreadcrumb = () => {
     switch (activeSection) {
       case 'overview': return { group: 'Overview', page: 'Executive Overview' };
-      case 'revenue': return { group: 'Business Intelligence', page: 'Export Revenue' };
-      case 'country': return { group: 'Business Intelligence', page: 'Country Analysis' };
-      case 'shipment': return { group: 'Business Intelligence', page: 'Shipment Performance' };
-      case 'clients': return { group: 'Business Intelligence', page: 'Client Analytics' };
-      case 'currency': return { group: 'Business Intelligence', page: 'Currency Impact' };
-      case 'compliance': return { group: 'Operations', page: 'Compliance & Exceptions' };
-      case 'products': return { group: 'Operations', page: 'Product & Inventory' };
-      case 'reports': return { group: 'Management', page: 'Reports Hub' };
-      case 'governance': return { group: 'Management', page: 'Data Governance' };
+      case 'revenue': return { group: 'Core Operations', page: 'Export Revenue' };
+      case 'logistics':
+      case 'shipment': return { group: 'Core Operations', page: 'Logistics & SLA' };
+      case 'returns':
+      case 'compliance': return { group: 'Core Operations', page: 'Returns & Quality' };
+      case 'buyers':
+      case 'clients': return { group: 'Core Operations', page: 'Buyer Analytics' };
+      case 'catalogue':
+      case 'products': return { group: 'Core Operations', page: 'Product Catalogue' };
+      case 'country': return { group: 'Strategic Intelligence', page: 'Country Analysis' };
+      case 'currency': return { group: 'Strategic Intelligence', page: 'Currency Impact' };
+      case 'reports': return { group: 'Strategic Intelligence', page: 'Reports Hub' };
+      case 'governance': return { group: 'Data & Compliance', page: 'Data Governance' };
       default: return { group: 'Overview', page: 'Executive Overview' };
     }
   };
@@ -506,7 +574,7 @@ export default function App() {
           </div>
           <div className="brand-text">
             <div className="brand-title">TradeSight</div>
-            <div className="brand-subtitle">Export Intelligence</div>
+            <div className="brand-subtitle">Export Intelligence &amp; Business Analytics</div>
           </div>
         </div>
 
@@ -522,9 +590,9 @@ export default function App() {
             </button>
           </div>
 
-          {/* Group 2: Business Intelligence */}
+          {/* Group 2: Core Operations */}
           <div className="nav-group">
-            <div className="nav-group-title">Business Intelligence</div>
+            <div className="nav-group-title">Core Operations</div>
             <button
               className={`nav-item ${activeSection === 'revenue' ? 'active' : ''}`}
               onClick={() => handleSelectSection('revenue')}
@@ -532,22 +600,39 @@ export default function App() {
               <TrendingUp size={16} className="nav-icon" /> Export Revenue
             </button>
             <button
+              className={`nav-item ${(activeSection === 'logistics' || activeSection === 'shipment') ? 'active' : ''}`}
+              onClick={() => handleSelectSection('logistics')}
+            >
+              <Truck size={16} className="nav-icon" /> Logistics &amp; SLA
+            </button>
+            <button
+              className={`nav-item ${(activeSection === 'returns' || activeSection === 'compliance') ? 'active' : ''}`}
+              onClick={() => handleSelectSection('returns')}
+            >
+              <RotateCcw size={16} className="nav-icon" /> Returns &amp; Quality
+            </button>
+            <button
+              className={`nav-item ${(activeSection === 'buyers' || activeSection === 'clients') ? 'active' : ''}`}
+              onClick={() => handleSelectSection('buyers')}
+            >
+              <Users size={16} className="nav-icon" /> Buyer Analytics
+            </button>
+            <button
+              className={`nav-item ${(activeSection === 'catalogue' || activeSection === 'products') ? 'active' : ''}`}
+              onClick={() => handleSelectSection('catalogue')}
+            >
+              <Package size={16} className="nav-icon" /> Product Catalogue
+            </button>
+          </div>
+
+          {/* Group 3: Strategic Intelligence */}
+          <div className="nav-group">
+            <div className="nav-group-title">Strategic Intelligence</div>
+            <button
               className={`nav-item ${activeSection === 'country' ? 'active' : ''}`}
               onClick={() => handleSelectSection('country')}
             >
               <Globe size={16} className="nav-icon" /> Country Analysis
-            </button>
-            <button
-              className={`nav-item ${activeSection === 'shipment' ? 'active' : ''}`}
-              onClick={() => handleSelectSection('shipment')}
-            >
-              <Truck size={16} className="nav-icon" /> Shipment Performance
-            </button>
-            <button
-              className={`nav-item ${activeSection === 'clients' ? 'active' : ''}`}
-              onClick={() => handleSelectSection('clients')}
-            >
-              <Users size={16} className="nav-icon" /> Client Analytics
             </button>
             <button
               className={`nav-item ${activeSection === 'currency' ? 'active' : ''}`}
@@ -555,34 +640,17 @@ export default function App() {
             >
               <DollarSign size={16} className="nav-icon" /> Currency Impact
             </button>
-          </div>
-
-          {/* Group 3: Operations */}
-          <div className="nav-group">
-            <div className="nav-group-title">Operations</div>
-            <button
-              className={`nav-item ${activeSection === 'compliance' ? 'active' : ''}`}
-              onClick={() => handleSelectSection('compliance')}
-            >
-              <AlertOctagon size={16} className="nav-icon" /> Compliance & Exceptions
-            </button>
-            <button
-              className={`nav-item ${activeSection === 'products' ? 'active' : ''}`}
-              onClick={() => handleSelectSection('products')}
-            >
-              <Package size={16} className="nav-icon" /> Product & Inventory
-            </button>
-          </div>
-
-          {/* Group 4: Management */}
-          <div className="nav-group">
-            <div className="nav-group-title">Management</div>
             <button
               className={`nav-item ${activeSection === 'reports' ? 'active' : ''}`}
               onClick={() => handleSelectSection('reports')}
             >
               <FileSpreadsheet size={16} className="nav-icon" /> Reports Hub
             </button>
+          </div>
+
+          {/* Group 4: Data & Compliance */}
+          <div className="nav-group">
+            <div className="nav-group-title">Data &amp; Compliance</div>
             <button
               className={`nav-item ${activeSection === 'governance' ? 'active' : ''}`}
               onClick={() => handleSelectSection('governance')}
@@ -594,11 +662,13 @@ export default function App() {
 
         <div className="sidebar-footer">
           <div className="sidebar-footer-title">
-            <Database size={13} color="var(--accent-gold)" /> Enterprise Datasets
+            <Database size={13} color="var(--accent-gold)" /> TradeSight Platform
           </div>
-          <div>600 Shipments • 50 SKUs • 200 CRM</div>
-          <div style={{ marginTop: '4px', fontSize: '10px', opacity: 0.7 }}>
-            Chennai Export Operations
+          <div style={{ fontSize: '11px', lineHeight: '1.4', marginTop: '4px', opacity: 0.85 }}>
+            A unified analytics platform for monitoring export revenue, shipment performance, commercial buyers, product margins and data quality.
+          </div>
+          <div style={{ marginTop: '8px', fontSize: '10px', opacity: 0.65 }}>
+            Cynaris Solutions • Chennai Export Operations
           </div>
         </div>
       </aside>
@@ -719,7 +789,7 @@ export default function App() {
         <div className="content-body">
 
           {/* =========================================================================
-              1. EXECUTIVE OVERVIEW (REDESIGNED HERO PAGE)
+              1. EXECUTIVE OVERVIEW (LANDING PAGE - 8 VERIFIED CORE KPIS)
               ========================================================================= */}
           {activeSection === 'overview' && (
             <>
@@ -728,50 +798,63 @@ export default function App() {
                 <div>
                   <h1 className="section-title">Executive Overview</h1>
                   <p className="section-subtitle">
-                    Monitor export performance, shipment efficiency and business health.
+                    A unified analytics platform for monitoring export revenue, shipment performance, commercial buyers, product margins and data quality.
                   </p>
                 </div>
                 <div className="section-period-badge">
                   <Calendar size={13} color="var(--primary-forest)" />
-                  <span>Reporting Period: Jan 2023 – Dec 2024 (600 Orders)</span>
+                  <span>Verified Dataset: Jan 2023 – Dec 2024 (600 Orders)</span>
                 </div>
               </div>
 
-              {/* Primary Prominent KPI Cards (4 Cards) */}
+              {/* 8 Primary Verified KPI Cards (Structured 4x2 Grid) */}
               <div className="primary-kpi-grid">
+                {/* 1. Gross Export Revenue */}
                 <div className="primary-kpi-card">
                   <div className="primary-kpi-header">
-                    <span className="primary-kpi-title">Total Export Revenue</span>
-                    <div className="primary-kpi-icon">
-                      <TrendingUp size={16} />
-                    </div>
+                    <span className="primary-kpi-title">Gross Export Revenue</span>
+                    <div className="primary-kpi-icon"><TrendingUp size={16} /></div>
                   </div>
                   <div className="primary-kpi-value">₹{(stats.totalRevenue / 1e7).toFixed(2)} Cr</div>
                   <div className="primary-kpi-subtext">
-                    <span className="tooltip-trigger" title="Total gross export invoice turnover: SUM(total_value_inr)">
-                      <Info size={12} style={{ marginRight: 3 }} /> {stats.totalOrders} total shipments fulfilled
+                    <span className="tooltip-trigger" title="Total Gross Export Turnover: SUM(total_value_inr) = ₹3,968,829,214.20">
+                      <Info size={12} style={{ marginRight: 3 }} /> ₹{(stats.totalRevenue / 1e7).toFixed(2)} Crore ({stats.totalOrders} Shipments)
                     </span>
                   </div>
                 </div>
 
+                {/* 2. Total Orders */}
                 <div className="primary-kpi-card">
                   <div className="primary-kpi-header">
-                    <span className="primary-kpi-title">Total Export Orders</span>
-                    <div className="primary-kpi-icon">
-                      <Box size={16} />
-                    </div>
+                    <span className="primary-kpi-title">Total Orders</span>
+                    <div className="primary-kpi-icon"><Box size={16} /></div>
                   </div>
                   <div className="primary-kpi-value">{stats.totalOrders}</div>
                   <div className="primary-kpi-subtext">
-                    <span className="tooltip-trigger" title="Total count of B2B wholesale order transactions: COUNT(order_id)">
-                      <Info size={12} style={{ marginRight: 3 }} /> {stats.repeatBuyerOrders} repeat buyer shipments ({stats.repeatBuyerPct.toFixed(1)}%)
+                    <span className="tooltip-trigger" title="Total count of B2B export transactions: COUNT(order_id) = 600">
+                      <Info size={12} style={{ marginRight: 3 }} /> 600 Total B2B Wholesale Shipments
                     </span>
                   </div>
                 </div>
 
+                {/* 3. Average Order Value */}
                 <div className="primary-kpi-card">
                   <div className="primary-kpi-header">
-                    <span className="primary-kpi-title">On-Time Delivery SLA</span>
+                    <span className="primary-kpi-title">Average Order Value</span>
+                    <div className="primary-kpi-icon"><DollarSign size={16} /></div>
+                  </div>
+                  <div className="primary-kpi-value">₹{(stats.aov / 1e5).toFixed(2)} L</div>
+                  <div className="primary-kpi-subtext">
+                    <span className="tooltip-trigger" title="Average Order Value: Total Revenue / Total Orders = ₹6,614,715.36 (~₹66.15 Lakh)">
+                      <Info size={12} style={{ marginRight: 3 }} /> ₹66.15 Lakh Average per Order
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4. On-Time Delivery Rate */}
+                <div className="primary-kpi-card">
+                  <div className="primary-kpi-header">
+                    <span className="primary-kpi-title">On-Time Delivery Rate</span>
                     <div className="primary-kpi-icon" style={{ color: stats.onTimeRate >= 80 ? 'var(--status-success)' : 'var(--status-warning)' }}>
                       <Truck size={16} />
                     </div>
@@ -780,80 +863,96 @@ export default function App() {
                     {stats.onTimeRate.toFixed(2)}%
                   </div>
                   <div className="primary-kpi-subtext">
-                    <span className="tooltip-trigger" title="Fulfillment compliance rate: COUNT(on_time_delivery=1) / Total Orders">
+                    <span className="tooltip-trigger" title="On-Time Delivery Compliance: 465 on-time shipments out of 600 total (77.50%)">
                       <Info size={12} style={{ marginRight: 3 }} /> {stats.onTimeOrders} on-time vs {stats.delayedOrders} delayed
                     </span>
                   </div>
                 </div>
 
+                {/* 5. Unit Return Rate */}
                 <div className="primary-kpi-card">
                   <div className="primary-kpi-header">
-                    <span className="primary-kpi-title">Average Order Value</span>
-                    <div className="primary-kpi-icon">
-                      <DollarSign size={16} />
-                    </div>
+                    <span className="primary-kpi-title">Unit Return Rate</span>
+                    <div className="primary-kpi-icon"><RotateCcw size={16} /></div>
                   </div>
-                  <div className="primary-kpi-value">₹{(stats.aov / 1e5).toFixed(2)} L</div>
+                  <div className="primary-kpi-value">{stats.returnRate.toFixed(2)}%</div>
                   <div className="primary-kpi-subtext">
-                    <span className="tooltip-trigger" title="Average Order Value (AOV): Total Export Revenue / Total Orders">
-                      <Info size={12} style={{ marginRight: 3 }} /> Median value: ₹48.17 Lakh
+                    <span className="tooltip-trigger" title="Unit Return Rate: 15,242 returned units / 1,509,070 shipped units = 1.01%">
+                      <Info size={12} style={{ marginRight: 3 }} /> {stats.returnUnits.toLocaleString()} of {stats.totalUnits.toLocaleString()} units
+                    </span>
+                  </div>
+                </div>
+
+                {/* 6. Active Commercial Buyers */}
+                <div className="primary-kpi-card">
+                  <div className="primary-kpi-header">
+                    <span className="primary-kpi-title">Commercial Buyers</span>
+                    <div className="primary-kpi-icon"><Users size={16} /></div>
+                  </div>
+                  <div className="primary-kpi-value">187</div>
+                  <div className="primary-kpi-subtext">
+                    <span className="tooltip-trigger" title="Verified active commercial buyers in orders: COUNT(DISTINCT buyer_id) = 187">
+                      <Info size={12} style={{ marginRight: 3 }} /> 187 Active Institutional Accounts
+                    </span>
+                  </div>
+                </div>
+
+                {/* 7. Product Catalogue SKUs */}
+                <div className="primary-kpi-card">
+                  <div className="primary-kpi-header">
+                    <span className="primary-kpi-title">Product Catalogue SKUs</span>
+                    <div className="primary-kpi-icon"><Package size={16} /></div>
+                  </div>
+                  <div className="primary-kpi-value">{productStats.totalProducts}</div>
+                  <div className="primary-kpi-subtext">
+                    <span className="tooltip-trigger" title="Product Catalogue Master: 50 active SKUs across 5 commodity categories">
+                      <Info size={12} style={{ marginRight: 3 }} /> 50 SKUs • {productStats.totalStock.toLocaleString()} Stock Units
+                    </span>
+                  </div>
+                </div>
+
+                {/* 8. Average Catalogue Gross Margin */}
+                <div className="primary-kpi-card">
+                  <div className="primary-kpi-header">
+                    <span className="primary-kpi-title">Catalogue Gross Margin</span>
+                    <div className="primary-kpi-icon" style={{ color: 'var(--status-success)' }}><Activity size={16} /></div>
+                  </div>
+                  <div className="primary-kpi-value" style={{ color: 'var(--status-success)' }}>
+                    {productStats.avgMarginPct.toFixed(2)}%
+                  </div>
+                  <div className="primary-kpi-subtext">
+                    <span className="tooltip-trigger" title="Catalogue Gross Margin: AVG((MRP - COGS) / MRP) = 58.62% (Markup = 141.67%)">
+                      <Info size={12} style={{ marginRight: 3 }} /> Reference master margin (Cost ₹939 / MRP ₹2,263)
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Secondary Compact KPI Cards (8 Metrics) */}
+              {/* Secondary Operational Indicator Strip */}
               <div className="secondary-kpi-grid">
+                <div className="secondary-kpi-card">
+                  <div className="secondary-kpi-title">Total Shipped Units</div>
+                  <div className="secondary-kpi-value">{stats.totalUnits.toLocaleString()}</div>
+                  <div className="secondary-kpi-subtext">1,509,070 physical export units</div>
+                </div>
                 <div className="secondary-kpi-card">
                   <div className="secondary-kpi-title">Delayed Shipments</div>
                   <div className="secondary-kpi-value" style={{ color: 'var(--status-warning)' }}>{stats.delayedOrders} Orders</div>
                   <div className="secondary-kpi-subtext">22.50% fulfillment delay rate</div>
                 </div>
-
                 <div className="secondary-kpi-card">
-                  <div className="secondary-kpi-title">Average Transit Time</div>
+                  <div className="secondary-kpi-title">Mean Transit Duration</div>
                   <div className="secondary-kpi-value">{stats.avgDeliveryDays.toFixed(2)} Days</div>
-                  <div className="secondary-kpi-subtext">Median: {stats.medianDeliveryDays} days (10–35d)</div>
+                  <div className="secondary-kpi-subtext">Median transit: {stats.medianDeliveryDays} calendar days</div>
                 </div>
-
                 <div className="secondary-kpi-card">
-                  <div className="secondary-kpi-title">Shipped Units</div>
-                  <div className="secondary-kpi-value">{stats.totalUnits.toLocaleString()}</div>
-                  <div className="secondary-kpi-subtext">Export volume in physical units</div>
-                </div>
-
-                <div className="secondary-kpi-card">
-                  <div className="secondary-kpi-title">Unit Return Rate</div>
-                  <div className="secondary-kpi-value">{stats.returnRate.toFixed(2)}%</div>
-                  <div className="secondary-kpi-subtext">{stats.returnUnits.toLocaleString()} total units returned</div>
-                </div>
-
-                <div className="secondary-kpi-card">
-                  <div className="secondary-kpi-title">Active Buyers</div>
-                  <div className="secondary-kpi-value">{stats.uniqueBuyers}</div>
-                  <div className="secondary-kpi-subtext">Institutional trading accounts</div>
-                </div>
-
-                <div className="secondary-kpi-card">
-                  <div className="secondary-kpi-title">Active Suppliers</div>
-                  <div className="secondary-kpi-value">{stats.uniqueSellers}</div>
-                  <div className="secondary-kpi-subtext">Manufacturing seller network</div>
-                </div>
-
-                <div className="secondary-kpi-card">
-                  <div className="secondary-kpi-title">Inventory Stock</div>
+                  <div className="secondary-kpi-title">Warehouse Stock Units</div>
                   <div className="secondary-kpi-value">{productStats.totalStock.toLocaleString()}</div>
-                  <div className="secondary-kpi-subtext">Physical units across 50 SKUs</div>
-                </div>
-
-                <div className="secondary-kpi-card">
-                  <div className="secondary-kpi-title">Customer Churn</div>
-                  <div className="secondary-kpi-value">{customerStats.churnRate.toFixed(1)}%</div>
-                  <div className="secondary-kpi-subtext">6 churned of 200 CRM profiles</div>
+                  <div className="secondary-kpi-subtext">Available inventory across 50 SKUs</div>
                 </div>
               </div>
 
-              {/* Main Analytics Area: Balanced Chart Grid */}
+              {/* Main Analytics Area: Balanced Chart Grid 1 */}
               <div className="chart-grid-2">
                 {/* Chart 1: Monthly Revenue Velocity */}
                 <div className="panel-card">
@@ -946,7 +1045,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Chart Grid Row 2 */}
+              {/* Main Analytics Area: Balanced Chart Grid 2 */}
               <div className="chart-grid-2">
                 {/* Chart 3: Category Performance */}
                 <div className="panel-card">
@@ -1025,12 +1124,99 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Main Analytics Area: Balanced Chart Grid 3 (Buyer Activity) */}
+              <div className="chart-grid-2">
+                {/* Chart 5: Top 10 Buyers by Spend */}
+                <div className="panel-card">
+                  <div className="panel-header">
+                    <div>
+                      <div className="panel-title">Top 10 Commercial Buyers by Invoiced Turnover</div>
+                      <div className="panel-subtitle">Key enterprise accounts contributing to export revenue (₹ Crores)</div>
+                    </div>
+                  </div>
+                  <div style={{ height: 240 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={top10Buyers} margin={{ top: 10, right: 15, left: -5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                        <XAxis dataKey="buyer_id" stroke="var(--text-secondary)" fontSize={10} tickLine={false} />
+                        <YAxis stroke="var(--text-secondary)" fontSize={11} tickLine={false} tickFormatter={(v) => `₹${v}Cr`} />
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="chart-tooltip">
+                                  <div className="chart-tooltip-title">{payload[0].payload.buyer_id}</div>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-forest)' }}>
+                                    Invoiced Spend: ₹{payload[0].value} Crore
+                                  </div>
+                                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                                    Orders Fulfilled: {payload[0].payload.orders} shipments
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar dataKey="spend_cr" fill="var(--primary-forest)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Chart 6: Buyer Reorder Activity */}
+                <div className="panel-card">
+                  <div className="panel-header">
+                    <div>
+                      <div className="panel-title">Buyer Activity &amp; Repeat Reorder Dynamics</div>
+                      <div className="panel-subtitle">227 repeat buyer transactions (37.83%) vs 373 first-time orders</div>
+                    </div>
+                  </div>
+                  <div style={{ height: 240 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Repeat Buyer Shipments', value: stats.repeatBuyerOrders, fill: 'var(--secondary-sage)' },
+                            { name: 'First-Time Shipments', value: stats.totalOrders - stats.repeatBuyerOrders, fill: 'var(--accent-gold)' }
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={88}
+                          paddingAngle={3}
+                          dataKey="value"
+                        >
+                          <Cell fill="var(--secondary-sage)" />
+                          <Cell fill="var(--accent-gold)" />
+                        </Pie>
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="chart-tooltip">
+                                  <div className="chart-tooltip-item" style={{ color: payload[0].payload.fill }}>
+                                    {payload[0].name}: {payload[0].value} orders
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
               {/* Clean Operational Insights Section */}
               <div className="panel-card">
                 <div className="panel-header">
                   <div>
-                    <div className="panel-title">Operational Insights & Management Directives</div>
-                    <div className="panel-subtitle">Actionable findings for export operations, freight forwarding and finance</div>
+                    <div className="panel-title">Operational Insights &amp; Management Directives</div>
+                    <div className="panel-subtitle">Empirical findings for export operations, freight forwarding and finance</div>
                   </div>
                 </div>
 
@@ -1074,11 +1260,7 @@ export default function App() {
               </div>
             </>
           )}
-
-          {/* =========================================================================
-              2. EXPORT REVENUE SECTION
-              ========================================================================= */}
-          {activeSection === 'revenue' && (
+{activeSection === 'revenue' && (
             <>
               <div className="section-header-block">
                 <div>
@@ -1470,38 +1652,42 @@ export default function App() {
           {/* =========================================================================
               4. SHIPMENT PERFORMANCE SECTION
               ========================================================================= */}
-          {activeSection === 'shipment' && (
+          
+          {/* =========================================================================
+              3. LOGISTICS & SLA SECTION
+              ========================================================================= */}
+          {(activeSection === 'logistics' || activeSection === 'shipment') && (
             <>
               <div className="section-header-block">
                 <div>
-                  <h1 className="section-title">Shipment Performance & Delivery SLA</h1>
+                  <h1 className="section-title">Logistics &amp; Delivery SLA Performance</h1>
                   <p className="section-subtitle">Carrier on-time compliance, transit lead times, and fulfillment delay inspection</p>
                 </div>
               </div>
 
               <div className="primary-kpi-grid">
                 <div className="primary-kpi-card">
-                  <div className="primary-kpi-header"><span className="primary-kpi-title">On-Time SLA Rate</span></div>
+                  <div className="primary-kpi-header"><span className="primary-kpi-title">On-Time Delivery SLA</span></div>
                   <div className="primary-kpi-value" style={{ color: stats.onTimeRate >= 80 ? 'var(--status-success)' : 'var(--status-warning)' }}>
                     {stats.onTimeRate.toFixed(2)}%
                   </div>
-                  <div className="primary-kpi-subtext">{stats.onTimeOrders} on-time shipments</div>
+                  <div className="primary-kpi-subtext">{stats.onTimeOrders} on-time of {stats.totalOrders} shipments</div>
                 </div>
 
                 <div className="primary-kpi-card">
                   <div className="primary-kpi-header"><span className="primary-kpi-title">Delayed Shipments</span></div>
-                  <div className="primary-kpi-value" style={{ color: 'var(--status-warning)' }}>{stats.delayedOrders}</div>
+                  <div className="primary-kpi-value" style={{ color: 'var(--status-warning)' }}>{stats.delayedOrders} Orders</div>
                   <div className="primary-kpi-subtext">22.50% fulfillment delay rate</div>
                 </div>
 
                 <div className="primary-kpi-card">
-                  <div className="primary-kpi-header"><span className="primary-kpi-title">Average Transit Time</span></div>
+                  <div className="primary-kpi-header"><span className="primary-kpi-title">Mean Transit Duration</span></div>
                   <div className="primary-kpi-value">{stats.avgDeliveryDays.toFixed(2)} Days</div>
                   <div className="primary-kpi-subtext">Order dispatch to destination delivery</div>
                 </div>
 
                 <div className="primary-kpi-card">
-                  <div className="primary-kpi-header"><span className="primary-kpi-title">Median Transit</span></div>
+                  <div className="primary-kpi-header"><span className="primary-kpi-title">Median Transit Duration</span></div>
                   <div className="primary-kpi-value">{stats.medianDeliveryDays} Days</div>
                   <div className="primary-kpi-subtext">Range: 10 to 35 calendar days</div>
                 </div>
@@ -1587,69 +1773,120 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Delayed Shipments Inspection Table */}
+              {/* Delayed Shipments Inspection Table with Search & Pagination */}
               <div className="panel-card">
                 <div className="panel-header">
                   <div>
                     <div className="panel-title">Fulfillment Delay Ledger (135 Delayed Shipments)</div>
                     <div className="panel-subtitle">Click any shipment record to open the detailed operational drill-down view</div>
                   </div>
-                  <span className="badge warning">Action Required</span>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={14} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} />
+                      <input
+                        type="text"
+                        className="filter-select"
+                        placeholder="Search Delayed Order or Buyer..."
+                        value={delayedOrderSearch}
+                        onChange={(e) => { setDelayedOrderSearch(e.target.value); setDelayedPage(1); }}
+                        style={{ paddingLeft: 28, width: 220 }}
+                      />
+                    </div>
+                    <span className="badge warning">Action Required</span>
+                  </div>
                 </div>
 
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Order ID</th>
-                        <th>Order Date</th>
-                        <th>Buyer ID</th>
-                        <th>Seller ID</th>
-                        <th>Category</th>
-                        <th style={{ textAlign: 'right' }}>Invoice Value</th>
-                        <th>Transit Days</th>
-                        <th>Payment Terms</th>
-                        <th>Return Qty</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredOrders.filter(o => o.on_time_delivery === 0).slice(0, 10).map(o => (
-                        <tr key={o.order_id} className="clickable" onClick={() => setSelectedOrder(o)}>
-                          <td className="mono" style={{ fontWeight: 600, color: 'var(--status-warning)' }}>{o.order_id}</td>
-                          <td>{o.order_date}</td>
-                          <td className="mono">{o.buyer_id}</td>
-                          <td className="mono">{o.seller_id}</td>
-                          <td>{o.category}</td>
-                          <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{o.total_value_inr.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          <td style={{ color: o.delivery_days >= 30 ? 'var(--status-critical)' : 'inherit', fontWeight: 600 }}>
-                            {o.delivery_days} days
-                          </td>
-                          <td><span className="badge neutral">{o.payment_terms}</span></td>
-                          <td>{o.return_qty}</td>
-                          <td>
-                            <button className="action-btn" style={{ padding: '3px 8px', fontSize: '11.5px' }}>
-                              Inspect
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {(() => {
+                  const delayedList = filteredOrders.filter(o => o.on_time_delivery === 0 && (
+                    !delayedOrderSearch ||
+                    o.order_id.toLowerCase().includes(delayedOrderSearch.toLowerCase()) ||
+                    o.buyer_id.toLowerCase().includes(delayedOrderSearch.toLowerCase()) ||
+                    o.category.toLowerCase().includes(delayedOrderSearch.toLowerCase())
+                  ));
+
+                  return (
+                    <>
+                      <div className="table-wrapper">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Order ID</th>
+                              <th>Order Date</th>
+                              <th>Buyer ID</th>
+                              <th>Seller ID</th>
+                              <th>Category</th>
+                              <th style={{ textAlign: 'right' }}>Invoice Value</th>
+                              <th>Transit Days</th>
+                              <th>Payment Terms</th>
+                              <th>Return Qty</th>
+                              <th>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {delayedList.slice((delayedPage - 1) * pageSize, delayedPage * pageSize).map(o => (
+                              <tr key={o.order_id} className="clickable" onClick={() => setSelectedOrder(o)}>
+                                <td className="mono" style={{ fontWeight: 600, color: 'var(--status-warning)' }}>{o.order_id}</td>
+                                <td>{o.order_date}</td>
+                                <td className="mono">{o.buyer_id}</td>
+                                <td className="mono">{o.seller_id}</td>
+                                <td>{o.category}</td>
+                                <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{o.total_value_inr.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                                <td style={{ color: o.delivery_days >= 30 ? 'var(--status-critical)' : 'inherit', fontWeight: 600 }}>
+                                  {o.delivery_days} days
+                                </td>
+                                <td><span className="badge neutral">{o.payment_terms}</span></td>
+                                <td>{o.return_qty}</td>
+                                <td>
+                                  <button className="action-btn" style={{ padding: '3px 8px', fontSize: '11.5px' }}>
+                                    Inspect
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="table-pagination">
+                        <div>
+                          Showing {Math.min((delayedPage - 1) * pageSize + 1, delayedList.length)} to {Math.min(delayedPage * pageSize, delayedList.length)} of {delayedList.length} delayed shipments
+                        </div>
+                        <div className="pagination-btn-group">
+                          <button 
+                            className="pagination-btn" 
+                            onClick={() => setDelayedPage(p => Math.max(p - 1, 1))}
+                            disabled={delayedPage === 1}
+                          >
+                            <ChevronLeft size={14} />
+                          </button>
+                          <span style={{ padding: '0 8px', fontWeight: 600 }}>
+                            Page {delayedPage} of {Math.ceil(delayedList.length / pageSize) || 1}
+                          </span>
+                          <button 
+                            className="pagination-btn" 
+                            onClick={() => setDelayedPage(p => Math.min(p + 1, Math.ceil(delayedList.length / pageSize)))}
+                            disabled={delayedPage >= Math.ceil(delayedList.length / pageSize)}
+                          >
+                            <ChevronRight size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </>
           )}
 
           {/* =========================================================================
-              5. CLIENT ANALYTICS SECTION
+              5. BUYER ANALYTICS SECTION
               ========================================================================= */}
-          {activeSection === 'clients' && (
+          {(activeSection === 'buyers' || activeSection === 'clients') && (
             <>
               <div className="section-header-block">
                 <div>
-                  <h1 className="section-title">Client Analytics & Buyer Segmentation</h1>
-                  <p className="section-subtitle">Commercial buyer spending rankings, RFM-V clusters, and profitability audit</p>
+                  <h1 className="section-title">Buyer Analytics &amp; Commercial Segmentation</h1>
+                  <p className="section-subtitle">Commercial buyer spending rankings, repeat buyer activity, RFM-V clusters, and profitability audit</p>
                 </div>
               </div>
 
@@ -1657,12 +1894,12 @@ export default function App() {
                 <div className="primary-kpi-card">
                   <div className="primary-kpi-header"><span className="primary-kpi-title">Commercial Buyers</span></div>
                   <div className="primary-kpi-value">{stats.uniqueBuyers}</div>
-                  <div className="primary-kpi-subtext">Active institutional accounts</div>
+                  <div className="primary-kpi-subtext">187 institutional trading accounts</div>
                 </div>
                 <div className="primary-kpi-card">
-                  <div className="primary-kpi-header"><span className="primary-kpi-title">Repeat Buyer Orders</span></div>
+                  <div className="primary-kpi-header"><span className="primary-kpi-title">Repeat Buyer Shipments</span></div>
                   <div className="primary-kpi-value">{stats.repeatBuyerOrders}</div>
-                  <div className="primary-kpi-subtext">{stats.repeatBuyerPct.toFixed(1)}% repeat order rate</div>
+                  <div className="primary-kpi-subtext">{stats.repeatBuyerPct.toFixed(1)}% repeat order rate (227 shipments)</div>
                 </div>
                 <div className="primary-kpi-card">
                   <div className="primary-kpi-header"><span className="primary-kpi-title">Retail Consumer CRM</span></div>
@@ -1672,7 +1909,7 @@ export default function App() {
                 <div className="primary-kpi-card">
                   <div className="primary-kpi-header"><span className="primary-kpi-title">Customer Churn Rate</span></div>
                   <div className="primary-kpi-value">{customerStats.churnRate.toFixed(1)}%</div>
-                  <div className="primary-kpi-subtext">{customerStats.churnedCount} churned accounts</div>
+                  <div className="primary-kpi-subtext">{customerStats.churnedCount} churned accounts of 200</div>
                 </div>
               </div>
 
@@ -1681,12 +1918,50 @@ export default function App() {
                 <AlertTriangle size={18} color="var(--status-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
                   <strong style={{ display: 'block', fontSize: '13px', marginBottom: '3px' }}>
-                    Client Profitability Audit & Revenue Distinction
+                    Client Profitability Audit &amp; Revenue Distinction
                   </strong>
                   In accordance with senior data analyst standards, <strong>buyer revenue rankings must not be represented as client profitability rankings</strong>.
                   Wholesale orders record invoice turnover but lack landed manufacturing COGS, ocean freight, insurance, and product SKU foreign keys.
                   <br />
                   The <strong>58.62% catalogue gross margin</strong> is a retail reference markup from <code>da_product_catalogue.csv</code>, not actual B2B order net profitability.
+                </div>
+              </div>
+
+              {/* Top 10 Buyer Spending Visual Chart */}
+              <div className="panel-card">
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-title">Top 10 Commercial Buyers by Total Spending (₹ Crores)</div>
+                    <div className="panel-subtitle">Institutional enterprise accounts driving wholesale export invoice volume</div>
+                  </div>
+                </div>
+                <div style={{ height: 260 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={top10Buyers} layout="vertical" margin={{ top: 5, right: 30, left: 35, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
+                      <XAxis type="number" stroke="var(--text-secondary)" fontSize={11} tickFormatter={(v) => `₹${v}Cr`} />
+                      <YAxis dataKey="buyer_id" type="category" stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="chart-tooltip">
+                                <div className="chart-tooltip-title">{payload[0].payload.buyer_id}</div>
+                                <div className="chart-tooltip-item" style={{ color: 'var(--primary-forest)' }}>
+                                  Invoiced Turnover: ₹{payload[0].value} Crore
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                                  Orders Fulfilled: {payload[0].payload.orders} shipments
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="spend_cr" fill="var(--primary-forest)" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
@@ -1807,11 +2082,7 @@ export default function App() {
               </div>
             </>
           )}
-
-          {/* =========================================================================
-              6. CURRENCY IMPACT SECTION
-              ========================================================================= */}
-          {activeSection === 'currency' && (
+{activeSection === 'currency' && (
             <>
               <div className="section-header-block">
                 <div>
@@ -1943,48 +2214,240 @@ export default function App() {
           {/* =========================================================================
               7. COMPLIANCE & EXCEPTIONS SECTION
               ========================================================================= */}
-          {activeSection === 'compliance' && (
+          
+          {/* =========================================================================
+              4. RETURNS & QUALITY SECTION
+              ========================================================================= */}
+          {(activeSection === 'returns' || activeSection === 'compliance') && (
             <>
               <div className="section-header-block">
                 <div>
-                  <h1 className="section-title">Compliance & Operational Exceptions</h1>
-                  <p className="section-subtitle">Rule-based anomaly detection, resolution workflows, and audit logging</p>
+                  <h1 className="section-title">Returns &amp; Data Quality</h1>
+                  <p className="section-subtitle">Unit return rate monitoring, category returns analysis, and rule-based data anomaly audits</p>
                 </div>
               </div>
 
               {/* Summary Cards */}
               <div className="primary-kpi-grid">
-                <div className="primary-kpi-card" style={{ borderTopColor: 'var(--status-critical)' }}>
-                  <div className="primary-kpi-header"><span className="primary-kpi-title">Critical Exceptions</span></div>
-                  <div className="primary-kpi-value" style={{ color: 'var(--status-critical)' }}>2</div>
-                  <div className="primary-kpi-subtext">Return overruns &gt; shipped units</div>
-                </div>
-
-                <div className="primary-kpi-card" style={{ borderTopColor: 'var(--status-warning)' }}>
-                  <div className="primary-kpi-header"><span className="primary-kpi-title">High Priority Exceptions</span></div>
-                  <div className="primary-kpi-value" style={{ color: 'var(--status-warning)' }}>42</div>
-                  <div className="primary-kpi-subtext">CRM date inversions (First &gt; Last)</div>
-                </div>
-
-                <div className="primary-kpi-card" style={{ borderTopColor: 'var(--status-info)' }}>
-                  <div className="primary-kpi-header"><span className="primary-kpi-title">Credit Delay Exposure</span></div>
-                  <div className="primary-kpi-value">{exceptionsData.filter(e => e.severity === 'MEDIUM').length}</div>
-                  <div className="primary-kpi-subtext">Delays on 60 Days Net terms</div>
+                <div className="primary-kpi-card">
+                  <div className="primary-kpi-header"><span className="primary-kpi-title">Total Shipped Units</span></div>
+                  <div className="primary-kpi-value">{stats.totalUnits.toLocaleString()}</div>
+                  <div className="primary-kpi-subtext">1,509,070 physical export units</div>
                 </div>
 
                 <div className="primary-kpi-card">
-                  <div className="primary-kpi-header"><span className="primary-kpi-title">Total Flagged Records</span></div>
-                  <div className="primary-kpi-value">{exceptionsData.length}</div>
-                  <div className="primary-kpi-subtext">Rule-based anomalies detected</div>
+                  <div className="primary-kpi-header"><span className="primary-kpi-title">Total Returned Units</span></div>
+                  <div className="primary-kpi-value">{stats.returnUnits.toLocaleString()}</div>
+                  <div className="primary-kpi-subtext">15,242 units returned by buyers</div>
+                </div>
+
+                <div className="primary-kpi-card">
+                  <div className="primary-kpi-header"><span className="primary-kpi-title">Unit Return Rate</span></div>
+                  <div className="primary-kpi-value" style={{ color: stats.returnRate <= 2.0 ? 'var(--status-success)' : 'var(--status-warning)' }}>
+                    {stats.returnRate.toFixed(2)}%
+                  </div>
+                  <div className="primary-kpi-subtext">Across all commodity categories</div>
+                </div>
+
+                <div className="primary-kpi-card" style={{ borderTopColor: 'var(--status-warning)' }}>
+                  <div className="primary-kpi-header"><span className="primary-kpi-title">Data Quality Anomalies</span></div>
+                  <div className="primary-kpi-value" style={{ color: 'var(--status-warning)' }}>
+                    {suspiciousReturnsList.length + customerDateInconsistencies.length} Records
+                  </div>
+                  <div className="primary-kpi-subtext">2 return overruns + 42 date inversions</div>
                 </div>
               </div>
 
-              {/* Exception Table with Interactive Status & Pagination */}
+              {/* Category-Wise Return Analysis Chart */}
               <div className="panel-card">
                 <div className="panel-header">
                   <div>
-                    <div className="panel-title">Operational Exception Remediation Register</div>
-                    <div className="panel-subtitle">Review, update resolution status, and download operational exception logs</div>
+                    <div className="panel-title">Category-Wise Return Analysis (Shipped vs Returned)</div>
+                    <div className="panel-subtitle">Total volume in physical units and return percentage across export commodity categories</div>
+                  </div>
+                </div>
+                <div style={{ height: 260 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={categoryReturnData} margin={{ top: 10, right: 15, left: -5, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                      <XAxis dataKey="category" stroke="var(--text-secondary)" fontSize={10} tickLine={false} />
+                      <YAxis stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="chart-tooltip">
+                                <div className="chart-tooltip-title">{payload[0].payload.category}</div>
+                                <div className="chart-tooltip-item" style={{ color: 'var(--primary-forest)' }}>
+                                  Shipped Units: {payload[0].payload.shippedUnits.toLocaleString()}
+                                </div>
+                                <div className="chart-tooltip-item" style={{ color: 'var(--status-warning)' }}>
+                                  Returned Units: {payload[0].payload.returnUnits.toLocaleString()}
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                                  Return Rate: {payload[0].payload.returnRatePct}%
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="returnUnits" fill="var(--status-warning)" radius={[4, 4, 0, 0]} name="Returned Units" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Suspicious Return Quantity Records Table */}
+              <div className="panel-card">
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-title">Suspicious Return Quantity Records (Return Qty &gt; Shipped Qty)</div>
+                    <div className="panel-subtitle">Physical impossibility anomalies quarantined during automated data ingestion</div>
+                  </div>
+                  <span className="badge danger">2 Flagged Orders</span>
+                </div>
+
+                <div className="alert-banner danger" style={{ margin: '0 0 16px 0' }}>
+                  <AlertCircle size={16} color="var(--status-critical)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong>Data Quality Exception (Not a Customs Violation):</strong> In orders <code>B2B-00131</code> and <code>B2B-00188</code>, the recorded return quantity exceeds the ordered quantity. This is an operational warehouse data entry error or replacement receipt anomaly, and is quarantined to prevent distorted inventory metrics.
+                  </div>
+                </div>
+
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Order ID</th>
+                        <th>Order Date</th>
+                        <th>Buyer ID</th>
+                        <th>Category</th>
+                        <th style={{ textAlign: 'right' }}>Shipped Qty</th>
+                        <th style={{ textAlign: 'right' }}>Return Qty</th>
+                        <th>Discrepancy</th>
+                        <th>Underlying Root Cause</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {suspiciousReturnsList.map(o => (
+                        <tr key={o.order_id} className="clickable" onClick={() => setSelectedOrder(o)}>
+                          <td className="mono" style={{ fontWeight: 600, color: 'var(--status-critical)' }}>{o.order_id}</td>
+                          <td>{o.order_date}</td>
+                          <td className="mono">{o.buyer_id}</td>
+                          <td>{o.category}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 600 }}>{o.quantity_units} Units</td>
+                          <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--status-critical)' }}>{o.return_qty} Units</td>
+                          <td><span className="badge danger">+{o.return_qty - o.quantity_units} Overrun</span></td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Physical return overrun; intake record clerical error.</td>
+                          <td>
+                            <button className="action-btn" style={{ padding: '3px 8px', fontSize: '11.5px' }}>
+                              Inspect
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Customer Purchase-Date Inconsistencies Table */}
+              <div className="panel-card">
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-title">Customer Purchase-Date Inconsistencies (First Purchase &gt; Last Purchase)</div>
+                    <div className="panel-subtitle">42 CRM profile entries exhibiting chronological date inversion in <code>da_customer_profiles.csv</code></div>
+                  </div>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} />
+                    <input
+                      type="text"
+                      className="filter-select"
+                      placeholder="Search Customer ID or City..."
+                      value={inconsistencySearch}
+                      onChange={(e) => { setInconsistencySearch(e.target.value); setInconsistencyPage(1); }}
+                      style={{ paddingLeft: 28, width: 220 }}
+                    />
+                  </div>
+                </div>
+
+                <div className="alert-banner warning" style={{ margin: '0 0 16px 0' }}>
+                  <AlertTriangle size={16} color="var(--status-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong>Chronological Inversion in CRM Profile (Not a Regulatory Violation):</strong> 42 customer accounts in <code>da_customer_profiles.csv</code> have a First Purchase Date that occurs chronologically later than their Last Purchase Date. The pipeline flags these records to prevent negative customer tenure calculations.
+                  </div>
+                </div>
+
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Customer ID</th>
+                        <th>City</th>
+                        <th>Age Band</th>
+                        <th>Gender</th>
+                        <th>Acquisition Channel</th>
+                        <th>First Purchase Date</th>
+                        <th>Last Purchase Date</th>
+                        <th style={{ textAlign: 'right' }}>Total Orders</th>
+                        <th style={{ textAlign: 'right' }}>Total Revenue</th>
+                        <th>ETL Remediation</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredDateInconsistencies.slice((inconsistencyPage - 1) * pageSize, inconsistencyPage * pageSize).map(c => (
+                        <tr key={c.Customer_ID}>
+                          <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-forest)' }}>{c.Customer_ID}</td>
+                          <td>{c.City}</td>
+                          <td>{c.Age_Band}</td>
+                          <td>{c.Gender}</td>
+                          <td>{c.Acquisition_Channel}</td>
+                          <td className="mono" style={{ color: 'var(--status-critical)', fontWeight: 600 }}>{c.First_Purchase_Date}</td>
+                          <td className="mono" style={{ color: 'var(--status-warning)', fontWeight: 600 }}>{c.Last_Purchase_Date}</td>
+                          <td style={{ textAlign: 'right' }}>{c.Total_Orders}</td>
+                          <td style={{ textAlign: 'right' }}>₹{c.Total_Revenue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                          <td><span className="badge warning">Date Transposition</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="table-pagination">
+                  <div>
+                    Showing {Math.min((inconsistencyPage - 1) * pageSize + 1, filteredDateInconsistencies.length)} to {Math.min(inconsistencyPage * pageSize, filteredDateInconsistencies.length)} of {filteredDateInconsistencies.length} inconsistent records
+                  </div>
+                  <div className="pagination-btn-group">
+                    <button 
+                      className="pagination-btn" 
+                      onClick={() => setInconsistencyPage(p => Math.max(p - 1, 1))}
+                      disabled={inconsistencyPage === 1}
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <span style={{ padding: '0 8px', fontWeight: 600 }}>
+                      Page {inconsistencyPage} of {Math.ceil(filteredDateInconsistencies.length / pageSize) || 1}
+                    </span>
+                    <button 
+                      className="pagination-btn" 
+                      onClick={() => setInconsistencyPage(p => Math.min(p + 1, Math.ceil(filteredDateInconsistencies.length / pageSize)))}
+                      disabled={inconsistencyPage >= Math.ceil(filteredDateInconsistencies.length / pageSize)}
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Complete 135-Record Operational Exception Register */}
+              <div className="panel-card">
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-title">Operational Exception Remediation Register (135 Total Records)</div>
+                    <div className="panel-subtitle">Interactive resolution status tracking across shipment delays, credit risks, and data quality flags</div>
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -2099,14 +2562,14 @@ export default function App() {
           )}
 
           {/* =========================================================================
-              8. PRODUCT & INVENTORY SECTION
+              6. PRODUCT CATALOGUE SECTION
               ========================================================================= */}
-          {activeSection === 'products' && (
+          {(activeSection === 'catalogue' || activeSection === 'products') && (
             <>
               <div className="section-header-block">
                 <div>
-                  <h1 className="section-title">Product Catalogue & Inventory</h1>
-                  <p className="section-subtitle">Stock unit availability, pricing analysis, and catalogue gross margin</p>
+                  <h1 className="section-title">Product Catalogue &amp; Inventory</h1>
+                  <p className="section-subtitle">Warehouse stock unit availability, pricing analysis, and catalogue gross margin economics</p>
                 </div>
               </div>
 
@@ -2114,22 +2577,129 @@ export default function App() {
                 <div className="primary-kpi-card">
                   <div className="primary-kpi-header"><span className="primary-kpi-title">Master Catalogue SKUs</span></div>
                   <div className="primary-kpi-value">{productStats.totalProducts}</div>
-                  <div className="primary-kpi-subtext">5 Consumer product categories</div>
+                  <div className="primary-kpi-subtext">50 SKUs across 5 commodity categories</div>
                 </div>
                 <div className="primary-kpi-card">
-                  <div className="primary-kpi-header"><span className="primary-kpi-title">Warehouse Stock Units</span></div>
+                  <div className="primary-kpi-header"><span className="primary-kpi-title">Warehouse Stock</span></div>
                   <div className="primary-kpi-value">{productStats.totalStock.toLocaleString()}</div>
-                  <div className="primary-kpi-subtext">Physical units in warehouse inventory</div>
+                  <div className="primary-kpi-subtext">13,857 physical inventory units</div>
                 </div>
                 <div className="primary-kpi-card">
-                  <div className="primary-kpi-header"><span className="primary-kpi-title">Catalogue Gross Margin</span></div>
-                  <div className="primary-kpi-value" style={{ color: 'var(--status-success)' }}>{productStats.avgMarginPct.toFixed(2)}%</div>
-                  <div className="primary-kpi-subtext">Formula: (MRP - COGS) / MRP</div>
+                  <div className="primary-kpi-header"><span className="primary-kpi-title">Average Retail MRP</span></div>
+                  <div className="primary-kpi-value">₹{productStats.avgMRP.toFixed(2)}</div>
+                  <div className="primary-kpi-subtext">Average listed export MRP</div>
                 </div>
                 <div className="primary-kpi-card">
-                  <div className="primary-kpi-header"><span className="primary-kpi-title">Catalogue Markup</span></div>
-                  <div className="primary-kpi-value">{productStats.avgMarkupPct.toFixed(1)}%</div>
-                  <div className="primary-kpi-subtext">Formula: (MRP - COGS) / COGS</div>
+                  <div className="primary-kpi-header"><span className="primary-kpi-title">Average Wholesale Cost</span></div>
+                  <div className="primary-kpi-value">₹{productStats.avgCOGS.toFixed(2)}</div>
+                  <div className="primary-kpi-subtext">Production cost of goods sold (COGS)</div>
+                </div>
+              </div>
+
+              <div className="secondary-kpi-grid" style={{ marginBottom: '14px' }}>
+                <div className="secondary-kpi-card">
+                  <div className="secondary-kpi-title">Catalogue Gross Margin</div>
+                  <div className="secondary-kpi-value" style={{ color: 'var(--status-success)' }}>{productStats.avgMarginPct.toFixed(2)}%</div>
+                  <div className="secondary-kpi-subtext">Formula: (MRP - COGS) / MRP = 58.62%</div>
+                </div>
+                <div className="secondary-kpi-card">
+                  <div className="secondary-kpi-title">Catalogue Cost Markup</div>
+                  <div className="secondary-kpi-value">{productStats.avgMarkupPct.toFixed(1)}%</div>
+                  <div className="secondary-kpi-subtext">Formula: (MRP - COGS) / COGS = 141.67%</div>
+                </div>
+                <div className="secondary-kpi-card">
+                  <div className="secondary-kpi-title">Commodity Categories</div>
+                  <div className="secondary-kpi-value">5 Categories</div>
+                  <div className="secondary-kpi-subtext">Electronics, Beauty, Apparel, Home, Grocery</div>
+                </div>
+                <div className="secondary-kpi-card">
+                  <div className="secondary-kpi-title">Low Stock SKUs (&lt; 150 units)</div>
+                  <div className="secondary-kpi-value" style={{ color: 'var(--status-warning)' }}>
+                    {productsRaw.filter(p => p.Stock_Units < 150).length} SKUs
+                  </div>
+                  <div className="secondary-kpi-subtext">Reorder threshold monitoring</div>
+                </div>
+              </div>
+
+              {/* Profitability Limitation Audit */}
+              <div className="alert-banner info" style={{ marginBottom: '18px' }}>
+                <Info size={18} color="var(--status-info)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <strong>Catalogue Economics vs Wholesale Order Margin:</strong> The 58.62% gross margin reflects retail reference values in <code>da_product_catalogue.csv</code>. Wholesale B2B export orders in <code>da_b2b_orders.csv</code> represent negotiated institutional contracts and do not contain landed freight, terminal handling, insurance, or SKU foreign keys.
+                </div>
+              </div>
+
+              {/* Category Margin & Stock Visual Charts */}
+              <div className="chart-grid-2">
+                <div className="panel-card">
+                  <div className="panel-header">
+                    <div>
+                      <div className="panel-title">Average Gross Margin by Category (%)</div>
+                      <div className="panel-subtitle">Margin performance calculated as (MRP - COGS) / MRP</div>
+                    </div>
+                  </div>
+                  <div style={{ height: 240 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={productCategoryStats} margin={{ top: 10, right: 15, left: -5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                        <XAxis dataKey="category" stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                        <YAxis stroke="var(--text-secondary)" fontSize={11} domain={[0, 80]} tickLine={false} tickFormatter={(v) => `${v}%`} />
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="chart-tooltip">
+                                  <div className="chart-tooltip-title">{payload[0].payload.category}</div>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--status-success)' }}>
+                                    Gross Margin: {payload[0].value}%
+                                  </div>
+                                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                                    Total SKUs: {payload[0].payload.count} products
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar dataKey="avgMarginPct" fill="var(--status-success)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="panel-card">
+                  <div className="panel-header">
+                    <div>
+                      <div className="panel-title">Warehouse Inventory Stock Units by Category</div>
+                      <div className="panel-subtitle">Physical inventory volume available in storage across 5 categories</div>
+                    </div>
+                  </div>
+                  <div style={{ height: 240 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={productCategoryStats} margin={{ top: 10, right: 15, left: -5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                        <XAxis dataKey="category" stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                        <YAxis stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="chart-tooltip">
+                                  <div className="chart-tooltip-title">{payload[0].payload.category}</div>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--secondary-sage)' }}>
+                                    Stock Units: {payload[0].value.toLocaleString()}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar dataKey="stock" fill="var(--secondary-sage)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
 
@@ -2137,7 +2707,7 @@ export default function App() {
               <div className="panel-card">
                 <div className="panel-header">
                   <div>
-                    <div className="panel-title">Product Catalogue Pricing & Stock Register</div>
+                    <div className="panel-title">Product Catalogue Pricing &amp; Stock Register</div>
                     <div className="panel-subtitle">Retail reference catalogue from <code>da_product_catalogue.csv</code></div>
                   </div>
                   <div style={{ position: 'relative' }}>
@@ -2223,11 +2793,7 @@ export default function App() {
               </div>
             </>
           )}
-
-          {/* =========================================================================
-              9. REPORTS HUB SECTION
-              ========================================================================= */}
-          {activeSection === 'reports' && (
+{activeSection === 'reports' && (
             <>
               <div className="section-header-block">
                 <div>
