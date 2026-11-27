@@ -687,11 +687,7 @@ export default function App() {
             >
               <Menu size={18} />
             </button>
-            <div className="breadcrumbs">
-              <span>TradeSight</span>
-              <span>/</span>
-              <span className="breadcrumbs-current">{pageTitle}</span>
-            </div>
+            <div className="header-page-title">{pageTitle}</div>
           </div>
 
           <div className="header-right">
@@ -809,7 +805,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 12 Key Metrics Grid */}
+              {/* 8 Primary Key Metrics Grid (4 columns x 2 rows) */}
               <div className="dashboard-kpi-grid">
                 {/* 1. Total Revenue */}
                 <div className="kpi-card">
@@ -871,7 +867,7 @@ export default function App() {
                     <span className="kpi-card-label">Total Buyers</span>
                     <div className="kpi-card-icon"><Users size={14} /></div>
                   </div>
-                  <div className="kpi-card-value">187</div>
+                  <div className="kpi-card-value">{stats.uniqueBuyers}</div>
                   <div className="kpi-card-subtext">Active commercial buyers</div>
                 </div>
 
@@ -885,10 +881,10 @@ export default function App() {
                   <div className="kpi-card-subtext">5 commodity categories</div>
                 </div>
 
-                {/* 8. Average Product Margin */}
+                {/* 8. Average Catalogue Margin */}
                 <div className="kpi-card">
                   <div className="kpi-card-header">
-                    <span className="kpi-card-label">Average Product Margin</span>
+                    <span className="kpi-card-label">Average Catalogue Margin</span>
                     <div className="kpi-card-icon" style={{ color: 'var(--status-success)' }}><Activity size={14} /></div>
                   </div>
                   <div className="kpi-card-value" style={{ color: 'var(--status-success)' }}>
@@ -896,47 +892,20 @@ export default function App() {
                   </div>
                   <div className="kpi-card-subtext">Retail catalogue margin</div>
                 </div>
-
-                {/* 9. Shipped Units */}
-                <div className="kpi-card">
-                  <div className="kpi-card-header">
-                    <span className="kpi-card-label">Shipped Units</span>
-                    <div className="kpi-card-icon"><Layers size={14} /></div>
-                  </div>
-                  <div className="kpi-card-value">{stats.totalUnits.toLocaleString()}</div>
-                  <div className="kpi-card-subtext">Total physical volume</div>
-                </div>
-
-                {/* 10. Delayed Orders */}
-                <div className="kpi-card">
-                  <div className="kpi-card-header">
-                    <span className="kpi-card-label">Delayed Orders</span>
-                    <div className="kpi-card-icon" style={{ color: 'var(--status-warning)' }}><AlertTriangle size={14} /></div>
-                  </div>
-                  <div className="kpi-card-value" style={{ color: 'var(--status-warning)' }}>{stats.delayedOrders}</div>
-                  <div className="kpi-card-subtext">{((stats.delayedOrders / (stats.totalOrders || 1)) * 100).toFixed(1)}% of shipments</div>
-                </div>
-
-                {/* 11. Average Transit Time */}
-                <div className="kpi-card">
-                  <div className="kpi-card-header">
-                    <span className="kpi-card-label">Average Transit Time</span>
-                    <div className="kpi-card-icon"><Clock size={14} /></div>
-                  </div>
-                  <div className="kpi-card-value">{stats.avgDeliveryDays.toFixed(1)} days</div>
-                  <div className="kpi-card-subtext">Range: 5 to 45 days</div>
-                </div>
-
-                {/* 12. Available Stock */}
-                <div className="kpi-card">
-                  <div className="kpi-card-header">
-                    <span className="kpi-card-label">Available Stock</span>
-                    <div className="kpi-card-icon"><Box size={14} /></div>
-                  </div>
-                  <div className="kpi-card-value">{productStats.totalStock.toLocaleString()}</div>
-                  <div className="kpi-card-subtext">Warehouse inventory</div>
-                </div>
               </div>
+
+              {/* Compact Dynamic Needs Attention Alert */}
+              {stats.delayedOrders > 0 && (
+                <div className="needs-attention-banner">
+                  <div className="needs-attention-content">
+                    <AlertTriangle size={15} color="#B45309" />
+                    <span><strong>Needs Attention:</strong> Delayed shipments: {stats.delayedOrders} of {stats.totalOrders} ({((stats.delayedOrders / (stats.totalOrders || 1)) * 100).toFixed(1)}%).</span>
+                  </div>
+                  <button className="action-btn" onClick={() => handleSelectSection('logistics')} style={{ padding: '3px 10px', fontSize: '11.5px', background: 'var(--bg-card)' }}>
+                    View Shipments
+                  </button>
+                </div>
+              )}
 
               {/* Main Analytics Area: Chart Grid 1 */}
               <div className="chart-grid-2">
@@ -1187,54 +1156,6 @@ export default function App() {
                         <Legend verticalAlign="bottom" height={36} iconType="circle" />
                       </PieChart>
                     </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              {/* Key Findings Section */}
-              <div className="panel-card">
-                <div className="panel-header">
-                  <div>
-                    <div className="panel-title">Key Findings</div>
-                    <div className="panel-subtitle">Summary of findings from export sales, delivery performance and data checks.</div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-                  <div className="alert-banner warning">
-                    <div>
-                      <strong style={{ display: 'block', marginBottom: '2px', color: 'var(--status-warning)' }}>
-                        Delivery Delays:
-                      </strong>
-                      {stats.delayedOrders} out of {stats.totalOrders} shipments were delayed. Delivery performance needs improvement.
-                    </div>
-                  </div>
-
-                  <div className="alert-banner danger">
-                    <div>
-                      <strong style={{ display: 'block', marginBottom: '2px', color: 'var(--status-critical)' }}>
-                        Return Quantity Errors:
-                      </strong>
-                      Two orders have return quantities greater than the shipped quantities. These records need verification.
-                    </div>
-                  </div>
-
-                  <div className="alert-banner info">
-                    <div>
-                      <strong style={{ display: 'block', marginBottom: '2px', color: 'var(--status-info)' }}>
-                        Repeat Orders:
-                      </strong>
-                      {stats.repeatBuyerOrders} orders were placed by repeat buyers, accounting for {stats.repeatBuyerPct.toFixed(2)}% of total orders.
-                    </div>
-                  </div>
-
-                  <div className="alert-banner success">
-                    <div>
-                      <strong style={{ display: 'block', marginBottom: '2px', color: 'var(--status-success)' }}>
-                        Product Margin:
-                      </strong>
-                      The average catalogue gross margin is {productStats.avgMarginPct.toFixed(2)}%. Actual order profitability cannot be calculated without additional cost information.
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1684,14 +1605,14 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 12-Market Integration Specification */}
+              {/* Proposed Markets (12 Export Countries) */}
               <div className="panel-card">
                 <div className="panel-header">
                   <div>
-                    <div className="panel-title">12 Export Countries Specification</div>
-                    <div className="panel-subtitle">Target destination countries and required fields for future data integration.</div>
+                    <div className="panel-title">Proposed Markets (12 Export Countries)</div>
+                    <div className="panel-subtitle">Destination-country data is unavailable in the current dataset. Target export markets and required fields for future integration.</div>
                   </div>
-                  <span className="badge neutral">Specification</span>
+                  <span className="badge neutral">Proposed Markets</span>
                 </div>
 
                 <div className="table-wrapper">
@@ -2228,7 +2149,7 @@ export default function App() {
                   </strong>
                   All 600 orders in <code>da_b2b_orders.csv</code> are recorded strictly in <strong>Indian Rupee (INR)</strong>. The dataset does not include foreign currency amounts or historical exchange rates.
                   <br />
-                  In accordance with strict data integrity, no historical foreign exchange gains or losses are invented. Below is a scenario tool to estimate the impact of exchange rate changes on total revenue.
+                  In accordance with strict data integrity, no historical foreign exchange gains or losses are invented. Below is a scenario tool to estimate the impact of exchange rate changes on total revenue. Results are based on simulated exchange rates.
                 </div>
               </div>
 
@@ -2727,7 +2648,7 @@ export default function App() {
               <div className="alert-banner info" style={{ marginBottom: '18px' }}>
                 <Info size={18} color="var(--status-info)" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
-                  <strong>Product Catalogue vs Export Orders:</strong> The product catalogue lists retail prices (MRP) and costs (COGS) for 50 products. This catalogue is separate from the export orders dataset, which contains wholesale transactions without product SKU links.
+                  <strong>Product Catalogue vs Export Orders:</strong> The product catalogue lists retail prices (MRP) and costs (COGS) for 50 products. This catalogue is separate from the export orders dataset. Catalogue margin does not include order-level shipping and other landed costs.
                 </div>
               </div>
 
