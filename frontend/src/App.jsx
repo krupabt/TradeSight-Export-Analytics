@@ -24,20 +24,21 @@ import exceptionsRaw from './data/exceptions.json';
 const ALL_CATEGORIES = [...new Set(ordersRaw.map(o => o.category))].sort();
 const ALL_TERMS = [...new Set(ordersRaw.map(o => o.payment_terms))].sort();
 
-// Premium Enterprise Forest Green, Sage & Muted Gold Color Palette
+// Classic Corporate White and Navy Color Palette
 const THEME_COLORS = {
-  forest: '#16423C',
-  sage: '#6A9C89',
-  gold: '#C5A059',
-  goldLight: '#EBD9B4',
-  charcoal: '#202B29',
-  secondaryText: '#66736F',
-  border: '#E2E7E2',
-  emerald: '#16865C',
-  amber: '#D97706',
-  rose: '#DC2626',
-  blue: '#2B6CB0',
-  piePalette: ['#16423C', '#6A9C89', '#C5A059', '#3E6B5C', '#2B6CB0', '#8C7A5B']
+  navy: '#243447',
+  navyActive: '#3D566E',
+  primaryAccent: '#527A9E',
+  secondaryAccent: '#8FA9BF',
+  slate: '#64748B',
+  supportingGold: '#B69A68',
+  charcoal: '#1F2937',
+  secondaryText: '#667085',
+  border: '#DDE2E8',
+  success: '#27805B',
+  warning: '#B7791F',
+  error: '#C24141',
+  piePalette: ['#527A9E', '#8FA9BF', '#64748B', '#B69A68', '#3D566E', '#243447']
 };
 
 export default function App() {
@@ -662,7 +663,7 @@ export default function App() {
 
         <div className="sidebar-footer">
           <div className="sidebar-footer-title">
-            <Database size={13} color="var(--accent-gold)" /> TradeSight Platform
+            <Database size={13} color="var(--supporting-gold)" /> TradeSight Platform
           </div>
           <div style={{ fontSize: '11px', lineHeight: '1.4', marginTop: '4px', opacity: 0.85 }}>
             A unified analytics platform for monitoring export revenue, shipment performance, commercial buyers, product margins and data quality.
@@ -802,7 +803,7 @@ export default function App() {
                   </p>
                 </div>
                 <div className="section-period-badge">
-                  <Calendar size={13} color="var(--primary-forest)" />
+                  <Calendar size={13} color="var(--primary-accent)" />
                   <span>Verified Dataset: Jan 2023 – Dec 2024 (600 Orders)</span>
                 </div>
               </div>
@@ -966,9 +967,9 @@ export default function App() {
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={monthlyRevenue} margin={{ top: 10, right: 15, left: -5, bottom: 0 }}>
                         <defs>
-                          <linearGradient id="forestGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="var(--primary-forest)" stopOpacity={0.35} />
-                            <stop offset="95%" stopColor="var(--primary-forest)" stopOpacity={0.0} />
+                          <linearGradient id="navyGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="var(--primary-accent)" stopOpacity={0.35} />
+                            <stop offset="95%" stopColor="var(--primary-accent)" stopOpacity={0.0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
@@ -980,7 +981,7 @@ export default function App() {
                               return (
                                 <div className="chart-tooltip">
                                   <div className="chart-tooltip-title">{label}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-forest)' }}>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
                                     Turnover: ₹{payload[0].value} Crore
                                   </div>
                                   <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -992,7 +993,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Area type="monotone" dataKey="revenueCr" stroke="var(--primary-forest)" fillOpacity={1} fill="url(#forestGrad)" strokeWidth={2.5} />
+                        <Area type="monotone" dataKey="revenueCr" stroke="var(--primary-accent)" fillOpacity={1} fill="url(#navyGrad)" strokeWidth={2.5} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -1067,7 +1068,7 @@ export default function App() {
                               return (
                                 <div className="chart-tooltip">
                                   <div className="chart-tooltip-title">{payload[0].payload.category}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-forest)' }}>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
                                     Revenue: ₹{payload[0].value} Crore
                                   </div>
                                   <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -1079,7 +1080,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Bar dataKey="revenueCr" fill="var(--secondary-sage)" radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="revenueCr" fill="var(--secondary-accent)" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1105,7 +1106,7 @@ export default function App() {
                               return (
                                 <div className="chart-tooltip">
                                   <div className="chart-tooltip-title">{payload[0].payload.term}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--accent-gold)' }}>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--supporting-gold)' }}>
                                     Turnover: ₹{payload[0].value} Crore
                                   </div>
                                   <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -1117,7 +1118,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Bar dataKey="revenueCr" fill="var(--accent-gold)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="revenueCr" fill="var(--supporting-gold)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1146,7 +1147,7 @@ export default function App() {
                               return (
                                 <div className="chart-tooltip">
                                   <div className="chart-tooltip-title">{payload[0].payload.buyer_id}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-forest)' }}>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
                                     Invoiced Spend: ₹{payload[0].value} Crore
                                   </div>
                                   <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -1158,7 +1159,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Bar dataKey="spend_cr" fill="var(--primary-forest)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="spend_cr" fill="var(--primary-accent)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1177,8 +1178,8 @@ export default function App() {
                       <PieChart>
                         <Pie
                           data={[
-                            { name: 'Repeat Buyer Shipments', value: stats.repeatBuyerOrders, fill: 'var(--secondary-sage)' },
-                            { name: 'First-Time Shipments', value: stats.totalOrders - stats.repeatBuyerOrders, fill: 'var(--accent-gold)' }
+                            { name: 'Repeat Buyer Shipments', value: stats.repeatBuyerOrders, fill: 'var(--secondary-accent)' },
+                            { name: 'First-Time Shipments', value: stats.totalOrders - stats.repeatBuyerOrders, fill: 'var(--supporting-gold)' }
                           ]}
                           cx="50%"
                           cy="50%"
@@ -1187,8 +1188,8 @@ export default function App() {
                           paddingAngle={3}
                           dataKey="value"
                         >
-                          <Cell fill="var(--secondary-sage)" />
-                          <Cell fill="var(--accent-gold)" />
+                          <Cell fill="var(--secondary-accent)" />
+                          <Cell fill="var(--supporting-gold)" />
                         </Pie>
                         <Tooltip 
                           content={({ active, payload }) => {
@@ -1315,7 +1316,7 @@ export default function App() {
                               return (
                                 <div className="chart-tooltip">
                                   <div className="chart-tooltip-title">{payload[0].payload.quarter}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-forest)' }}>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
                                     Turnover: ₹{payload[0].value} Crore
                                   </div>
                                 </div>
@@ -1324,7 +1325,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Bar dataKey="revenueCr" fill="var(--primary-forest)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="revenueCr" fill="var(--primary-accent)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1349,7 +1350,7 @@ export default function App() {
                               return (
                                 <div className="chart-tooltip">
                                   <div className="chart-tooltip-title">{payload[0].payload.tier}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--secondary-sage)' }}>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--secondary-accent)' }}>
                                     Revenue: ₹{payload[0].value} Crore
                                   </div>
                                   <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -1361,7 +1362,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Bar dataKey="revCr" fill="var(--secondary-sage)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="revCr" fill="var(--secondary-accent)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1410,7 +1411,7 @@ export default function App() {
                     <tbody>
                       {filteredOrders.slice((orderPage - 1) * pageSize, orderPage * pageSize).map(o => (
                         <tr key={o.order_id} className="clickable" onClick={() => setSelectedOrder(o)}>
-                          <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-forest)' }}>{o.order_id}</td>
+                          <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-accent)' }}>{o.order_id}</td>
                           <td>{o.order_date}</td>
                           <td className="mono">{o.buyer_id}</td>
                           <td className="mono">{o.seller_id}</td>
@@ -1484,7 +1485,7 @@ export default function App() {
 
               {/* Data Limitation Notice */}
               <div className="alert-banner info">
-                <Globe size={20} color="var(--primary-forest)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <Globe size={20} color="var(--primary-accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
                   <strong style={{ display: 'block', fontSize: '14px', marginBottom: '3px' }}>
                     Export Destination Data Availability Audit
@@ -1528,7 +1529,7 @@ export default function App() {
                               return (
                                 <div className="chart-tooltip">
                                   <div className="chart-tooltip-title">{payload[0].payload.state}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-forest)' }}>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
                                     Inventory: {payload[0].value.toLocaleString()} units
                                   </div>
                                   <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -1540,7 +1541,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Bar dataKey="stock" fill="var(--primary-forest)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="stock" fill="var(--primary-accent)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1714,7 +1715,7 @@ export default function App() {
                               return (
                                 <div className="chart-tooltip">
                                   <div className="chart-tooltip-title">{payload[0].payload.range}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-forest)' }}>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
                                     Volume: {payload[0].value} shipments
                                   </div>
                                 </div>
@@ -1723,7 +1724,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Bar dataKey="count" fill="var(--primary-forest)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="count" fill="var(--primary-accent)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1757,7 +1758,7 @@ export default function App() {
                               return (
                                 <div className="chart-tooltip">
                                   <div className="chart-tooltip-title">{payload[0].payload.category}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--secondary-sage)' }}>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--secondary-accent)' }}>
                                     On-Time SLA: {payload[0].value}%
                                   </div>
                                 </div>
@@ -1766,7 +1767,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Bar dataKey="sla" fill="var(--secondary-sage)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="sla" fill="var(--secondary-accent)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -1947,7 +1948,7 @@ export default function App() {
                             return (
                               <div className="chart-tooltip">
                                 <div className="chart-tooltip-title">{payload[0].payload.buyer_id}</div>
-                                <div className="chart-tooltip-item" style={{ color: 'var(--primary-forest)' }}>
+                                <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
                                   Invoiced Turnover: ₹{payload[0].value} Crore
                                 </div>
                                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
@@ -1959,7 +1960,7 @@ export default function App() {
                           return null;
                         }}
                       />
-                      <Bar dataKey="spend_cr" fill="var(--primary-forest)" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="spend_cr" fill="var(--primary-accent)" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -1982,7 +1983,7 @@ export default function App() {
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>High fulfillment compliance, steady reorders, minimal returns.</div>
                   </div>
                   <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card-subtle)', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--secondary-sage)', fontSize: '13px' }}>Active Growth Buyers</div>
+                    <div style={{ fontWeight: 700, color: 'var(--secondary-accent)', fontSize: '13px' }}>Active Growth Buyers</div>
                     <div style={{ fontSize: '22px', fontWeight: 800, margin: '4px 0' }}>68 Buyers (36.4%)</div>
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>High turnover velocity, large volumes, transit sensitive.</div>
                   </div>
@@ -2032,7 +2033,7 @@ export default function App() {
                     <tbody>
                       {filteredBuyers.slice((buyerPage - 1) * pageSize, buyerPage * pageSize).map(b => (
                         <tr key={b.buyer_id}>
-                          <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-forest)' }}>{b.buyer_id}</td>
+                          <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-accent)' }}>{b.buyer_id}</td>
                           <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{b.total_spend_inr.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
                           <td>{b.orders_count}</td>
                           <td style={{ textAlign: 'right' }}>{b.total_ordered_units.toLocaleString()}</td>
@@ -2093,7 +2094,7 @@ export default function App() {
 
               {/* Data Limitation Notice */}
               <div className="alert-banner info">
-                <DollarSign size={20} color="var(--primary-forest)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <DollarSign size={20} color="var(--primary-accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <div>
                   <strong style={{ display: 'block', fontSize: '14px', marginBottom: '3px' }}>
                     Foreign Exchange Data Availability Audit
@@ -2114,7 +2115,7 @@ export default function App() {
                     <div className="panel-subtitle">Simulate theoretical exchange rate impact on ₹396.88 Crore export turnover</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Sliders size={14} color="var(--primary-forest)" />
+                    <Sliders size={14} color="var(--primary-accent)" />
                     <span style={{ fontSize: '12px', fontWeight: 600 }}>FX Fluctuation:</span>
                     {[-10, -5, -2, 0, 2, 5, 10].map(pct => (
                       <button
@@ -2278,7 +2279,7 @@ export default function App() {
                             return (
                               <div className="chart-tooltip">
                                 <div className="chart-tooltip-title">{payload[0].payload.category}</div>
-                                <div className="chart-tooltip-item" style={{ color: 'var(--primary-forest)' }}>
+                                <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
                                   Shipped Units: {payload[0].payload.shippedUnits.toLocaleString()}
                                 </div>
                                 <div className="chart-tooltip-item" style={{ color: 'var(--status-warning)' }}>
@@ -2400,7 +2401,7 @@ export default function App() {
                     <tbody>
                       {filteredDateInconsistencies.slice((inconsistencyPage - 1) * pageSize, inconsistencyPage * pageSize).map(c => (
                         <tr key={c.Customer_ID}>
-                          <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-forest)' }}>{c.Customer_ID}</td>
+                          <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-accent)' }}>{c.Customer_ID}</td>
                           <td>{c.City}</td>
                           <td>{c.Age_Band}</td>
                           <td>{c.Gender}</td>
@@ -2687,7 +2688,7 @@ export default function App() {
                               return (
                                 <div className="chart-tooltip">
                                   <div className="chart-tooltip-title">{payload[0].payload.category}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--secondary-sage)' }}>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--secondary-accent)' }}>
                                     Stock Units: {payload[0].value.toLocaleString()}
                                   </div>
                                 </div>
@@ -2696,7 +2697,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Bar dataKey="stock" fill="var(--secondary-sage)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="stock" fill="var(--secondary-accent)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -2744,7 +2745,7 @@ export default function App() {
                         const markup = p.COGS > 0 ? ((p.MRP - p.COGS) / p.COGS) * 100 : 0;
                         return (
                           <tr key={p.Product_ID}>
-                            <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-forest)' }}>{p.Product_ID}</td>
+                            <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-accent)' }}>{p.Product_ID}</td>
                             <td style={{ fontWeight: 500 }}>{p.Name}</td>
                             <td>{p.Category}</td>
                             <td style={{ textAlign: 'right' }}>₹{p.MRP.toFixed(2)}</td>
@@ -2814,7 +2815,7 @@ export default function App() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                   <div style={{ padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-card-subtle)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <FileText size={18} color="var(--primary-forest)" />
+                      <FileText size={18} color="var(--primary-accent)" />
                       <strong style={{ fontSize: '14px' }}>1. Executive Business Summary</strong>
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
@@ -2828,7 +2829,7 @@ export default function App() {
 
                   <div style={{ padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-card-subtle)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <TrendingUp size={18} color="var(--secondary-sage)" />
+                      <TrendingUp size={18} color="var(--secondary-accent)" />
                       <strong style={{ fontSize: '14px' }}>2. Revenue Performance Report</strong>
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
@@ -2842,7 +2843,7 @@ export default function App() {
 
                   <div style={{ padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-card-subtle)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <Truck size={18} color="var(--accent-gold)" />
+                      <Truck size={18} color="var(--supporting-gold)" />
                       <strong style={{ fontSize: '14px' }}>3. Shipment Performance Report</strong>
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
@@ -3049,7 +3050,7 @@ export default function App() {
               </div>
               <div className="detail-item">
                 <span className="detail-label">Total Invoice Value</span>
-                <span className="detail-value" style={{ color: 'var(--primary-forest)' }}>
+                <span className="detail-value" style={{ color: 'var(--primary-accent)' }}>
                   ₹{selectedOrder.total_value_inr.toLocaleString('en-IN', { maximumFractionDigits: 2 })} INR
                 </span>
               </div>
