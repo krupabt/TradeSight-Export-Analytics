@@ -310,7 +310,30 @@ streamlit run week9_dashboard/app.py
 python week9_dashboard/src/generate_screenshots.py
 python week9_dashboard/src/generate_pdf_report.py
 
-# 3. Run the automated test suite (34 passing tests across Weeks 3, 6, and 9):
+# 3. Run the automated test suite (35 passing tests):
 pytest -v
 ```
+
+---
+
+## 8. Automated Weekly Reporting & SMTP Configuration (GitHub Actions)
+
+TradeSight includes an automated weekly exception reporting workflow orchestrated via GitHub Actions (`.github/workflows/weekly_report.yml`).
+
+### Workflow Details
+- **Cadence:** Scheduled every Monday at `08:00 UTC` via cron (`0 8 * * 1`) and manually triggerable via `workflow_dispatch`.
+- **Pipeline Execution:** Runs `pytest`, validates data integrity, checks for shipment and return anomalies, and exports dated CSV and Markdown reports.
+- **Artifacts:** Reports are saved to GitHub Actions run artifacts (`weekly_exception_report_<date>.csv` and `.md`).
+
+### SMTP Email Dispatch Setup
+By default, the pipeline runs in **Test Mode** (safe execution without external network dispatch). To enable production email notifications, configure the following GitHub repository secrets:
+
+- `SMTP_SERVER`: Outgoing mail server host (e.g. `smtp.gmail.com` or `smtp.office365.com`)
+- `SMTP_PORT`: Port number (e.g. `587` for STARTTLS or `465` for SSL)
+- `SMTP_USER`: Authentication username or sender email address
+- `SMTP_PASSWORD`: Application-specific password or API token
+- `ALERT_RECIPIENTS`: Comma-separated list of recipient email addresses (e.g. `ops@cynaris.com,management@cynaris.com`)
+
+*Note: Without these credentials, automated email delivery remains safely in Test Mode to prevent unauthorized or failing outbound connections.*
+
 

@@ -1276,7 +1276,7 @@ export default function App() {
                       <strong style={{ display: 'block', marginBottom: '2px', color: 'var(--status-warning)' }}>
                         Delivery Delays:
                       </strong>
-                      135 out of 600 shipments were delayed. Delivery performance needs improvement.
+                      {stats.delayedOrders} out of {stats.totalOrders} shipments were delayed. Delivery performance needs improvement.
                     </div>
                   </div>
 
@@ -1294,7 +1294,7 @@ export default function App() {
                       <strong style={{ display: 'block', marginBottom: '2px', color: 'var(--status-info)' }}>
                         Repeat Orders:
                       </strong>
-                      227 orders were placed by repeat buyers, accounting for 37.83% of total orders.
+                      {stats.repeatBuyerOrders} orders were placed by repeat buyers, accounting for {stats.repeatBuyerPct.toFixed(2)}% of total orders.
                     </div>
                   </div>
 
@@ -1303,7 +1303,7 @@ export default function App() {
                       <strong style={{ display: 'block', marginBottom: '2px', color: 'var(--status-success)' }}>
                         Product Margin:
                       </strong>
-                      The average catalogue gross margin is 58.62%. Actual order profitability cannot be calculated without additional cost information.
+                      The average catalogue gross margin is {productStats.avgMarginPct.toFixed(2)}%. Actual order profitability cannot be calculated without additional cost information.
                     </div>
                   </div>
                 </div>
@@ -1741,6 +1741,40 @@ export default function App() {
                 <div className="panel-card">
                   <div className="panel-header">
                     <div>
+                      <div className="panel-title">Monthly Orders</div>
+                      <div className="panel-subtitle">Number of export shipments fulfilled per month (2023–2024)</div>
+                    </div>
+                  </div>
+                  <div style={{ height: 260 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={monthlyRevenue} margin={{ top: 10, right: 15, left: -5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                        <XAxis dataKey="month" stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                        <YAxis stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="chart-tooltip">
+                                  <div className="chart-tooltip-title">{payload[0].payload.month}</div>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
+                                    Orders: {payload[0].value} shipments
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar dataKey="orders" fill="var(--primary-accent)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="panel-card">
+                  <div className="panel-header">
+                    <div>
                       <div className="panel-title">Transit Time Distribution</div>
                       <div className="panel-subtitle">Number of shipments by transit duration in days</div>
                     </div>
@@ -1757,7 +1791,7 @@ export default function App() {
                               return (
                                 <div className="chart-tooltip">
                                   <div className="chart-tooltip-title">{payload[0].payload.range}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--secondary-accent)' }}>
                                     Volume: {payload[0].value} shipments
                                   </div>
                                 </div>
@@ -1766,53 +1800,53 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Bar dataKey="count" fill="var(--primary-accent)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="count" fill="var(--secondary-accent)" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
+              </div>
 
-                <div className="panel-card">
-                  <div className="panel-header">
-                    <div>
-                      <div className="panel-title">Delivery Performance by Category</div>
-                      <div className="panel-subtitle">On-time delivery percentage by product category</div>
-                    </div>
+              <div className="panel-card" style={{ marginBottom: '20px' }}>
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-title">Delivery Performance</div>
+                    <div className="panel-subtitle">On-time delivery percentage by product category benchmarked against 80% SLA</div>
                   </div>
-                  <div style={{ height: 260 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart 
-                        data={categoryData.map(c => {
-                          const catOrders = filteredOrders.filter(o => o.category === c.category);
-                          const onTime = catOrders.length ? catOrders.filter(o => o.on_time_delivery === 1).length : 0;
-                          const sla = catOrders.length ? (onTime / catOrders.length) * 100 : 0;
-                          return { category: c.category, sla: parseFloat(sla.toFixed(1)) };
-                        })}
-                        margin={{ top: 10, right: 15, left: -5, bottom: 5 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
-                        <XAxis dataKey="category" stroke="var(--text-secondary)" fontSize={10} tickLine={false} tickFormatter={formatCategoryName} />
-                        <YAxis stroke="var(--text-secondary)" fontSize={11} domain={[0, 100]} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                        <ReferenceLine y={80} stroke="var(--status-success)" strokeDasharray="3 3" label={{ value: 'Target 80%', fill: 'var(--status-success)', fontSize: 10 }} />
-                        <Tooltip 
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <div className="chart-tooltip">
-                                  <div className="chart-tooltip-title">{formatCategoryName(payload[0].payload.category)}</div>
-                                  <div className="chart-tooltip-item" style={{ color: 'var(--secondary-accent)' }}>
-                                    On-Time: {payload[0].value}%
-                                  </div>
+                </div>
+                <div style={{ height: 260 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart 
+                      data={categoryData.map(c => {
+                        const catOrders = filteredOrders.filter(o => o.category === c.category);
+                        const onTime = catOrders.length ? catOrders.filter(o => o.on_time_delivery === 1).length : 0;
+                        const sla = catOrders.length ? (onTime / catOrders.length) * 100 : 0;
+                        return { category: c.category, sla: parseFloat(sla.toFixed(1)) };
+                      })}
+                      margin={{ top: 10, right: 15, left: -5, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                      <XAxis dataKey="category" stroke="var(--text-secondary)" fontSize={10} tickLine={false} tickFormatter={formatCategoryName} />
+                      <YAxis stroke="var(--text-secondary)" fontSize={11} domain={[0, 100]} tickLine={false} tickFormatter={(v) => `${v}%`} />
+                      <ReferenceLine y={80} stroke="var(--status-success)" strokeDasharray="3 3" label={{ value: 'Target 80%', fill: 'var(--status-success)', fontSize: 10 }} />
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="chart-tooltip">
+                                <div className="chart-tooltip-title">{formatCategoryName(payload[0].payload.category)}</div>
+                                <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
+                                  On-Time: {payload[0].value}%
                                 </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Bar dataKey="sla" fill="var(--secondary-accent)" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="sla" fill="var(--primary-accent)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
 
@@ -2861,7 +2895,7 @@ export default function App() {
                       <strong style={{ fontSize: '14px' }}>1. Executive Summary</strong>
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
-                      Overview of export sales revenue, order volumes and delivery performance.
+                      Summary of revenue, orders, deliveries and buyers.
                     </p>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button className="action-btn" onClick={() => window.print()}><Printer size={13} /> Print / Save PDF</button>
@@ -2875,7 +2909,7 @@ export default function App() {
                       <strong style={{ fontSize: '14px' }}>2. Revenue Report</strong>
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
-                      Monthly revenue, category breakdown, payment terms and top buyers.
+                      Monthly revenue, product categories and payment terms.
                     </p>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button className="action-btn" onClick={() => window.print()}><Printer size={13} /> Print / Save PDF</button>
@@ -2889,7 +2923,7 @@ export default function App() {
                       <strong style={{ fontSize: '14px' }}>3. Shipment Report</strong>
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
-                      Transit time distribution, delivery delays and carrier performance.
+                      Delivery performance, transit time and delayed orders.
                     </p>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button className="action-btn" onClick={() => window.print()}><Printer size={13} /> Print / Save PDF</button>
@@ -2903,7 +2937,7 @@ export default function App() {
                       <strong style={{ fontSize: '14px' }}>4. Data Quality Report</strong>
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px', lineHeight: 1.5 }}>
-                      Identified data errors including return overruns and date errors.
+                      Return quantity errors and other data quality issues.
                     </p>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button className="action-btn" onClick={() => window.print()}><Printer size={13} /> Print / Save PDF</button>
@@ -2913,22 +2947,22 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Weekly Automation Section */}
+              {/* Automated Reports Section */}
               <div className="panel-card">
                 <div className="panel-header">
                   <div>
                     <div className="panel-title">Automated Reports</div>
                     <div className="panel-subtitle">Weekly reports are generated using GitHub Actions.</div>
                   </div>
-                  <span className="badge success">Configured</span>
+                  <span className="badge neutral">Test Mode</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                   <div>
                     <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-                      Weekly Schedule:
+                      Schedule:
                     </strong>
-                    Configured via <code>.github/workflows/weekly_report.yml</code> to run every <strong>Monday at 08:00 UTC</strong>. The automated workflow runs tests, checks for data anomalies and generates updated reports.
+                    Every Monday at 08:00 UTC. The automated workflow runs tests, checks for data anomalies and generates updated reports.
                   </div>
                   <div>
                     <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
