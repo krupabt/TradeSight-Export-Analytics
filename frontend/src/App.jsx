@@ -1567,7 +1567,7 @@ export default function App() {
                         margin={{ top: 10, right: 15, left: -5, bottom: 5 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
-                        <XAxis dataKey="state" stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                        <XAxis dataKey="state" stroke="var(--text-secondary)" fontSize={11} tickLine={false} interval={0} />
                         <YAxis stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
                         <Tooltip 
                           content={({ active, payload }) => {
