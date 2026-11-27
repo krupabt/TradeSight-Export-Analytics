@@ -24,19 +24,19 @@ import exceptionsRaw from './data/exceptions.json';
 const ALL_CATEGORIES = [...new Set(ordersRaw.map(o => o.category))].sort();
 const ALL_TERMS = [...new Set(ordersRaw.map(o => o.payment_terms))].sort();
 
-// Editorial Corporate Design Palette
+// Clean Professional Light Theme Palette
 const THEME_COLORS = {
-  primaryAccent: '#52796F',
-  secondaryAccent: '#D8BFA7',
-  primaryText: '#202C33',
-  secondaryText: '#667085',
-  summaryPanelBg: '#E4ECE8',
+  primaryAccent: '#287D78',
+  secondaryAccent: '#5FA5A0',
+  primaryText: '#242424',
+  secondaryText: '#616161',
+  summaryPanelBg: '#FFFFFF',
   cardBg: '#FFFFFF',
-  border: '#E2E6E9',
-  success: '#27805B',
+  border: '#E0E3E7',
+  success: '#2E7D32',
   warning: '#B7791F',
-  error: '#C24141',
-  piePalette: ['#52796F', '#D8BFA7', '#3F5E57', '#C4A482', '#6B9080', '#202C33']
+  error: '#C62828',
+  piePalette: ['#287D78', '#3D948F', '#57ABA5', '#76C2BC', '#9AD7D2', '#C2EAE6']
 };
 
 export default function App() {
@@ -1111,12 +1111,6 @@ export default function App() {
                   <div style={{ height: 260 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={monthlyRevenue} margin={{ top: 10, right: 15, left: -5, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="navyGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="var(--primary-accent)" stopOpacity={0.35} />
-                            <stop offset="95%" stopColor="var(--primary-accent)" stopOpacity={0.0} />
-                          </linearGradient>
-                        </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
                         <XAxis dataKey="month" stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
                         <YAxis stroke="var(--text-secondary)" fontSize={11} tickLine={false} tickFormatter={(v) => `₹${v}Cr`} />
@@ -1138,7 +1132,7 @@ export default function App() {
                             return null;
                           }}
                         />
-                        <Area type="monotone" dataKey="revenueCr" stroke="var(--primary-accent)" fillOpacity={1} fill="url(#navyGrad)" strokeWidth={2.5} />
+                        <Area type="monotone" dataKey="revenueCr" stroke="var(--primary-accent)" fillOpacity={1} fill="var(--primary-accent-subtle)" strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
