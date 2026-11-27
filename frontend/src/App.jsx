@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -11,7 +11,7 @@ import {
   Info, Search, HelpCircle, Globe, DollarSign, AlertOctagon,
   Sun, Moon, ExternalLink, X, Printer, Clock, FileSpreadsheet,
   CheckCircle2, AlertCircle, ArrowDownRight, Sliders, Menu,
-  ChevronLeft, ChevronRight, Activity, ArrowRight
+  ChevronLeft, ChevronRight, Activity, ArrowRight, ChevronDown
 } from 'lucide-react';
 
 import ordersRaw from './data/orders.json';
@@ -24,21 +24,19 @@ import exceptionsRaw from './data/exceptions.json';
 const ALL_CATEGORIES = [...new Set(ordersRaw.map(o => o.category))].sort();
 const ALL_TERMS = [...new Set(ordersRaw.map(o => o.payment_terms))].sort();
 
-// Classic Corporate White and Navy Color Palette
+// Editorial Corporate Design Palette
 const THEME_COLORS = {
-  navy: '#243447',
-  navyActive: '#3D566E',
-  primaryAccent: '#527A9E',
-  secondaryAccent: '#8FA9BF',
-  slate: '#64748B',
-  supportingGold: '#B69A68',
-  charcoal: '#1F2937',
+  primaryAccent: '#52796F',
+  secondaryAccent: '#D8BFA7',
+  primaryText: '#202C33',
   secondaryText: '#667085',
-  border: '#DDE2E8',
+  summaryPanelBg: '#E4ECE8',
+  cardBg: '#FFFFFF',
+  border: '#E2E6E9',
   success: '#27805B',
   warning: '#B7791F',
   error: '#C24141',
-  piePalette: ['#527A9E', '#8FA9BF', '#64748B', '#B69A68', '#3D566E', '#243447']
+  piePalette: ['#52796F', '#D8BFA7', '#3F5E57', '#C4A482', '#6B9080', '#202C33']
 };
 
 export default function App() {
@@ -53,8 +51,22 @@ export default function App() {
     return 'overview';
   });
 
-  // Mobile Sidebar Drawer State
+  // Mobile Drawer State
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Horizontal Navigation Dropdown State
+  const [openDropdown, setOpenDropdown] = useState(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleGlobalClick = (e) => {
+      if (!e.target.closest('.nav-dropdown-wrapper')) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener('click', handleGlobalClick);
+    return () => document.removeEventListener('click', handleGlobalClick);
+  }, []);
 
   // Theme State (Default: Light Mode per strict requirement)
   const [theme, setTheme] = useState(() => {
@@ -84,6 +96,7 @@ export default function App() {
   const handleSelectSection = (s) => {
     setActiveSection(s);
     setSidebarOpen(false);
+    setOpenDropdown(null);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location);
       url.searchParams.set('section', s);
@@ -561,152 +574,243 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      {/* Mobile Drawer Overlay */}
-      <div 
-        className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
-        onClick={() => setSidebarOpen(false)}
-      />
-
-      {/* LEFT SIDEBAR NAVIGATION */}
-      <aside className={`app-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="sidebar-brand">
-          <div className="brand-icon">
-            <Globe size={20} />
+      {/* CLEAN HORIZONTAL NAVIGATION HEADER */}
+      <header className="top-horizontal-nav">
+        {/* Minimal TradeSight Brand Logo & Wordmark */}
+        <div className="brand-area" onClick={() => handleSelectSection('overview')}>
+          <div className="brand-logo-mark" title="TradeSight Export Analytics">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            </svg>
           </div>
-          <div className="brand-text">
-            <div className="brand-title">TradeSight</div>
-            <div className="brand-subtitle">Export Intelligence &amp; Business Analytics</div>
+          <div className="brand-typography">
+            <div className="brand-name">
+              TradeSight <span className="brand-name-tag">BI</span>
+            </div>
+            <div className="brand-tagline">Export Intelligence &amp; Business Analytics</div>
           </div>
         </div>
 
-        <nav className="sidebar-nav">
-          {/* Group 1: Overview */}
-          <div className="nav-group">
-            <div className="nav-group-title">Overview</div>
+        {/* Horizontal Navigation Menu with Working Dropdowns */}
+        <nav className="nav-menu-horizontal">
+          {/* 1. Overview */}
+          <button
+            className={`nav-link-btn ${activeSection === 'overview' ? 'active' : ''}`}
+            onClick={() => handleSelectSection('overview')}
+          >
+            <Activity size={14} /> Overview
+          </button>
+
+          {/* 2. Core Operations Dropdown */}
+          <div className="nav-dropdown-wrapper">
             <button
-              className={`nav-item ${activeSection === 'overview' ? 'active' : ''}`}
-              onClick={() => handleSelectSection('overview')}
+              className={`nav-dropdown-trigger ${['revenue', 'logistics', 'shipment', 'returns', 'compliance', 'buyers', 'clients', 'catalogue', 'products'].includes(activeSection) ? 'has-active' : ''} ${openDropdown === 'operations' ? 'open' : ''}`}
+              onClick={() => setOpenDropdown(prev => prev === 'operations' ? null : 'operations')}
             >
-              <Activity size={16} className="nav-icon" /> Executive Overview
+              <TrendingUp size={14} /> Core Operations
+              <ChevronDown size={13} className="nav-dropdown-chevron" />
             </button>
+            {openDropdown === 'operations' && (
+              <div className="nav-dropdown-menu">
+                <button
+                  className={`dropdown-item ${activeSection === 'revenue' ? 'active' : ''}`}
+                  onClick={() => handleSelectSection('revenue')}
+                >
+                  <TrendingUp size={14} /> Export Revenue
+                </button>
+                <button
+                  className={`dropdown-item ${(activeSection === 'logistics' || activeSection === 'shipment') ? 'active' : ''}`}
+                  onClick={() => handleSelectSection('logistics')}
+                >
+                  <Truck size={14} /> Logistics &amp; SLA
+                </button>
+                <button
+                  className={`dropdown-item ${(activeSection === 'returns' || activeSection === 'compliance') ? 'active' : ''}`}
+                  onClick={() => handleSelectSection('returns')}
+                >
+                  <RotateCcw size={14} /> Returns &amp; Quality
+                </button>
+                <button
+                  className={`dropdown-item ${(activeSection === 'buyers' || activeSection === 'clients') ? 'active' : ''}`}
+                  onClick={() => handleSelectSection('buyers')}
+                >
+                  <Users size={14} /> Buyer Analytics
+                </button>
+                <button
+                  className={`dropdown-item ${(activeSection === 'catalogue' || activeSection === 'products') ? 'active' : ''}`}
+                  onClick={() => handleSelectSection('catalogue')}
+                >
+                  <Package size={14} /> Product Catalogue
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Group 2: Core Operations */}
-          <div className="nav-group">
-            <div className="nav-group-title">Core Operations</div>
+          {/* 3. Strategic Intelligence Dropdown */}
+          <div className="nav-dropdown-wrapper">
             <button
-              className={`nav-item ${activeSection === 'revenue' ? 'active' : ''}`}
-              onClick={() => handleSelectSection('revenue')}
+              className={`nav-dropdown-trigger ${['country', 'currency', 'reports'].includes(activeSection) ? 'has-active' : ''} ${openDropdown === 'strategic' ? 'open' : ''}`}
+              onClick={() => setOpenDropdown(prev => prev === 'strategic' ? null : 'strategic')}
             >
-              <TrendingUp size={16} className="nav-icon" /> Export Revenue
+              <Globe size={14} /> Strategic Intelligence
+              <ChevronDown size={13} className="nav-dropdown-chevron" />
             </button>
-            <button
-              className={`nav-item ${(activeSection === 'logistics' || activeSection === 'shipment') ? 'active' : ''}`}
-              onClick={() => handleSelectSection('logistics')}
-            >
-              <Truck size={16} className="nav-icon" /> Logistics &amp; SLA
-            </button>
-            <button
-              className={`nav-item ${(activeSection === 'returns' || activeSection === 'compliance') ? 'active' : ''}`}
-              onClick={() => handleSelectSection('returns')}
-            >
-              <RotateCcw size={16} className="nav-icon" /> Returns &amp; Quality
-            </button>
-            <button
-              className={`nav-item ${(activeSection === 'buyers' || activeSection === 'clients') ? 'active' : ''}`}
-              onClick={() => handleSelectSection('buyers')}
-            >
-              <Users size={16} className="nav-icon" /> Buyer Analytics
-            </button>
-            <button
-              className={`nav-item ${(activeSection === 'catalogue' || activeSection === 'products') ? 'active' : ''}`}
-              onClick={() => handleSelectSection('catalogue')}
-            >
-              <Package size={16} className="nav-icon" /> Product Catalogue
-            </button>
+            {openDropdown === 'strategic' && (
+              <div className="nav-dropdown-menu">
+                <button
+                  className={`dropdown-item ${activeSection === 'country' ? 'active' : ''}`}
+                  onClick={() => handleSelectSection('country')}
+                >
+                  <Globe size={14} /> Country Analysis
+                </button>
+                <button
+                  className={`dropdown-item ${activeSection === 'currency' ? 'active' : ''}`}
+                  onClick={() => handleSelectSection('currency')}
+                >
+                  <DollarSign size={14} /> Currency Impact
+                </button>
+                <button
+                  className={`dropdown-item ${activeSection === 'reports' ? 'active' : ''}`}
+                  onClick={() => handleSelectSection('reports')}
+                >
+                  <FileSpreadsheet size={14} /> Reports Hub
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Group 3: Strategic Intelligence */}
-          <div className="nav-group">
-            <div className="nav-group-title">Strategic Intelligence</div>
-            <button
-              className={`nav-item ${activeSection === 'country' ? 'active' : ''}`}
-              onClick={() => handleSelectSection('country')}
-            >
-              <Globe size={16} className="nav-icon" /> Country Analysis
-            </button>
-            <button
-              className={`nav-item ${activeSection === 'currency' ? 'active' : ''}`}
-              onClick={() => handleSelectSection('currency')}
-            >
-              <DollarSign size={16} className="nav-icon" /> Currency Impact
-            </button>
-            <button
-              className={`nav-item ${activeSection === 'reports' ? 'active' : ''}`}
-              onClick={() => handleSelectSection('reports')}
-            >
-              <FileSpreadsheet size={16} className="nav-icon" /> Reports Hub
-            </button>
-          </div>
-
-          {/* Group 4: Data & Compliance */}
-          <div className="nav-group">
-            <div className="nav-group-title">Data &amp; Compliance</div>
-            <button
-              className={`nav-item ${activeSection === 'governance' ? 'active' : ''}`}
-              onClick={() => handleSelectSection('governance')}
-            >
-              <ShieldAlert size={16} className="nav-icon" /> Data Governance
-            </button>
-          </div>
+          {/* 4. Data & Compliance */}
+          <button
+            className={`nav-link-btn ${activeSection === 'governance' ? 'active' : ''}`}
+            onClick={() => handleSelectSection('governance')}
+          >
+            <ShieldAlert size={14} /> Data Governance
+          </button>
         </nav>
 
-        <div className="sidebar-footer">
-          <div className="sidebar-footer-title">
-            <Database size={13} color="var(--supporting-gold)" /> TradeSight Platform
+        {/* Header Right Action Area */}
+        <div className="nav-actions-right">
+          <button 
+            className="theme-toggle-btn" 
+            onClick={toggleTheme} 
+            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
+            aria-label="Toggle Theme"
+          >
+            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
+          <button className="action-btn primary" onClick={handleExportCSV}>
+            <Download size={13} /> Export Report
+          </button>
+          <button 
+            className="mobile-menu-btn" 
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Open Mobile Menu"
+          >
+            <Menu size={18} />
+          </button>
+        </div>
+      </header>
+
+      {/* MOBILE NAVIGATION DRAWER & BACKDROP */}
+      <div 
+        className={`mobile-nav-overlay ${sidebarOpen ? 'open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+      />
+      <aside className={`mobile-nav-drawer ${sidebarOpen ? 'open' : ''}`}>
+        <div className="mobile-nav-header">
+          <div className="brand-area" onClick={() => handleSelectSection('overview')}>
+            <div className="brand-logo-mark">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
+                <circle cx="12" cy="12" r="10" />
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+              </svg>
+            </div>
+            <div className="brand-typography">
+              <div className="brand-name">TradeSight</div>
+              <div className="brand-tagline">Export Intelligence</div>
+            </div>
           </div>
-          <div style={{ fontSize: '11px', lineHeight: '1.4', marginTop: '4px', opacity: 0.85 }}>
-            A unified analytics platform for monitoring export revenue, shipment performance, commercial buyers, product margins and data quality.
-          </div>
-          <div style={{ marginTop: '8px', fontSize: '10px', opacity: 0.65 }}>
-            Cynaris Solutions • Chennai Export Operations
-          </div>
+          <button className="modal-close-btn" onClick={() => setSidebarOpen(false)}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mobile-nav-group-title">Overview</div>
+        <button
+          className={`dropdown-item ${activeSection === 'overview' ? 'active' : ''}`}
+          onClick={() => handleSelectSection('overview')}
+        >
+          <Activity size={14} /> Executive Overview
+        </button>
+
+        <div className="mobile-nav-group-title">Core Operations</div>
+        <button
+          className={`dropdown-item ${activeSection === 'revenue' ? 'active' : ''}`}
+          onClick={() => handleSelectSection('revenue')}
+        >
+          <TrendingUp size={14} /> Export Revenue
+        </button>
+        <button
+          className={`dropdown-item ${(activeSection === 'logistics' || activeSection === 'shipment') ? 'active' : ''}`}
+          onClick={() => handleSelectSection('logistics')}
+        >
+          <Truck size={14} /> Logistics &amp; SLA
+        </button>
+        <button
+          className={`dropdown-item ${(activeSection === 'returns' || activeSection === 'compliance') ? 'active' : ''}`}
+          onClick={() => handleSelectSection('returns')}
+        >
+          <RotateCcw size={14} /> Returns &amp; Quality
+        </button>
+        <button
+          className={`dropdown-item ${(activeSection === 'buyers' || activeSection === 'clients') ? 'active' : ''}`}
+          onClick={() => handleSelectSection('buyers')}
+        >
+          <Users size={14} /> Buyer Analytics
+        </button>
+        <button
+          className={`dropdown-item ${(activeSection === 'catalogue' || activeSection === 'products') ? 'active' : ''}`}
+          onClick={() => handleSelectSection('catalogue')}
+        >
+          <Package size={14} /> Product Catalogue
+        </button>
+
+        <div className="mobile-nav-group-title">Strategic Intelligence</div>
+        <button
+          className={`dropdown-item ${activeSection === 'country' ? 'active' : ''}`}
+          onClick={() => handleSelectSection('country')}
+        >
+          <Globe size={14} /> Country Analysis
+        </button>
+        <button
+          className={`dropdown-item ${activeSection === 'currency' ? 'active' : ''}`}
+          onClick={() => handleSelectSection('currency')}
+        >
+          <DollarSign size={14} /> Currency Impact
+        </button>
+        <button
+          className={`dropdown-item ${activeSection === 'reports' ? 'active' : ''}`}
+          onClick={() => handleSelectSection('reports')}
+        >
+          <FileSpreadsheet size={14} /> Reports Hub
+        </button>
+
+        <div className="mobile-nav-group-title">Data &amp; Compliance</div>
+        <button
+          className={`dropdown-item ${activeSection === 'governance' ? 'active' : ''}`}
+          onClick={() => handleSelectSection('governance')}
+        >
+          <ShieldAlert size={14} /> Data Governance
+        </button>
+
+        <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid var(--border-subtle)', fontSize: 11, color: 'var(--text-muted)' }}>
+          Cynaris Solutions • Chennai Export Operations
         </div>
       </aside>
 
       {/* MAIN VIEWPORT */}
       <div className="app-main">
-        {/* TOP HEADER BAR */}
-        <header className="top-bar">
-          <div className="header-left">
-            <button 
-              className="sidebar-toggle-btn"
-              onClick={() => setSidebarOpen(prev => !prev)}
-              aria-label="Toggle Navigation"
-            >
-              <Menu size={18} />
-            </button>
-            <div className="breadcrumbs">
-              <span>{breadcrumb.group}</span>
-              <span>/</span>
-              <span className="breadcrumbs-current">{breadcrumb.page}</span>
-            </div>
-          </div>
-
-          <div className="header-right">
-            <button 
-              className="theme-toggle-btn" 
-              onClick={toggleTheme} 
-              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
-            >
-              {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
-            <button className="action-btn primary" onClick={handleExportCSV}>
-              <Download size={13} /> Export Report
-            </button>
-          </div>
-        </header>
-
         {/* RELEVANT FILTER TOOLBAR */}
         <div className="filter-toolbar">
           <div className="filter-group">
@@ -808,148 +912,189 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 8 Primary Verified KPI Cards (Structured 4x2 Grid) */}
-              <div className="primary-kpi-grid">
-                {/* 1. Gross Export Revenue */}
-                <div className="primary-kpi-card">
-                  <div className="primary-kpi-header">
-                    <span className="primary-kpi-title">Gross Export Revenue</span>
-                    <div className="primary-kpi-icon"><TrendingUp size={16} /></div>
-                  </div>
-                  <div className="primary-kpi-value">₹{(stats.totalRevenue / 1e7).toFixed(2)} Cr</div>
-                  <div className="primary-kpi-subtext">
-                    <span className="tooltip-trigger" title="Total Gross Export Turnover: SUM(total_value_inr) = ₹3,968,829,214.20">
-                      <Info size={12} style={{ marginRight: 3 }} /> ₹{(stats.totalRevenue / 1e7).toFixed(2)} Crore ({stats.totalOrders} Shipments)
-                    </span>
-                  </div>
-                </div>
-
-                {/* 2. Total Orders */}
-                <div className="primary-kpi-card">
-                  <div className="primary-kpi-header">
-                    <span className="primary-kpi-title">Total Orders</span>
-                    <div className="primary-kpi-icon"><Box size={16} /></div>
-                  </div>
-                  <div className="primary-kpi-value">{stats.totalOrders}</div>
-                  <div className="primary-kpi-subtext">
-                    <span className="tooltip-trigger" title="Total count of B2B export transactions: COUNT(order_id) = 600">
-                      <Info size={12} style={{ marginRight: 3 }} /> 600 Total B2B Wholesale Shipments
-                    </span>
-                  </div>
-                </div>
-
-                {/* 3. Average Order Value */}
-                <div className="primary-kpi-card">
-                  <div className="primary-kpi-header">
-                    <span className="primary-kpi-title">Average Order Value</span>
-                    <div className="primary-kpi-icon"><DollarSign size={16} /></div>
-                  </div>
-                  <div className="primary-kpi-value">₹{(stats.aov / 1e5).toFixed(2)} L</div>
-                  <div className="primary-kpi-subtext">
-                    <span className="tooltip-trigger" title="Average Order Value: Total Revenue / Total Orders = ₹6,614,715.36 (~₹66.15 Lakh)">
-                      <Info size={12} style={{ marginRight: 3 }} /> ₹66.15 Lakh Average per Order
-                    </span>
-                  </div>
-                </div>
-
-                {/* 4. On-Time Delivery Rate */}
-                <div className="primary-kpi-card">
-                  <div className="primary-kpi-header">
-                    <span className="primary-kpi-title">On-Time Delivery Rate</span>
-                    <div className="primary-kpi-icon" style={{ color: stats.onTimeRate >= 80 ? 'var(--status-success)' : 'var(--status-warning)' }}>
-                      <Truck size={16} />
+              {/* Executive Performance Summary Panel (#E4ECE8) */}
+              <div className="summary-panel">
+                <div className="summary-panel-header">
+                  <div className="summary-panel-title-area">
+                    <div className="summary-panel-title">
+                      <Activity size={18} color="var(--primary-accent)" />
+                      Executive Performance Summary
+                      <span className="summary-panel-tag">Verified Baseline</span>
+                    </div>
+                    <div className="summary-panel-desc">
+                      C-Suite consolidated export turnover, wholesale transaction volume and logistics fulfillment benchmarks
                     </div>
                   </div>
-                  <div className="primary-kpi-value" style={{ color: stats.onTimeRate >= 80 ? 'var(--status-success)' : 'var(--status-warning)' }}>
-                    {stats.onTimeRate.toFixed(2)}%
-                  </div>
-                  <div className="primary-kpi-subtext">
-                    <span className="tooltip-trigger" title="On-Time Delivery Compliance: 465 on-time shipments out of 600 total (77.50%)">
-                      <Info size={12} style={{ marginRight: 3 }} /> {stats.onTimeOrders} on-time vs {stats.delayedOrders} delayed
-                    </span>
+                  <div className="summary-panel-meta">
+                    <Calendar size={13} color="var(--primary-accent)" />
+                    <span>Jan 2023 – Dec 2024 • 600 B2B Shipments</span>
                   </div>
                 </div>
 
-                {/* 5. Unit Return Rate */}
-                <div className="primary-kpi-card">
-                  <div className="primary-kpi-header">
-                    <span className="primary-kpi-title">Unit Return Rate</span>
-                    <div className="primary-kpi-icon"><RotateCcw size={16} /></div>
+                {/* 4 Core Financial & Operations Pillars */}
+                <div className="summary-kpi-grid">
+                  {/* 1. Gross Export Revenue */}
+                  <div className="summary-kpi-card">
+                    <div className="summary-kpi-header">
+                      <span className="summary-kpi-label">Gross Export Revenue</span>
+                      <div className="summary-kpi-icon-pill"><TrendingUp size={15} /></div>
+                    </div>
+                    <div className="summary-kpi-value">₹{(stats.totalRevenue / 1e7).toFixed(2)} Cr</div>
+                    <div className="summary-kpi-subtext">
+                      <span className="tooltip-trigger" title="Total Gross Export Turnover: SUM(total_value_inr) = ₹3,968,829,214.20">
+                        <Info size={12} style={{ marginRight: 3 }} /> ₹{(stats.totalRevenue / 1e7).toFixed(2)} Cr across {stats.totalOrders} Shipments
+                      </span>
+                    </div>
                   </div>
-                  <div className="primary-kpi-value">{stats.returnRate.toFixed(2)}%</div>
-                  <div className="primary-kpi-subtext">
-                    <span className="tooltip-trigger" title="Unit Return Rate: 15,242 returned units / 1,509,070 shipped units = 1.01%">
-                      <Info size={12} style={{ marginRight: 3 }} /> {stats.returnUnits.toLocaleString()} of {stats.totalUnits.toLocaleString()} units
-                    </span>
-                  </div>
-                </div>
 
-                {/* 6. Active Commercial Buyers */}
-                <div className="primary-kpi-card">
-                  <div className="primary-kpi-header">
-                    <span className="primary-kpi-title">Commercial Buyers</span>
-                    <div className="primary-kpi-icon"><Users size={16} /></div>
+                  {/* 2. Total Orders */}
+                  <div className="summary-kpi-card">
+                    <div className="summary-kpi-header">
+                      <span className="summary-kpi-label">Total Wholesale Orders</span>
+                      <div className="summary-kpi-icon-pill"><Box size={15} /></div>
+                    </div>
+                    <div className="summary-kpi-value">{stats.totalOrders}</div>
+                    <div className="summary-kpi-subtext">
+                      <span className="tooltip-trigger" title="Total count of B2B export transactions: COUNT(order_id) = 600">
+                        <Info size={12} style={{ marginRight: 3 }} /> 600 Total B2B Wholesale Shipments
+                      </span>
+                    </div>
                   </div>
-                  <div className="primary-kpi-value">187</div>
-                  <div className="primary-kpi-subtext">
-                    <span className="tooltip-trigger" title="Verified active commercial buyers in orders: COUNT(DISTINCT buyer_id) = 187">
-                      <Info size={12} style={{ marginRight: 3 }} /> 187 Active Institutional Accounts
-                    </span>
-                  </div>
-                </div>
 
-                {/* 7. Product Catalogue SKUs */}
-                <div className="primary-kpi-card">
-                  <div className="primary-kpi-header">
-                    <span className="primary-kpi-title">Product Catalogue SKUs</span>
-                    <div className="primary-kpi-icon"><Package size={16} /></div>
+                  {/* 3. Average Order Value */}
+                  <div className="summary-kpi-card">
+                    <div className="summary-kpi-header">
+                      <span className="summary-kpi-label">Average Order Value</span>
+                      <div className="summary-kpi-icon-pill"><DollarSign size={15} /></div>
+                    </div>
+                    <div className="summary-kpi-value">₹{(stats.aov / 1e5).toFixed(2)} L</div>
+                    <div className="summary-kpi-subtext">
+                      <span className="tooltip-trigger" title="Average Order Value: Total Revenue / Total Orders = ₹6,614,715.36 (~₹66.15 Lakh)">
+                        <Info size={12} style={{ marginRight: 3 }} /> ₹66.15 Lakh Average per Order
+                      </span>
+                    </div>
                   </div>
-                  <div className="primary-kpi-value">{productStats.totalProducts}</div>
-                  <div className="primary-kpi-subtext">
-                    <span className="tooltip-trigger" title="Product Catalogue Master: 50 active SKUs across 5 commodity categories">
-                      <Info size={12} style={{ marginRight: 3 }} /> 50 SKUs • {productStats.totalStock.toLocaleString()} Stock Units
-                    </span>
-                  </div>
-                </div>
 
-                {/* 8. Average Catalogue Gross Margin */}
-                <div className="primary-kpi-card">
-                  <div className="primary-kpi-header">
-                    <span className="primary-kpi-title">Catalogue Gross Margin</span>
-                    <div className="primary-kpi-icon" style={{ color: 'var(--status-success)' }}><Activity size={16} /></div>
-                  </div>
-                  <div className="primary-kpi-value" style={{ color: 'var(--status-success)' }}>
-                    {productStats.avgMarginPct.toFixed(2)}%
-                  </div>
-                  <div className="primary-kpi-subtext">
-                    <span className="tooltip-trigger" title="Catalogue Gross Margin: AVG((MRP - COGS) / MRP) = 58.62% (Markup = 141.67%)">
-                      <Info size={12} style={{ marginRight: 3 }} /> Reference master margin (Cost ₹939 / MRP ₹2,263)
-                    </span>
+                  {/* 4. On-Time Delivery Rate */}
+                  <div className="summary-kpi-card">
+                    <div className="summary-kpi-header">
+                      <span className="summary-kpi-label">On-Time Delivery Rate</span>
+                      <div className="summary-kpi-icon-pill" style={{ color: stats.onTimeRate >= 80 ? 'var(--status-success)' : 'var(--status-warning)' }}>
+                        <Truck size={15} />
+                      </div>
+                    </div>
+                    <div className="summary-kpi-value" style={{ color: stats.onTimeRate >= 80 ? 'var(--status-success)' : 'var(--status-warning)' }}>
+                      {stats.onTimeRate.toFixed(2)}%
+                    </div>
+                    <div className="summary-kpi-subtext">
+                      <span className="tooltip-trigger" title="On-Time Delivery Compliance: 465 on-time shipments out of 600 total (77.50%)">
+                        <Info size={12} style={{ marginRight: 3 }} /> {stats.onTimeOrders} on-time • {stats.delayedOrders} delayed
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Secondary Operational Indicator Strip */}
-              <div className="secondary-kpi-grid">
-                <div className="secondary-kpi-card">
-                  <div className="secondary-kpi-title">Total Shipped Units</div>
-                  <div className="secondary-kpi-value">{stats.totalUnits.toLocaleString()}</div>
-                  <div className="secondary-kpi-subtext">1,509,070 physical export units</div>
+              {/* Supporting Operational KPI Grid (White Cards #FFFFFF) */}
+              <div className="supporting-kpi-grid">
+                {/* 1. Unit Return Rate */}
+                <div className="supporting-kpi-card">
+                  <div className="supporting-kpi-header">
+                    <span className="supporting-kpi-title">Unit Return Rate</span>
+                    <RotateCcw size={14} color="var(--primary-accent)" />
+                  </div>
+                  <div className="supporting-kpi-value">{stats.returnRate.toFixed(2)}%</div>
+                  <div className="supporting-kpi-subtext">
+                    {stats.returnUnits.toLocaleString()} / {stats.totalUnits.toLocaleString()} units
+                  </div>
                 </div>
-                <div className="secondary-kpi-card">
-                  <div className="secondary-kpi-title">Delayed Shipments</div>
-                  <div className="secondary-kpi-value" style={{ color: 'var(--status-warning)' }}>{stats.delayedOrders} Orders</div>
-                  <div className="secondary-kpi-subtext">22.50% fulfillment delay rate</div>
+
+                {/* 2. Commercial Buyers */}
+                <div className="supporting-kpi-card">
+                  <div className="supporting-kpi-header">
+                    <span className="supporting-kpi-title">Commercial Buyers</span>
+                    <Users size={14} color="var(--primary-accent)" />
+                  </div>
+                  <div className="supporting-kpi-value">187</div>
+                  <div className="supporting-kpi-subtext">
+                    Active Institutional Accounts
+                  </div>
                 </div>
-                <div className="secondary-kpi-card">
-                  <div className="secondary-kpi-title">Mean Transit Duration</div>
-                  <div className="secondary-kpi-value">{stats.avgDeliveryDays.toFixed(2)} Days</div>
-                  <div className="secondary-kpi-subtext">Median transit: {stats.medianDeliveryDays} calendar days</div>
+
+                {/* 3. Product Catalogue SKUs */}
+                <div className="supporting-kpi-card">
+                  <div className="supporting-kpi-header">
+                    <span className="supporting-kpi-title">Catalogue SKUs</span>
+                    <Package size={14} color="var(--primary-accent)" />
+                  </div>
+                  <div className="supporting-kpi-value">{productStats.totalProducts}</div>
+                  <div className="supporting-kpi-subtext">
+                    5 Commodity Categories
+                  </div>
                 </div>
-                <div className="secondary-kpi-card">
-                  <div className="secondary-kpi-title">Warehouse Stock Units</div>
-                  <div className="secondary-kpi-value">{productStats.totalStock.toLocaleString()}</div>
-                  <div className="secondary-kpi-subtext">Available inventory across 50 SKUs</div>
+
+                {/* 4. Catalogue Gross Margin */}
+                <div className="supporting-kpi-card">
+                  <div className="supporting-kpi-header">
+                    <span className="supporting-kpi-title">Catalogue Margin</span>
+                    <Activity size={14} color="var(--status-success)" />
+                  </div>
+                  <div className="supporting-kpi-value" style={{ color: 'var(--status-success)' }}>
+                    {productStats.avgMarginPct.toFixed(2)}%
+                  </div>
+                  <div className="supporting-kpi-subtext">
+                    Cost ₹939 / MRP ₹2,263
+                  </div>
+                </div>
+
+                {/* 5. Total Shipped Units */}
+                <div className="supporting-kpi-card">
+                  <div className="supporting-kpi-header">
+                    <span className="supporting-kpi-title">Shipped Volume</span>
+                    <Layers size={14} color="var(--primary-accent)" />
+                  </div>
+                  <div className="supporting-kpi-value">{(stats.totalUnits / 1e3).toFixed(1)}k</div>
+                  <div className="supporting-kpi-subtext">
+                    {stats.totalUnits.toLocaleString()} units exported
+                  </div>
+                </div>
+
+                {/* 6. Delayed Shipments */}
+                <div className="supporting-kpi-card">
+                  <div className="supporting-kpi-header">
+                    <span className="supporting-kpi-title">Delayed Shipments</span>
+                    <AlertTriangle size={14} color="var(--status-warning)" />
+                  </div>
+                  <div className="supporting-kpi-value" style={{ color: 'var(--status-warning)' }}>
+                    {stats.delayedOrders}
+                  </div>
+                  <div className="supporting-kpi-subtext">
+                    22.50% SLA exception rate
+                  </div>
+                </div>
+
+                {/* 7. Mean Transit Lead Time */}
+                <div className="supporting-kpi-card">
+                  <div className="supporting-kpi-header">
+                    <span className="supporting-kpi-title">Mean Transit Time</span>
+                    <Clock size={14} color="var(--primary-accent)" />
+                  </div>
+                  <div className="supporting-kpi-value">{stats.avgDeliveryDays.toFixed(2)}d</div>
+                  <div className="supporting-kpi-subtext">
+                    Range: 5 to 45 business days
+                  </div>
+                </div>
+
+                {/* 8. Warehouse Stock Inventory */}
+                <div className="supporting-kpi-card">
+                  <div className="supporting-kpi-header">
+                    <span className="supporting-kpi-title">Warehouse Stock</span>
+                    <Box size={14} color="var(--secondary-chart-dark)" />
+                  </div>
+                  <div className="supporting-kpi-value">{productStats.totalStock.toLocaleString()}</div>
+                  <div className="supporting-kpi-subtext">
+                    Physical inventory units
+                  </div>
                 </div>
               </div>
 
