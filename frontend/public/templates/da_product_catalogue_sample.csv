@@ -1,0 +1,11 @@
+Product_ID,Name,Category,MRP,COGS,Stock_Units,Avg_Monthly_Sales
+P1,Product_1,Beauty,4921,2017,383,112
+P2,Product_2,Home,3191,957,234,143
+P3,Product_3,Electronics,2561,768,121,24
+P4,Product_4,Apparel,3242,1069,490,184
+P5,Product_5,Apparel,1119,369,388,27
+P6,Product_6,Electronics,1835,550,8,167
+P7,Product_7,Home,2808,1207,162,199
+P8,Product_8,Electronics,1667,800,408,173
+P9,Product_9,Apparel,2580,851,138,188
+P10,Product_10,Grocery,1054,527,352,102

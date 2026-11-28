@@ -243,44 +243,16 @@ def package_powerbi_bundle() -> Path:
     return zip_path
 
 
-def create_starter_pbix_package() -> Path:
-    """Create a structured TradeSight_Analytics.pbix container.
-    
-    Contains standard OPC manifests, Version, Settings, and Report Layout.
-    Power BI Desktop will open this or the native PBIP project.
-    """
-    pbix_paths = [
-        POWERBI_DIR / "TradeSight_Analytics.pbix",
-        PROJECT_ROOT / "frontend" / "public" / "powerbi" / "TradeSight_Analytics.pbix",
+def check_powerbi_desktop_installed() -> Tuple[bool, str]:
+    """Check if Microsoft Power BI Desktop is installed locally."""
+    possible_paths = [
+        Path(r"C:\Program Files\Microsoft Power BI Desktop\bin\PBIDesktop.exe"),
+        Path(r"C:\Program Files (x86)\Microsoft Power BI Desktop\bin\PBIDesktop.exe"),
     ]
-
-    report_json_path = POWERBI_DIR / "TradeSight_Analytics.Report" / "report.json"
-    with open(report_json_path, "r", encoding="utf-8") as f:
-        report_content = f.read()
-
-    content_types_xml = (
-        '<?xml version="1.0" encoding="utf-8"?>\r\n'
-        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">\r\n'
-        '  <Default Extension="json" ContentType="application/json" />\r\n'
-        '  <Default Extension="xml" ContentType="application/xml" />\r\n'
-        '  <Override PartName="/Report/Layout" ContentType="application/json" />\r\n'
-        '  <Override PartName="/Settings" ContentType="application/json" />\r\n'
-        '  <Override PartName="/Version" ContentType="application/json" />\r\n'
-        '</Types>'
-    )
-
-    settings_json = json.dumps({"version": "5.48", "locale": "en-US", "isReportAccessible": True})
-    version_str = "1.28"
-
-    for dest in pbix_paths:
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
-            z.writestr("[Content_Types].xml", content_types_xml.encode("utf-8"))
-            z.writestr("Version", version_str.encode("utf-16le"))
-            z.writestr("Settings", settings_json.encode("utf-16le"))
-            z.writestr("Report/Layout", report_content.encode("utf-16le"))
-
-    return pbix_paths[0]
+    for p in possible_paths:
+        if p.exists():
+            return True, str(p)
+    return False, "Not installed in standard program directories"
 
 
 def run_all_validations() -> Dict[str, Any]:
@@ -292,14 +264,16 @@ def run_all_validations() -> Dict[str, Any]:
     )
     dax_ok, dax_errs, dax_count = validate_dax_measures()
     theme_ok, theme_msg = validate_theme_json()
+    desktop_ok, desktop_msg = check_powerbi_desktop_installed()
 
     all_passed = pbip_ok and bim_ok and report_ok and dax_ok and theme_ok
 
     bundle_path = package_powerbi_bundle()
-    pbix_path = create_starter_pbix_package()
 
     summary = {
         "all_validations_passed": all_passed,
+        "powerbi_desktop_installed": desktop_ok,
+        "powerbi_desktop_status": desktop_msg,
         "pbip_entry": {"valid": pbip_ok, "message": pbip_msg},
         "semantic_model": {
             "valid": bim_ok,
@@ -316,7 +290,10 @@ def run_all_validations() -> Dict[str, Any]:
         "theme": {"valid": theme_ok, "message": theme_msg},
         "artifacts_packaged": {
             "bundle_zip": str(bundle_path.relative_to(PROJECT_ROOT)),
-            "pbix_file": str(pbix_path.relative_to(PROJECT_ROOT)),
+            "pbix_generation_note": (
+                "Standalone .pbix binary requires Microsoft Power BI Desktop to compile "
+                "the VertiPaq tabular model. Genuine compilation must be performed via Desktop."
+            ),
         },
     }
 

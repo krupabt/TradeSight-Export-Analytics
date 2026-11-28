@@ -1,0 +1,11 @@
+Customer_ID,City,Age_Band,Gender,Acquisition_Channel,First_Purchase_Date,Total_Orders,Total_Revenue,Last_Purchase_Date,Churned
+C1,Delhi,18-24,F,Marketplace,2025-11-08,19,33219,2026-04-27,0
+C2,Mumbai,18-24,M,App,2025-03-19,4,7139,2025-11-11,0
+C3,Hyderabad,18-24,F,Marketplace,2025-04-03,3,10843,2025-12-22,0
+C4,Pune,45-54,M,Marketplace,2024-09-13,17,44332,2026-06-01,0
+C5,Pune,45-54,F,Offline,2024-11-27,7,36395,2026-04-11,0
+C6,Delhi,35-44,M,Website,2025-10-13,15,25969,2025-10-23,0
+C7,Bangalore,45-54,F,Marketplace,2025-07-16,13,39958,2025-07-28,0
+C8,Delhi,18-24,M,Website,2025-09-16,15,17133,2025-07-24,0
+C9,Bangalore,55+,F,Website,2025-10-27,16,16310,2025-10-29,0
+C10,Chennai,45-54,F,App,2025-12-26,3,35834,2025-10-20,0

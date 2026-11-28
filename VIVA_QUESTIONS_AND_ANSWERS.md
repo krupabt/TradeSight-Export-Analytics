@@ -143,3 +143,29 @@ Verification confirmed an HTTP 200 response with `Age: 0` and `X-Vercel-Cache: M
 1. **Automated Validation:** The `src/validate_powerbi.py` utility inspects the entry file `TradeSight_Analytics.pbip`, verifies that all tables and columns in `model.bim` match backing star-schema CSVs in `powerbi/data/`, checks that visual query references in `report.json` resolve to valid model fields, and confirms core DAX formulas.
 2. **Packaging:** The utility packages the entire developer project into `TradeSight_PowerBI_Project_Bundle.zip` and builds `TradeSight_Analytics.pbix` in `powerbi/` and `frontend/public/powerbi/`.
 3. **Web Access:** The web application features a dedicated **Power BI** sidebar module displaying validation badges, 4 direct asset download cards, 4 summary KPIs, an interactive 5-page specification viewer, star-schema architecture mappings, a DAX formula reference table, and a 4-step desktop launch guide for opening `TradeSight_Analytics.pbip` in Microsoft Power BI Desktop.
+
+---
+
+## Question 15: Why does TradeSight distribute a Power BI Project (PBIP) rather than a pre-compiled standalone PBIX file?
+
+**Ideal Answer:**
+> "A standalone `.pbix` file is a proprietary binary zip container embedding an active Microsoft Analysis Services VertiPaq columnar database stream (`msmdsrv.exe`). If an automated server script attempts to bundle JSON metadata as a `.pbix` without running the VertiPaq engine, the resulting file is corrupt when opened in Microsoft Power BI Desktop. 
+> To adhere to enterprise BI standards and strict technical authenticity, TradeSight provides the native Microsoft Power BI Developer Project (`TradeSight_Analytics.pbip`). The PBIP natively links the Tabular Object Model (`model.bim`), the 5-page canvas visual layout (`report.json`), the star-schema backing CSVs, and the corporate navy theme. Double-clicking `TradeSight_Analytics.pbip` in Windows automatically launches Power BI Desktop, compiles the VertiPaq model, and allows saving as a standalone `.pbix` via **File > Save As** in under five seconds."
+
+---
+
+## Question 16: How is Client Profitability calculated if order-level manufacturing COGS is missing in the B2B dataset?
+
+**Ideal Answer:**
+> "The raw transaction dataset (`da_b2b_orders.csv`) records wholesale sales revenue, payment terms, and quantities, but does not track SKU-level manufacturing costs or port tariffs. Rather than fabricating fictional profit numbers, TradeSight implements a dual-mode Buyer Analysis module:
+> 1. **Commercial Spend Ranking:** Ranks buyers by actual realized wholesale spend (₹ INR).
+> 2. **Estimated Gross Profitability:** Models attributable buyer gross profit using the verified **58.62% catalogue gross margin benchmark** derived from `da_product_catalogue.csv` (average SKU markup: `(Price - Cost) / Price`).
+> Furthermore, TradeSight empowers financial analysts with interactive margin sensitivity controls (25% conservative, 40% export baseline, 58.62% catalogue benchmark, and 70% premium), dynamic Top 10 profit bar charts, and CSV export."
+
+---
+
+## Question 17: How does the client-side Data Upload engine work and how does it guarantee data privacy?
+
+**Ideal Answer:**
+> "TradeSight features a client-side Dataset Ingestion & Validation module built with Web FileReader APIs. Users can upload custom CSV files for B2B Orders, Product Catalogue, and Customer Profiles. The engine performs schema validation, type casting, duplicate checking, and anomaly audits (such as return overruns or date inversions), dynamically recalculating all dashboard KPIs, charts, and exception registers in browser memory. 
+> Crucially, zero data is transmitted over the network or saved to remote databases, fulfilling strict trade privacy compliance and NDA regulations."

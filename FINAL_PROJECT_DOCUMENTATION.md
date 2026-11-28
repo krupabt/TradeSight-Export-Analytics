@@ -18,7 +18,7 @@
 ## 2. Abstract
 TradeSight Export Analytics is an end-to-end data analytics and business intelligence platform designed and implemented for Cynaris Solutions Private Limited during a 3-month Data Analyst internship. The platform addresses critical challenges in international export operations: tracking large-scale B2B revenue realization across multi-crore transactions, detecting logistics SLA breaches, monitoring product return anomalies, segmenting commercial buyer purchasing behaviors (RFM-V), simulating foreign exchange volatility risks, and automating weekly compliance exception reports. 
 
-The application utilizes a production-grade technology stack comprising Python, Pandas, NumPy, SQL, Pytest, React.js, Vite, Recharts, and Microsoft Power BI (Power Query, DAX, Tabular Object Model). Built strictly on ground-truth commercial datasets (600 export orders totaling ₹396.88 Crore, 200 customer accounts, and 50 product SKUs), the system eliminates data fabrication, enforces automated regression validation (43 passing test suites), and provides both an interactive web platform deployed on Vercel and an enterprise 5-page Power BI reporting project.
+The application utilizes a production-grade technology stack comprising Python, Pandas, NumPy, SQL, Pytest, React.js, Vite, Recharts, and Microsoft Power BI (Power Query, DAX, Tabular Object Model). Built strictly on ground-truth commercial datasets (600 export orders totaling ₹396.88 Crore, 200 customer accounts, and 50 product SKUs), the system eliminates data fabrication, enforces automated regression validation (54 passing automated unit and integration tests), and provides both an interactive web platform deployed on Vercel and an enterprise 5-page Power BI reporting project.
 
 ---
 
@@ -48,7 +48,7 @@ International export operations involve substantial capital commitments, volatil
 * **Buyer Segmentation & Commercial Ranking:** Implement Recency, Frequency, Monetary, and Volume (RFM-V) customer segmentation across 187 active buyers while clearly distinguishing gross revenue ranking from unlinked product-level net profitability.
 * **FX Sensitivity Simulator:** Build a mathematically verified currency fluctuation tool modeling exchange rate volatility for USD, EUR, GBP, AED, SGD, and JPY.
 * **Automated Exception Reporting:** Engineer an automated GitHub Actions CI/CD workflow executing Python pipelines every Monday at 08:00 UTC to generate markdown reports, CSV exception logs, and secure SMTP email alerts.
-* **Microsoft Power BI Integration:** Develop a complementary enterprise Power BI reporting model (`powerbi/`) containing star-schema datasets, Power Query M scripts, 30+ DAX measures, corporate JSON theme, and 5 interactive report pages.
+* **Microsoft Power BI Integration:** Develop a complementary enterprise Power BI reporting model (`powerbi/`) containing star-schema datasets, Power Query M scripts, 47 enterprise DAX measures, corporate JSON theme, and 5 interactive report pages.
 
 ---
 

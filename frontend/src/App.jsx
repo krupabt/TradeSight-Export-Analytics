@@ -11,7 +11,8 @@ import {
   Info, Search, HelpCircle, Globe, DollarSign, AlertOctagon,
   Sun, Moon, ExternalLink, X, Printer, Clock, FileSpreadsheet,
   CheckCircle2, AlertCircle, ArrowDownRight, Sliders, Menu,
-  ChevronLeft, ChevronRight, Activity, ArrowRight, ChevronDown
+  ChevronLeft, ChevronRight, Activity, ArrowRight, ChevronDown,
+  UploadCloud, FileUp, Percent, ShieldCheck
 } from 'lucide-react';
 
 import ordersRaw from './data/orders.json';
@@ -20,9 +21,9 @@ import customersRaw from './data/customers.json';
 import buyersRaw from './data/buyers_aggregated.json';
 import exceptionsRaw from './data/exceptions.json';
 
-// Unique filters supported by orders dataset
-const ALL_CATEGORIES = [...new Set(ordersRaw.map(o => o.category))].sort();
-const ALL_TERMS = [...new Set(ordersRaw.map(o => o.payment_terms))].sort();
+// Fallback filters supported by initial orders dataset
+const INITIAL_CATEGORIES = [...new Set(ordersRaw.map(o => o.category))].sort();
+const INITIAL_TERMS = [...new Set(ordersRaw.map(o => o.payment_terms))].sort();
 
 // Helper to format category names with proper spacing (e.g. IndustrialMachinery -> Industrial Machinery)
 const formatCategoryName = (cat) => {
@@ -126,6 +127,25 @@ export default function App() {
   const [delayedOrderSearch, setDelayedOrderSearch] = useState('');
   const [inconsistencySearch, setInconsistencySearch] = useState('');
 
+  // Custom Uploaded Datasets State (Task 7: Ingestion & Dynamic Recalculation)
+  const [customOrders, setCustomOrders] = useState(null);
+  const [customProducts, setCustomProducts] = useState(null);
+  const [customCustomers, setCustomCustomers] = useState(null);
+  const [uploadFeedback, setUploadFeedback] = useState(null);
+
+  // Active Datasets (custom uploaded or demo baseline)
+  const activeOrders = useMemo(() => customOrders || ordersRaw, [customOrders]);
+  const activeProducts = useMemo(() => customProducts || productsRaw, [customProducts]);
+  const activeCustomers = useMemo(() => customCustomers || customersRaw, [customCustomers]);
+
+  // Dynamic filter lists from active orders
+  const categoriesList = useMemo(() => [...new Set(activeOrders.map(o => o.category))].sort(), [activeOrders]);
+  const termsList = useMemo(() => [...new Set(activeOrders.map(o => o.payment_terms))].sort(), [activeOrders]);
+
+  // Client Profitability View & Margin State (Task 2)
+  const [buyerAnalysisView, setBuyerAnalysisView] = useState('revenue'); // 'revenue' | 'profitability'
+  const [assumedGrossMarginPct, setAssumedGrossMarginPct] = useState(58.62); // 58.62% benchmark from da_product_catalogue.csv
+
   // Selected Order for Drill-down Modal
   const [selectedOrder, setSelectedOrder] = useState(null);
 
@@ -160,7 +180,7 @@ export default function App() {
     const list = [];
 
     // 1. Critical Return Quantity Errors (2 records)
-    ordersRaw.filter(o => o.return_qty > o.quantity_units).forEach(o => {
+    activeOrders.filter(o => o.return_qty > o.quantity_units).forEach(o => {
       const id = `EXC-RET-${o.order_id}`;
       list.push({
         exception_id: id,
@@ -180,7 +200,7 @@ export default function App() {
     });
 
     // 2. High Customer Date Inversions (42 records)
-    customersRaw.filter(c => new Date(c.First_Purchase_Date) > new Date(c.Last_Purchase_Date)).forEach(c => {
+    activeCustomers.filter(c => new Date(c.First_Purchase_Date) > new Date(c.Last_Purchase_Date)).forEach(c => {
       const id = `EXC-DATE-${c.Customer_ID}`;
       list.push({
         exception_id: id,
@@ -200,7 +220,7 @@ export default function App() {
     });
 
     // 3. Logistics Delayed Shipments (135 records)
-    ordersRaw.filter(o => o.on_time_delivery === 0).forEach(o => {
+    activeOrders.filter(o => o.on_time_delivery === 0).forEach(o => {
       const id = `EXC-SLA-${o.order_id}`;
       const isCritical = o.delivery_days >= 40;
       const isHigh = o.payment_terms === '60 Days Net';
@@ -222,7 +242,7 @@ export default function App() {
     });
 
     return list;
-  }, [exceptionsStatusMap]);
+  }, [exceptionsStatusMap, activeOrders, activeCustomers]);
 
   // Backward-compatible alias
   const exceptionsData = allReconciledExceptions;
@@ -272,7 +292,7 @@ export default function App() {
 
   // Filtered Orders Data
   const filteredOrders = useMemo(() => {
-    return ordersRaw.filter(order => {
+    return activeOrders.filter(order => {
       if (selectedYear !== 'ALL' && String(order.order_year) !== selectedYear) return false;
       if (selectedCategory !== 'ALL' && order.category !== selectedCategory) return false;
       if (selectedTerm !== 'ALL' && order.payment_terms !== selectedTerm) return false;
@@ -291,7 +311,7 @@ export default function App() {
       }
       return true;
     });
-  }, [selectedYear, selectedCategory, selectedTerm, quickFilter, orderSearch]);
+  }, [activeOrders, selectedYear, selectedCategory, selectedTerm, quickFilter, orderSearch]);
 
   // Reset pagination when filters change
   useEffect(() => {
@@ -349,23 +369,23 @@ export default function App() {
     };
   }, [filteredOrders]);
 
-  // Product Catalogue Stats (from da_product_catalogue.csv)
+  // Product Catalogue Stats (from da_product_catalogue.csv or custom upload)
   const productStats = useMemo(() => {
-    const totalProducts = productsRaw.length;
-    const totalStock = productsRaw.reduce((sum, p) => sum + (p.Stock_Units || 0), 0);
-    const avgMRP = totalProducts ? productsRaw.reduce((sum, p) => sum + p.MRP, 0) / totalProducts : 0;
-    const avgCOGS = totalProducts ? productsRaw.reduce((sum, p) => sum + p.COGS, 0) / totalProducts : 0;
-    // Accurate Gross Margin formula: (MRP - COGS) / MRP across 50 SKUs = 58.62%
-    const avgMarginPct = totalProducts ? productsRaw.reduce((sum, p) => sum + p.Margin_Pct, 0) / totalProducts : 0;
-    // Accurate Markup formula: (MRP - COGS) / COGS = 141.67%
+    const totalProducts = activeProducts.length;
+    const totalStock = activeProducts.reduce((sum, p) => sum + (p.Stock_Units || 0), 0);
+    const avgMRP = totalProducts ? activeProducts.reduce((sum, p) => sum + p.MRP, 0) / totalProducts : 0;
+    const avgCOGS = totalProducts ? activeProducts.reduce((sum, p) => sum + p.COGS, 0) / totalProducts : 0;
+    // Accurate Gross Margin formula: (MRP - COGS) / MRP across SKUs
+    const avgMarginPct = totalProducts ? activeProducts.reduce((sum, p) => sum + p.Margin_Pct, 0) / totalProducts : 0;
+    // Accurate Markup formula: (MRP - COGS) / COGS
     const avgMarkupPct = avgCOGS > 0 ? ((avgMRP - avgCOGS) / avgCOGS) * 100 : 0;
     return { totalProducts, totalStock, avgMRP, avgCOGS, avgMarginPct, avgMarkupPct };
-  }, []);
+  }, [activeProducts]);
 
   // Product Category Statistics for Charts
   const productCategoryStats = useMemo(() => {
     const map = {};
-    productsRaw.forEach(p => {
+    activeProducts.forEach(p => {
       if (!map[p.Category]) {
         map[p.Category] = { category: p.Category, count: 0, stock: 0, totalMrp: 0, totalCogs: 0 };
       }
@@ -380,25 +400,25 @@ export default function App() {
       stock: c.stock,
       avgMarginPct: c.totalMrp ? parseFloat((((c.totalMrp - c.totalCogs) / c.totalMrp) * 100).toFixed(2)) : 0
     })).sort((a, b) => b.avgMarginPct - a.avgMarginPct);
-  }, []);
+  }, [activeProducts]);
 
-  // Customer Profile Stats (from da_customer_profiles.csv)
+  // Customer Profile Stats (from da_customer_profiles.csv or custom upload)
   const customerStats = useMemo(() => {
-    const count = customersRaw.length;
-    const totalRev = customersRaw.reduce((sum, c) => sum + (c.Total_Revenue || 0), 0);
-    const churnedCount = customersRaw.filter(c => c.Churned === 1).length;
+    const count = activeCustomers.length;
+    const totalRev = activeCustomers.reduce((sum, c) => sum + (c.Total_Revenue || 0), 0);
+    const churnedCount = activeCustomers.filter(c => c.Churned === 1).length;
     const churnRate = count ? (churnedCount / count) * 100 : 0;
     return { count, totalRev, churnedCount, churnRate };
-  }, []);
+  }, [activeCustomers]);
 
   // Customer Purchase Date Inconsistencies (First_Purchase_Date > Last_Purchase_Date)
   const customerDateInconsistencies = useMemo(() => {
-    return customersRaw.filter(c => {
+    return activeCustomers.filter(c => {
       const f = new Date(c.First_Purchase_Date);
       const l = new Date(c.Last_Purchase_Date);
       return f > l;
     });
-  }, []);
+  }, [activeCustomers]);
 
   const filteredDateInconsistencies = useMemo(() => {
     return customerDateInconsistencies.filter(c => {
@@ -412,8 +432,8 @@ export default function App() {
 
   // Suspicious Return Records (return_qty > quantity_units)
   const suspiciousReturnsList = useMemo(() => {
-    return ordersRaw.filter(o => o.return_qty > o.quantity_units);
-  }, []);
+    return activeOrders.filter(o => o.return_qty > o.quantity_units);
+  }, [activeOrders]);
 
   // Category Return Analysis (Volume Sorted)
   const categoryReturnData = useMemo(() => {
@@ -591,9 +611,84 @@ export default function App() {
       }));
   }, [filteredOrders]);
 
-  // Filtered Buyers with pagination
+  // Dynamic Buyer Directory with Estimated Commercial Profitability (Task 2)
+  const dynamicBuyersList = useMemo(() => {
+    const map = {};
+    activeOrders.forEach(o => {
+      const bid = o.buyer_id;
+      if (!map[bid]) {
+        map[bid] = {
+          buyer_id: bid,
+          total_orders: 0,
+          total_spend_inr: 0,
+          total_ordered_units: 0,
+          on_time_orders: 0,
+          categories: {},
+          terms: {}
+        };
+      }
+      map[bid].total_orders += 1;
+      map[bid].total_spend_inr += (o.total_value_inr || 0);
+      map[bid].total_ordered_units += (o.quantity_units || 0);
+      if (o.on_time_delivery === 1) map[bid].on_time_orders += 1;
+      map[bid].categories[o.category] = (map[bid].categories[o.category] || 0) + 1;
+      map[bid].terms[o.payment_terms] = (map[bid].terms[o.payment_terms] || 0) + 1;
+    });
+
+    return Object.values(map).map(b => {
+      // Primary category
+      let topCat = 'General';
+      let maxCat = 0;
+      Object.entries(b.categories).forEach(([c, cnt]) => {
+        if (cnt > maxCat) { maxCat = cnt; topCat = c; }
+      });
+
+      // Primary payment terms
+      let topTerm = '30 Days Net';
+      let maxTerm = 0;
+      Object.entries(b.terms).forEach(([t, cnt]) => {
+        if (cnt > maxTerm) { maxTerm = cnt; topTerm = t; }
+      });
+
+      const marginPct = assumedGrossMarginPct;
+      const estimatedCogs = b.total_spend_inr * (1 - marginPct / 100);
+      const estimatedProfit = b.total_spend_inr * (marginPct / 100);
+      const onTimeRate = b.total_orders ? (b.on_time_orders / b.total_orders) * 100 : 0;
+      const aov = b.total_orders ? b.total_spend_inr / b.total_orders : 0;
+
+      // Commercial Profitability Tier
+      let segment = 'Core Commercial Account';
+      if (estimatedProfit >= 10000000) segment = 'Strategic Tier 1 (High Profit)';
+      else if (estimatedProfit >= 5000000) segment = 'Growth Tier 2 (Moderate Profit)';
+      else segment = 'Standard Tier 3 (Base Profit)';
+
+      return {
+        ...b,
+        orders_count: b.total_orders,
+        aov_inr: aov,
+        on_time_rate: onTimeRate,
+        primary_category: topCat,
+        primary_terms: topTerm,
+        segment_label: segment,
+        estimated_cogs_inr: estimatedCogs,
+        estimated_profit_inr: estimatedProfit,
+        estimated_margin_pct: marginPct,
+        profit_cr: parseFloat((estimatedProfit / 1e7).toFixed(2)),
+        spend_cr: parseFloat((b.total_spend_inr / 1e7).toFixed(2))
+      };
+    });
+  }, [activeOrders, assumedGrossMarginPct]);
+
+  // Top 10 Buyers by Estimated Gross Profit
+  const top10ProfitBuyers = useMemo(() => {
+    return [...dynamicBuyersList]
+      .sort((a, b) => b.estimated_profit_inr - a.estimated_profit_inr)
+      .slice(0, 10);
+  }, [dynamicBuyersList]);
+
+  // Filtered Buyers with pagination & dual mode sorting
   const filteredBuyers = useMemo(() => {
-    return buyersRaw.filter(b => {
+    return dynamicBuyersList.filter(b => {
       if (buyerSearch) {
         const q = buyerSearch.toLowerCase();
         return (
@@ -603,19 +698,24 @@ export default function App() {
         );
       }
       return true;
-    }).sort((a, b) => b.total_spend_inr - a.total_spend_inr);
-  }, [buyerSearch]);
+    }).sort((a, b) => {
+      if (buyerAnalysisView === 'profitability') {
+        return b.estimated_profit_inr - a.estimated_profit_inr;
+      }
+      return b.total_spend_inr - a.total_spend_inr;
+    });
+  }, [dynamicBuyersList, buyerSearch, buyerAnalysisView]);
 
   // Filtered Products with pagination
   const filteredProducts = useMemo(() => {
-    return productsRaw.filter(p => {
+    return activeProducts.filter(p => {
       if (productSearch) {
         const q = productSearch.toLowerCase();
         return p.Product_ID.toLowerCase().includes(q) || p.Name.toLowerCase().includes(q) || p.Category.toLowerCase().includes(q);
       }
       return true;
     });
-  }, [productSearch]);
+  }, [activeProducts, productSearch]);
 
   // Filtered Exceptions with pagination
   const filteredExceptions = useMemo(() => {
@@ -634,6 +734,256 @@ export default function App() {
       return true;
     });
   }, [exceptionsData, exceptionSeverityFilter, exceptionSearch]);
+
+  // Robust CSV parser supporting quotes, commas, and newlines
+  const parseCSVText = (text) => {
+    const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+    if (!lines.length) return [];
+    
+    const parseLine = (line) => {
+      const result = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            cur += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (c === ',' && !inQuotes) {
+          result.push(cur.trim());
+          cur = '';
+        } else {
+          cur += c;
+        }
+      }
+      result.push(cur.trim());
+      return result;
+    };
+
+    const headers = parseLine(lines[0]).map(h => h.replace(/^["']|["']$/g, ''));
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = parseLine(lines[i]).map(v => v.replace(/^["']|["']$/g, ''));
+      if (values.length >= headers.length) {
+        const obj = {};
+        headers.forEach((h, idx) => {
+          obj[h] = values[idx];
+        });
+        rows.push(obj);
+      }
+    }
+    return rows;
+  };
+
+  const handleOrdersUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const rows = parseCSVText(evt.target.result);
+        if (!rows.length) {
+          setUploadFeedback({ type: 'danger', message: 'Uploaded orders CSV is empty.' });
+          return;
+        }
+        const required = ['order_id', 'buyer_id', 'category', 'order_date', 'quantity_units', 'unit_price_inr', 'total_value_inr', 'payment_terms', 'delivery_days', 'on_time_delivery', 'return_qty', 'repeat_buyer'];
+        const missing = required.filter(col => !(col in rows[0]));
+        if (missing.length > 0) {
+          setUploadFeedback({ type: 'danger', message: `Missing required order columns: ${missing.join(', ')}` });
+          return;
+        }
+        const normalized = rows.map((r, idx) => {
+          const qty = parseInt(r.quantity_units, 10) || 0;
+          const price = parseFloat(r.unit_price_inr) || 0;
+          const totalVal = parseFloat(r.total_value_inr) || (qty * price);
+          const oDate = r.order_date || '2024-01-01';
+          const oYear = parseInt(oDate.split('-')[0], 10) || 2024;
+          return {
+            order_id: r.order_id || `ORD-CUSTOM-${idx + 1}`,
+            buyer_id: r.buyer_id || `BUYER-CUSTOM`,
+            seller_id: r.seller_id || `SELLER-CUSTOM`,
+            category: r.category || 'General',
+            order_date: oDate,
+            order_year: oYear,
+            quantity_units: qty,
+            unit_price_inr: price,
+            total_value_inr: totalVal,
+            payment_terms: r.payment_terms || '30 Days Net',
+            delivery_days: parseInt(r.delivery_days, 10) || 15,
+            on_time_delivery: parseInt(r.on_time_delivery, 10) === 1 ? 1 : 0,
+            return_qty: parseInt(r.return_qty, 10) || 0,
+            repeat_buyer: parseInt(r.repeat_buyer, 10) === 1 ? 1 : 0
+          };
+        });
+        setCustomOrders(normalized);
+        setUploadFeedback({
+          type: 'success',
+          message: `Successfully ingested ${normalized.length} custom export orders! All dashboard analytics, KPIs, and reports have been dynamically updated in-memory.`
+        });
+      } catch (err) {
+        setUploadFeedback({ type: 'danger', message: `Failed to parse orders CSV: ${err.message}` });
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleProductsUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const rows = parseCSVText(evt.target.result);
+        if (!rows.length) {
+          setUploadFeedback({ type: 'danger', message: 'Uploaded product catalogue CSV is empty.' });
+          return;
+        }
+        const required = ['Product_ID', 'Name', 'Category', 'Price_INR', 'Cost_INR', 'Stock_Quantity', 'Supplier_State'];
+        const missing = required.filter(col => !(col in rows[0]));
+        if (missing.length > 0) {
+          setUploadFeedback({ type: 'danger', message: `Missing required product catalogue columns: ${missing.join(', ')}` });
+          return;
+        }
+        const normalized = rows.map((r, idx) => {
+          const price = parseFloat(r.Price_INR) || 0;
+          const cost = parseFloat(r.Cost_INR) || 0;
+          const marginPct = price > 0 ? ((price - cost) / price) * 100 : 0;
+          return {
+            Product_ID: r.Product_ID || `PROD-CUSTOM-${idx + 1}`,
+            Name: r.Name || 'Custom Product',
+            Category: r.Category || 'General',
+            Price_INR: price,
+            Cost_INR: cost,
+            Gross_Margin_Pct: marginPct,
+            Stock_Quantity: parseInt(r.Stock_Quantity, 10) || 0,
+            Supplier_State: r.Supplier_State || 'Tamil Nadu',
+            Reorder_Level: parseInt(r.Reorder_Level, 10) || 50
+          };
+        });
+        setCustomProducts(normalized);
+        setUploadFeedback({
+          type: 'success',
+          message: `Successfully ingested ${normalized.length} custom product catalogue SKUs! Dynamic catalogue stats and inventory breakdowns have recalculated.`
+        });
+      } catch (err) {
+        setUploadFeedback({ type: 'danger', message: `Failed to parse product catalogue CSV: ${err.message}` });
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCustomersUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const rows = parseCSVText(evt.target.result);
+        if (!rows.length) {
+          setUploadFeedback({ type: 'danger', message: 'Uploaded customer profiles CSV is empty.' });
+          return;
+        }
+        const required = ['Customer_ID', 'City', 'Age_Band', 'Gender', 'Total_Orders', 'Total_Revenue', 'First_Purchase_Date', 'Last_Purchase_Date', 'Churn_Flag'];
+        const missing = required.filter(col => !(col in rows[0]));
+        if (missing.length > 0) {
+          setUploadFeedback({ type: 'danger', message: `Missing required customer profile columns: ${missing.join(', ')}` });
+          return;
+        }
+        const normalized = rows.map((r, idx) => ({
+          Customer_ID: r.Customer_ID || `CUST-CUSTOM-${idx + 1}`,
+          City: r.City || 'Chennai',
+          Age_Band: r.Age_Band || '26-35',
+          Gender: r.Gender || 'Unspecified',
+          Acquisition_Channel: r.Acquisition_Channel || 'Direct B2B',
+          Total_Orders: parseInt(r.Total_Orders, 10) || 1,
+          Total_Revenue: parseFloat(r.Total_Revenue) || 0,
+          First_Purchase_Date: r.First_Purchase_Date || '2023-01-01',
+          Last_Purchase_Date: r.Last_Purchase_Date || '2024-01-01',
+          Churn_Flag: parseInt(r.Churn_Flag, 10) === 1 ? 1 : 0
+        }));
+        setCustomCustomers(normalized);
+        setUploadFeedback({
+          type: 'success',
+          message: `Successfully ingested ${normalized.length} customer profiles! Customer stats and date anomaly registers have dynamically refreshed.`
+        });
+      } catch (err) {
+        setUploadFeedback({ type: 'danger', message: `Failed to parse customer profiles CSV: ${err.message}` });
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleResetToDemoData = () => {
+    setCustomOrders(null);
+    setCustomProducts(null);
+    setCustomCustomers(null);
+    setUploadFeedback({
+      type: 'info',
+      message: 'Restored original demo baseline datasets (600 export orders, 50 catalogue SKUs, 200 customer profiles).'
+    });
+  };
+
+  const handleExportBuyerProfitabilityCSV = () => {
+    if (!filteredBuyers.length) return;
+    const headers = [
+      'Buyer_ID', 'Total_Revenue_INR', 'Attributable_COGS_INR', 
+      'Estimated_Gross_Profit_INR', 'Gross_Margin_Pct', 'Total_Orders', 
+      'Shipped_Units', 'On_Time_Delivery_Rate_Pct', 'Primary_Category', 
+      'Commercial_Tier', 'Benchmark_Assumption'
+    ];
+    const rows = filteredBuyers.map(b => [
+      `"${b.buyer_id}"`,
+      b.total_spend_inr.toFixed(2),
+      b.estimated_cogs_inr.toFixed(2),
+      b.estimated_profit_inr.toFixed(2),
+      b.estimated_margin_pct.toFixed(2),
+      b.orders_count,
+      b.total_ordered_units,
+      b.on_time_rate.toFixed(2),
+      `"${b.primary_category}"`,
+      `"${b.segment_label}"`,
+      `"Assumes ${assumedGrossMarginPct}% catalogue benchmark gross margin"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `tradesight_buyer_profitability_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportBuyerSpendCSV = () => {
+    if (!filteredBuyers.length) return;
+    const headers = [
+      'Buyer_ID', 'Total_Spend_INR', 'Total_Orders', 'Shipped_Units', 
+      'AOV_INR', 'On_Time_Rate_Pct', 'Primary_Category', 'Primary_Terms', 'Cluster'
+    ];
+    const rows = filteredBuyers.map(b => [
+      `"${b.buyer_id}"`,
+      b.total_spend_inr.toFixed(2),
+      b.orders_count,
+      b.total_ordered_units,
+      b.aov_inr.toFixed(2),
+      b.on_time_rate.toFixed(2),
+      `"${b.primary_category}"`,
+      `"${b.primary_terms}"`,
+      `"${b.segment_label}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `tradesight_buyer_spend_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   // Reset Filters
   const resetFilters = () => {
@@ -796,6 +1146,7 @@ export default function App() {
       case 'reports': return 'Reports';
       case 'governance': return 'Data Quality & Governance';
       case 'powerbi': return 'Power BI Reports & Semantic Model';
+      case 'upload': return 'Dataset Upload & Ingestion Validation';
       default: return 'Dashboard';
     }
   };
@@ -994,11 +1345,17 @@ export default function App() {
           >
             <Layers size={16} className="nav-icon" /> Power BI
           </button>
+          <button
+            className={`nav-item ${activeSection === 'upload' ? 'active' : ''}`}
+            onClick={() => handleSelectSection('upload')}
+          >
+            <UploadCloud size={16} className="nav-icon" /> Data Upload
+          </button>
         </nav>
 
         <div className="sidebar-footer">
           <div className="sidebar-footer-title">
-            <Database size={13} color="var(--secondary-accent)" /> 600 Export Orders
+            <Database size={13} color="var(--secondary-accent)" /> {activeOrders.length} Export Orders
           </div>
           <div style={{ marginTop: '2px', fontSize: '11px', color: '#8CB8E0' }}>
             Jan 2023 – Dec 2024
@@ -1057,8 +1414,8 @@ export default function App() {
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
             >
-              <option value="ALL">All Categories ({ALL_CATEGORIES.length})</option>
-              {ALL_CATEGORIES.map(c => <option key={c} value={c}>{formatCategoryName(c)}</option>)}
+              <option value="ALL">All Categories ({categoriesList.length})</option>
+              {categoriesList.map(c => <option key={c} value={c}>{formatCategoryName(c)}</option>)}
             </select>
           </div>
 
@@ -1069,8 +1426,8 @@ export default function App() {
               value={selectedTerm}
               onChange={(e) => setSelectedTerm(e.target.value)}
             >
-              <option value="ALL">All Payment Terms ({ALL_TERMS.length})</option>
-              {ALL_TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+              <option value="ALL">All Payment Terms ({termsList.length})</option>
+              {termsList.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
 
@@ -1079,19 +1436,19 @@ export default function App() {
               className={`preset-pill ${quickFilter === 'ALL' ? 'active' : ''}`} 
               onClick={() => setQuickFilter('ALL')}
             >
-              All (600)
+              All ({activeOrders.length})
             </button>
             <button 
               className={`preset-pill ${quickFilter === 'DELAYED' ? 'active' : ''}`} 
               onClick={() => setQuickFilter('DELAYED')}
             >
-              Delayed (135)
+              Delayed ({activeOrders.filter(o => o.on_time_delivery === 0).length})
             </button>
             <button 
               className={`preset-pill ${quickFilter === 'REPEAT' ? 'active' : ''}`} 
               onClick={() => setQuickFilter('REPEAT')}
             >
-              Repeat (227)
+              Repeat ({activeOrders.filter(o => o.repeat_buyer === 1).length})
             </button>
             <button 
               className={`preset-pill ${quickFilter === 'HIGH_VALUE' ? 'active' : ''}`} 
@@ -1103,7 +1460,7 @@ export default function App() {
               className={`preset-pill ${quickFilter === 'RETURNS' ? 'active' : ''}`} 
               onClick={() => setQuickFilter('RETURNS')}
             >
-              Returns (591)
+              Returns ({activeOrders.filter(o => (o.return_qty || 0) > 0).length})
             </button>
           </div>
 
@@ -1958,10 +2315,20 @@ export default function App() {
               <div className="panel-card">
                 <div className="panel-header">
                   <div>
-                    <div className="panel-title">Proposed Markets (12 Export Countries)</div>
-                    <div className="panel-subtitle">Destination-country data is unavailable in the current dataset. Target export markets and required fields for future integration.</div>
+                    <div className="panel-title">Part 2: Proposed 12-Market Export Expansion Roadmap</div>
+                    <div className="panel-subtitle">Target export markets, trade lanes, and destination data requirements for ERP ingestion.</div>
                   </div>
-                  <span className="badge neutral">Proposed Markets</span>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span className="badge neutral">Proposed Markets</span>
+                    <a
+                      href="/templates/tradesight_country_data_collection_template.csv"
+                      download="tradesight_country_data_collection_template.csv"
+                      className="action-btn primary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', padding: '6px 12px', fontSize: '12px' }}
+                    >
+                      <Download size={13} /> Download Country Ingestion Template (CSV)
+                    </a>
+                  </div>
                 </div>
 
                 <div className="table-wrapper">
@@ -2281,199 +2648,451 @@ export default function App() {
               <div className="section-header-block">
                 <div>
                   <h1 className="section-title">Buyer Analysis</h1>
-                  <p className="section-subtitle">Buyer order volume and repeat purchases.</p>
+                  <p className="section-subtitle">Commercial order volumes, client profitability estimations, and buyer segmentation.</p>
                 </div>
-              </div>
-
-              <div className="dashboard-kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
-                <div className="kpi-card">
-                  <div className="kpi-card-header"><span className="kpi-card-label">Total Buyers</span></div>
-                  <div className="kpi-card-value">{stats.uniqueBuyers}</div>
-                  <div className="kpi-card-subtext">Commercial buyers in dataset</div>
-                </div>
-                <div className="kpi-card">
-                  <div className="kpi-card-header"><span className="kpi-card-label">Repeat Orders</span></div>
-                  <div className="kpi-card-value">{stats.repeatBuyerOrders}</div>
-                  <div className="kpi-card-subtext">Orders from repeat accounts</div>
-                </div>
-                <div className="kpi-card">
-                  <div className="kpi-card-header"><span className="kpi-card-label">Repeat Order Rate</span></div>
-                  <div className="kpi-card-value">{stats.repeatBuyerPct.toFixed(2)}%</div>
-                  <div className="kpi-card-subtext">Repeat purchase frequency</div>
-                </div>
-                <div className="kpi-card">
-                  <div className="kpi-card-header"><span className="kpi-card-label">Customer Profiles</span></div>
-                  <div className="kpi-card-value">{customerStats.count}</div>
-                  <div className="kpi-card-subtext">{customerStats.churnedCount} churned accounts ({customerStats.churnRate.toFixed(1)}%)</div>
-                </div>
-              </div>
-
-              {/* Profitability Limitation Audit */}
-              <div className="alert-banner warning">
-                <AlertTriangle size={18} color="var(--status-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div>
-                  <strong style={{ display: 'block', fontSize: '13px', marginBottom: '3px' }}>
-                    Note on Client Profitability
-                  </strong>
-                  The dataset provides sales revenue by buyer, but does not include product manufacturing costs, freight or duty per order. Therefore, client rankings are based on revenue, not profit.
-                  <br />
-                  The <strong>58.62% catalogue gross margin</strong> is a retail catalogue average from <code>da_product_catalogue.csv</code>, not order-level net profit.
-                </div>
-              </div>
-
-              {/* Top 10 Buyer Spending Visual Chart */}
-              <div className="panel-card">
-                <div className="panel-header">
-                  <div>
-                    <div className="panel-title">Top 10 Buyers</div>
-                    <div className="panel-subtitle">Buyers with the highest total order spend in ₹ Crores</div>
-                  </div>
-                </div>
-                <div style={{ height: 260 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={top10Buyers} layout="vertical" margin={{ top: 5, right: 30, left: 35, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
-                      <XAxis type="number" stroke="var(--text-secondary)" fontSize={11} tickFormatter={(v) => `₹${v}Cr`} />
-                      <YAxis dataKey="buyer_id" type="category" stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
-                      <Tooltip 
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            return (
-                              <div className="chart-tooltip">
-                                <div className="chart-tooltip-title">{payload[0].payload.buyer_id}</div>
-                                <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
-                                  Revenue: ₹{payload[0].value} Crore
-                                </div>
-                                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
-                                  Orders: {payload[0].payload.orders} shipments
-                                </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Bar dataKey="spend_cr" fill="var(--primary-accent)" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-
-              {/* RFM-V Buyer Clusters */}
-              <div className="panel-card">
-                <div className="panel-header">
-                  <div>
-                    <div className="panel-title">Buyer Segments (RFM-V)</div>
-                    <div className="panel-subtitle">187 buyers grouped by order recency, frequency, spend and delivery rate</div>
-                  </div>
-                  <span className="badge success">Segmentation</span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '14px', marginBottom: '16px' }}>
-                  <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card-subtle)', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--status-success)', fontSize: '13px' }}>Core Accounts</div>
-                    <div style={{ fontSize: '22px', fontWeight: 800, margin: '4px 0' }}>75 Buyers (40.1%)</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Consistent reorders with minimal delays.</div>
-                  </div>
-                  <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card-subtle)', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--secondary-accent)', fontSize: '13px' }}>Growth Buyers</div>
-                    <div style={{ fontSize: '22px', fontWeight: 800, margin: '4px 0' }}>68 Buyers (36.4%)</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>High order volume and spend.</div>
-                  </div>
-                  <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card-subtle)', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--status-warning)', fontSize: '13px' }}>At-Risk Buyers</div>
-                    <div style={{ fontSize: '22px', fontWeight: 800, margin: '4px 0' }}>27 Buyers (14.4%)</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Experiencing delivery delays.</div>
-                  </div>
-                  <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card-subtle)', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--status-critical)', fontSize: '13px' }}>Inactive Buyers</div>
-                    <div style={{ fontSize: '22px', fontWeight: 800, margin: '4px 0' }}>17 Buyers (9.1%)</div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Lapsed buyers for re-engagement.</div>
-                  </div>
-                </div>
-
-                {/* Searchable Buyer Table with Pagination */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-secondary)' }}>Buyer Directory</span>
-                  <div style={{ position: 'relative' }}>
-                    <Search size={14} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} />
-                    <input
-                      type="text"
-                      className="filter-select"
-                      placeholder="Search Buyer ID, Category, Cluster..."
-                      value={buyerSearch}
-                      onChange={(e) => { setBuyerSearch(e.target.value); setBuyerPage(1); }}
-                      style={{ paddingLeft: 28, width: 240 }}
-                    />
-                  </div>
-                </div>
-
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Buyer ID</th>
-                        <th style={{ textAlign: 'right' }}>Total Spend (INR)</th>
-                        <th>Orders</th>
-                        <th style={{ textAlign: 'right' }}>Shipped Units</th>
-                        <th style={{ textAlign: 'right' }}>AOV</th>
-                        <th>On-Time Rate</th>
-                        <th>Primary Category</th>
-                        <th>Primary Terms</th>
-                        <th>Segment</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredBuyers.slice((buyerPage - 1) * pageSize, buyerPage * pageSize).map(b => (
-                        <tr key={b.buyer_id}>
-                          <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-accent)' }}>{b.buyer_id}</td>
-                          <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{b.total_spend_inr.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          <td>{b.orders_count}</td>
-                          <td style={{ textAlign: 'right' }}>{b.total_ordered_units.toLocaleString()}</td>
-                          <td style={{ textAlign: 'right' }}>₹{(b.aov_inr / 1e5).toFixed(2)} L</td>
-                          <td>
-                            <span className={`badge ${b.on_time_rate >= 80 ? 'success' : 'warning'}`}>
-                              {b.on_time_rate.toFixed(1)}%
-                            </span>
-                          </td>
-                          <td>{formatCategoryName(b.primary_category)}</td>
-                          <td><span className="badge neutral">{b.primary_terms}</span></td>
-                          <td>
-                            <span className="badge info">
-                              {b.segment_label || 'Segmented'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="table-pagination">
-                  <div>
-                    Showing {Math.min((buyerPage - 1) * pageSize + 1, filteredBuyers.length)} to {Math.min(buyerPage * pageSize, filteredBuyers.length)} of {filteredBuyers.length} buyers
-                  </div>
-                  <div className="pagination-btn-group">
-                    <button 
-                      className="pagination-btn" 
-                      onClick={() => setBuyerPage(p => Math.max(p - 1, 1))}
-                      disabled={buyerPage === 1}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <div className="filter-group" style={{ margin: 0 }}>
+                    <button
+                      className={`preset-pill ${buyerAnalysisView === 'revenue' ? 'active' : ''}`}
+                      onClick={() => setBuyerAnalysisView('revenue')}
                     >
-                      <ChevronLeft size={14} />
+                      Commercial Spend Ranking
                     </button>
-                    <span style={{ padding: '0 8px', fontWeight: 600 }}>
-                      Page {buyerPage} of {Math.ceil(filteredBuyers.length / pageSize) || 1}
-                    </span>
-                    <button 
-                      className="pagination-btn" 
-                      onClick={() => setBuyerPage(p => Math.min(p + 1, Math.ceil(filteredBuyers.length / pageSize)))}
-                      disabled={buyerPage >= Math.ceil(filteredBuyers.length / pageSize)}
+                    <button
+                      className={`preset-pill ${buyerAnalysisView === 'profitability' ? 'active' : ''}`}
+                      onClick={() => setBuyerAnalysisView('profitability')}
                     >
-                      <ChevronRight size={14} />
+                      <Percent size={12} style={{ marginRight: 4 }} /> Estimated Gross Profitability
                     </button>
                   </div>
                 </div>
               </div>
+
+              {buyerAnalysisView === 'revenue' ? (
+                <>
+                  <div className="dashboard-kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
+                    <div className="kpi-card">
+                      <div className="kpi-card-header"><span className="kpi-card-label">Total Buyers</span></div>
+                      <div className="kpi-card-value">{dynamicBuyersList.length}</div>
+                      <div className="kpi-card-subtext">Commercial accounts in dataset</div>
+                    </div>
+                    <div className="kpi-card">
+                      <div className="kpi-card-header"><span className="kpi-card-label">Repeat Orders</span></div>
+                      <div className="kpi-card-value">{stats.repeatBuyerOrders}</div>
+                      <div className="kpi-card-subtext">Orders from repeat accounts</div>
+                    </div>
+                    <div className="kpi-card">
+                      <div className="kpi-card-header"><span className="kpi-card-label">Repeat Order Rate</span></div>
+                      <div className="kpi-card-value">{stats.repeatBuyerPct.toFixed(2)}%</div>
+                      <div className="kpi-card-subtext">Repeat purchase frequency</div>
+                    </div>
+                    <div className="kpi-card">
+                      <div className="kpi-card-header"><span className="kpi-card-label">Customer Profiles</span></div>
+                      <div className="kpi-card-value">{customerStats.count}</div>
+                      <div className="kpi-card-subtext">{customerStats.churnedCount} churned accounts ({customerStats.churnRate.toFixed(1)}%)</div>
+                    </div>
+                  </div>
+
+                  <div className="alert-banner warning">
+                    <AlertTriangle size={18} color="var(--status-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '13px', marginBottom: '3px' }}>
+                        Note on Client Profitability
+                      </strong>
+                      The raw dataset provides sales revenue by buyer, but does not include product manufacturing costs, freight or duty per order. Therefore, default client rankings are based on revenue.
+                      <br />
+                      To explore estimated gross profit modeling using the <strong>58.62% catalogue gross margin</strong> benchmark, switch to <strong>Estimated Gross Profitability</strong> view above.
+                    </div>
+                  </div>
+
+                  {/* Top 10 Buyer Spending Visual Chart */}
+                  <div className="panel-card">
+                    <div className="panel-header">
+                      <div>
+                        <div className="panel-title">Top 10 Buyers by Commercial Spend</div>
+                        <div className="panel-subtitle">Wholesale buyers with the highest total export spend in ₹ Crores</div>
+                      </div>
+                    </div>
+                    <div style={{ height: 260 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={top10Buyers} layout="vertical" margin={{ top: 5, right: 30, left: 35, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
+                          <XAxis type="number" stroke="var(--text-secondary)" fontSize={11} tickFormatter={(v) => `₹${v}Cr`} />
+                          <YAxis dataKey="buyer_id" type="category" stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                          <Tooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="chart-tooltip">
+                                    <div className="chart-tooltip-title">{payload[0].payload.buyer_id}</div>
+                                    <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
+                                      Revenue: ₹{payload[0].value} Crore
+                                    </div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                                      Orders: {payload[0].payload.orders} shipments
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar dataKey="spend_cr" fill="var(--primary-accent)" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* RFM-V Buyer Clusters */}
+                  <div className="panel-card">
+                    <div className="panel-header">
+                      <div>
+                        <div className="panel-title">Buyer Segments (RFM-V)</div>
+                        <div className="panel-subtitle">Commercial accounts grouped by order recency, frequency, spend and delivery rate</div>
+                      </div>
+                      <span className="badge success">Segmentation</span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+                      <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card-subtle)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--status-success)', fontSize: '13px' }}>Core Accounts</div>
+                        <div style={{ fontSize: '22px', fontWeight: 800, margin: '4px 0' }}>75 Buyers (40.1%)</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Consistent reorders with minimal delays.</div>
+                      </div>
+                      <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card-subtle)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--secondary-accent)', fontSize: '13px' }}>Growth Buyers</div>
+                        <div style={{ fontSize: '22px', fontWeight: 800, margin: '4px 0' }}>68 Buyers (36.4%)</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>High order volume and spend.</div>
+                      </div>
+                      <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card-subtle)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--status-warning)', fontSize: '13px' }}>At-Risk Buyers</div>
+                        <div style={{ fontSize: '22px', fontWeight: 800, margin: '4px 0' }}>27 Buyers (14.4%)</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Experiencing delivery delays.</div>
+                      </div>
+                      <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card-subtle)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--status-critical)', fontSize: '13px' }}>Inactive Buyers</div>
+                        <div style={{ fontSize: '22px', fontWeight: 800, margin: '4px 0' }}>17 Buyers (9.1%)</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Lapsed buyers for re-engagement.</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-secondary)' }}>Buyer Directory ({filteredBuyers.length} accounts)</span>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ position: 'relative' }}>
+                          <Search size={14} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} />
+                          <input
+                            type="text"
+                            className="filter-select"
+                            placeholder="Search Buyer ID, Category..."
+                            value={buyerSearch}
+                            onChange={(e) => { setBuyerSearch(e.target.value); setBuyerPage(1); }}
+                            style={{ paddingLeft: 28, width: 220 }}
+                          />
+                        </div>
+                        <button className="action-btn" onClick={handleExportBuyerSpendCSV}>
+                          <Download size={12} /> Export CSV
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="table-wrapper">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Buyer ID</th>
+                            <th style={{ textAlign: 'right' }}>Total Spend (INR)</th>
+                            <th>Orders</th>
+                            <th style={{ textAlign: 'right' }}>Shipped Units</th>
+                            <th style={{ textAlign: 'right' }}>AOV</th>
+                            <th>On-Time Rate</th>
+                            <th>Primary Category</th>
+                            <th>Primary Terms</th>
+                            <th>Segment</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredBuyers.slice((buyerPage - 1) * pageSize, buyerPage * pageSize).map(b => (
+                            <tr key={b.buyer_id}>
+                              <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-accent)' }}>{b.buyer_id}</td>
+                              <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{b.total_spend_inr.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                              <td>{b.orders_count}</td>
+                              <td style={{ textAlign: 'right' }}>{b.total_ordered_units.toLocaleString()}</td>
+                              <td style={{ textAlign: 'right' }}>₹{(b.aov_inr / 1e5).toFixed(2)} L</td>
+                              <td>
+                                <span className={`badge ${b.on_time_rate >= 80 ? 'success' : 'warning'}`}>
+                                  {b.on_time_rate.toFixed(1)}%
+                                </span>
+                              </td>
+                              <td>{formatCategoryName(b.primary_category)}</td>
+                              <td><span className="badge neutral">{b.primary_terms}</span></td>
+                              <td>
+                                <span className="badge info">
+                                  {b.segment_label || 'Segmented'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="table-pagination">
+                      <div>
+                        Showing {Math.min((buyerPage - 1) * pageSize + 1, filteredBuyers.length)} to {Math.min(buyerPage * pageSize, filteredBuyers.length)} of {filteredBuyers.length} buyers
+                      </div>
+                      <div className="pagination-btn-group">
+                        <button 
+                          className="pagination-btn" 
+                          onClick={() => setBuyerPage(p => Math.max(p - 1, 1))}
+                          disabled={buyerPage === 1}
+                        >
+                          <ChevronLeft size={14} />
+                        </button>
+                        <span style={{ padding: '0 8px', fontWeight: 600 }}>
+                          Page {buyerPage} of {Math.ceil(filteredBuyers.length / pageSize) || 1}
+                        </span>
+                        <button 
+                          className="pagination-btn" 
+                          onClick={() => setBuyerPage(p => Math.min(p + 1, Math.ceil(filteredBuyers.length / pageSize)))}
+                          disabled={buyerPage >= Math.ceil(filteredBuyers.length / pageSize)}
+                        >
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* ESTIMATED GROSS PROFITABILITY VIEW (TASK 2) */
+                <>
+                  <div className="dashboard-kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
+                    <div className="kpi-card">
+                      <div className="kpi-card-header"><span className="kpi-card-label">Total Wholesale Revenue</span></div>
+                      <div className="kpi-card-value">{formatInrVal(dynamicBuyersList.reduce((acc, b) => acc + b.total_spend_inr, 0))}</div>
+                      <div className="kpi-card-subtext">{dynamicBuyersList.length} Active Commercial Accounts</div>
+                    </div>
+                    <div className="kpi-card">
+                      <div className="kpi-card-header"><span className="kpi-card-label">Attributable Estimated COGS</span></div>
+                      <div className="kpi-card-value" style={{ color: 'var(--text-secondary)' }}>
+                        {formatInrVal(dynamicBuyersList.reduce((acc, b) => acc + b.estimated_cogs_inr, 0))}
+                      </div>
+                      <div className="kpi-card-subtext">Estimated Cost ({(100 - assumedGrossMarginPct).toFixed(2)}% of Revenue)</div>
+                    </div>
+                    <div className="kpi-card">
+                      <div className="kpi-card-header"><span className="kpi-card-label">Estimated Gross Profit</span></div>
+                      <div className="kpi-card-value" style={{ color: 'var(--status-success)' }}>
+                        {formatInrVal(dynamicBuyersList.reduce((acc, b) => acc + b.estimated_profit_inr, 0))}
+                      </div>
+                      <div className="kpi-card-subtext">Attributable Gross Profit Contribution</div>
+                    </div>
+                    <div className="kpi-card">
+                      <div className="kpi-card-header"><span className="kpi-card-label">Benchmark Margin</span></div>
+                      <div className="kpi-card-value">{assumedGrossMarginPct.toFixed(2)}%</div>
+                      <div className="kpi-card-subtext">Catalogue Average (da_product_catalogue.csv)</div>
+                    </div>
+                  </div>
+
+                  {/* Profitability Methodology & Sensitivity Controls */}
+                  <div className="alert-banner info" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <Info size={18} color="var(--primary-accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <div>
+                        <strong style={{ fontSize: '13px' }}>
+                          Client Profitability Estimation Methodology &amp; Assumptions
+                        </strong>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', lineHeight: 1.5 }}>
+                          The source order dataset (<code>da_b2b_orders.csv</code>) records transaction sales revenue but omits direct SKU manufacturing cost of goods sold (COGS), port handling tariffs, and export freight.
+                          To estimate commercial profitability across buyers, TradeSight applies the verified <strong>58.62% catalogue gross margin benchmark</strong> (derived from <code>da_product_catalogue.csv</code>).
+                          All metrics below represent estimated gross profit. Adjust margin assumptions below to test commercial sensitivity:
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>Margin Presets:</span>
+                      <button
+                        className={`preset-pill ${assumedGrossMarginPct === 25 ? 'active' : ''}`}
+                        onClick={() => setAssumedGrossMarginPct(25)}
+                      >
+                        25% (Conservative)
+                      </button>
+                      <button
+                        className={`preset-pill ${assumedGrossMarginPct === 40 ? 'active' : ''}`}
+                        onClick={() => setAssumedGrossMarginPct(40)}
+                      >
+                        40% (Moderate Export)
+                      </button>
+                      <button
+                        className={`preset-pill ${assumedGrossMarginPct === 58.62 ? 'active' : ''}`}
+                        onClick={() => setAssumedGrossMarginPct(58.62)}
+                      >
+                        58.62% (Catalogue Benchmark)
+                      </button>
+                      <button
+                        className={`preset-pill ${assumedGrossMarginPct === 70 ? 'active' : ''}`}
+                        onClick={() => setAssumedGrossMarginPct(70)}
+                      >
+                        70% (Premium Line)
+                      </button>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Custom:</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="95"
+                          step="0.5"
+                          value={assumedGrossMarginPct}
+                          onChange={(e) => setAssumedGrossMarginPct(parseFloat(e.target.value) || 58.62)}
+                          className="filter-select"
+                          style={{ width: '70px', padding: '4px 6px', fontSize: '12px' }}
+                        />
+                        <span style={{ fontSize: '12px', fontWeight: 600 }}>%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Top 10 Clients by Estimated Gross Profit Bar Chart */}
+                  <div className="panel-card">
+                    <div className="panel-header">
+                      <div>
+                        <div className="panel-title">Top 10 Buyers by Estimated Gross Profit</div>
+                        <div className="panel-subtitle">Ranked by estimated commercial profit contribution in ₹ Crores (at {assumedGrossMarginPct}% margin)</div>
+                      </div>
+                      <span className="badge success">Profitability Ranking</span>
+                    </div>
+                    <div style={{ height: 270 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={top10ProfitBuyers} layout="vertical" margin={{ top: 5, right: 30, left: 35, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" horizontal={false} />
+                          <XAxis type="number" stroke="var(--text-secondary)" fontSize={11} tickFormatter={(v) => `₹${v}Cr`} />
+                          <YAxis dataKey="buyer_id" type="category" stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                          <Tooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="chart-tooltip">
+                                    <div className="chart-tooltip-title">{payload[0].payload.buyer_id}</div>
+                                    <div className="chart-tooltip-item" style={{ color: 'var(--status-success)' }}>
+                                      Est. Gross Profit: ₹{payload[0].value} Crore
+                                    </div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                                      Total Spend: ₹{payload[0].payload.spend_cr} Crore • {payload[0].payload.total_orders} Orders
+                                    </div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                                      Tier: {payload[0].payload.segment_label}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar dataKey="profit_cr" fill="var(--primary-accent)" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Client Profitability Table */}
+                  <div className="panel-card">
+                    <div className="panel-header">
+                      <div>
+                        <div className="panel-title">Client Profitability Directory</div>
+                        <div className="panel-subtitle">Wholesale accounts ranked by attributable gross profit contribution</div>
+                      </div>
+                      <button className="action-btn primary" onClick={handleExportBuyerProfitabilityCSV}>
+                        <Download size={13} /> Export Profitability CSV
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        Ranked Accounts ({filteredBuyers.length} total)
+                      </span>
+                      <div style={{ position: 'relative' }}>
+                        <Search size={14} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} />
+                        <input
+                          type="text"
+                          className="filter-select"
+                          placeholder="Search Buyer ID, Category, Tier..."
+                          value={buyerSearch}
+                          onChange={(e) => { setBuyerSearch(e.target.value); setBuyerPage(1); }}
+                          style={{ paddingLeft: 28, width: 240 }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="table-wrapper">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Buyer ID</th>
+                            <th style={{ textAlign: 'right' }}>Total Revenue (INR)</th>
+                            <th style={{ textAlign: 'right' }}>Attributable COGS</th>
+                            <th style={{ textAlign: 'right' }}>Est. Gross Profit</th>
+                            <th style={{ textAlign: 'center' }}>Gross Margin</th>
+                            <th>Orders</th>
+                            <th>On-Time Rate</th>
+                            <th>Primary Category</th>
+                            <th>Commercial Tier</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredBuyers.slice((buyerPage - 1) * pageSize, buyerPage * pageSize).map(b => (
+                            <tr key={b.buyer_id}>
+                              <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-accent)' }}>{b.buyer_id}</td>
+                              <td style={{ textAlign: 'right', fontWeight: 600 }}>₹{b.total_spend_inr.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                              <td style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>₹{b.estimated_cogs_inr.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                              <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--status-success)' }}>₹{b.estimated_profit_inr.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                              <td style={{ textAlign: 'center' }}>
+                                <span className="badge neutral">{assumedGrossMarginPct.toFixed(1)}%</span>
+                              </td>
+                              <td>{b.orders_count}</td>
+                              <td>
+                                <span className={`badge ${b.on_time_rate >= 80 ? 'success' : 'warning'}`}>
+                                  {b.on_time_rate.toFixed(1)}%
+                                </span>
+                              </td>
+                              <td>{formatCategoryName(b.primary_category)}</td>
+                              <td>
+                                <span className={`badge ${b.estimated_profit_inr >= 10000000 ? 'success' : b.estimated_profit_inr >= 5000000 ? 'info' : 'neutral'}`}>
+                                  {b.segment_label}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="table-pagination">
+                      <div>
+                        Showing {Math.min((buyerPage - 1) * pageSize + 1, filteredBuyers.length)} to {Math.min(buyerPage * pageSize, filteredBuyers.length)} of {filteredBuyers.length} buyers
+                      </div>
+                      <div className="pagination-btn-group">
+                        <button 
+                          className="pagination-btn" 
+                          onClick={() => setBuyerPage(p => Math.max(p - 1, 1))}
+                          disabled={buyerPage === 1}
+                        >
+                          <ChevronLeft size={14} />
+                        </button>
+                        <span style={{ padding: '0 8px', fontWeight: 600 }}>
+                          Page {buyerPage} of {Math.ceil(filteredBuyers.length / pageSize) || 1}
+                        </span>
+                        <button 
+                          className="pagination-btn" 
+                          onClick={() => setBuyerPage(p => Math.min(p + 1, Math.ceil(filteredBuyers.length / pageSize)))}
+                          disabled={buyerPage >= Math.ceil(filteredBuyers.length / pageSize)}
+                        >
+                          <ChevronRight size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
 
@@ -4023,19 +4642,19 @@ export default function App() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                       <Layers size={18} color="var(--primary-accent)" />
-                      <strong style={{ fontSize: '14px' }}>Power BI Report File (.PBIX)</strong>
+                      <strong style={{ fontSize: '14px' }}>Compile Standalone PBIX</strong>
                     </div>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: 1.4 }}>
-                      Compiled standalone report container with all 5 interactive canvas pages, visual layouts, and data source bindings.
+                      Standalone .pbix files require Microsoft VertiPaq compilation. Open <code>TradeSight_Analytics.pbip</code> in Power BI Desktop and click <em>File &gt; Save As (*.pbix)</em>.
                     </p>
                   </div>
                   <a
-                    href="/powerbi/TradeSight_Analytics.pbix"
-                    download="TradeSight_Analytics.pbix"
+                    href="/powerbi/TradeSight_Analytics.pbip"
+                    download="TradeSight_Analytics.pbip"
                     className="action-btn secondary"
                     style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none' }}
                   >
-                    <Download size={14} /> Download TradeSight_Analytics.pbix
+                    <FileText size={14} /> Download PBIP Launcher
                   </a>
                 </div>
 
@@ -4603,6 +5222,241 @@ export default function App() {
                   </ol>
                 </div>
               </div>
+            </>
+          )}
+
+          {/* =========================================================================
+              11. DATASET UPLOAD & INGESTION VALIDATION SECTION (TASK 7)
+              ========================================================================= */}
+          {activeSection === 'upload' && (
+            <>
+              <div className="section-header-block">
+                <div>
+                  <h1 className="section-title">Dataset Upload &amp; Ingestion Validation</h1>
+                  <p className="section-subtitle">Upload custom CSV files to dynamically recalculate dashboard KPIs, models, and exception registers in browser memory.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    className="action-btn"
+                    onClick={handleResetToDemoData}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <RefreshCw size={13} /> Reset to Demo Baseline
+                  </button>
+                </div>
+              </div>
+
+              {/* Status Header Overview */}
+              <div className="dashboard-kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
+                <div className="kpi-card">
+                  <div className="kpi-card-header"><span className="kpi-card-label">Active Orders</span></div>
+                  <div className="kpi-card-value">{activeOrders.length}</div>
+                  <div className="kpi-card-subtext">{customOrders ? 'Custom Ingested Orders' : 'Demo Baseline (da_b2b_orders.csv)'}</div>
+                </div>
+                <div className="kpi-card">
+                  <div className="kpi-card-header"><span className="kpi-card-label">Active Catalogue SKUs</span></div>
+                  <div className="kpi-card-value">{activeProducts.length}</div>
+                  <div className="kpi-card-subtext">{customProducts ? 'Custom Ingested SKUs' : 'Demo Baseline (da_product_catalogue.csv)'}</div>
+                </div>
+                <div className="kpi-card">
+                  <div className="kpi-card-header"><span className="kpi-card-label">Active Customer Accounts</span></div>
+                  <div className="kpi-card-value">{activeCustomers.length}</div>
+                  <div className="kpi-card-subtext">{customCustomers ? 'Custom Ingested Profiles' : 'Demo Baseline (da_customer_profiles.csv)'}</div>
+                </div>
+                <div className="kpi-card">
+                  <div className="kpi-card-header"><span className="kpi-card-label">Ingestion Mode</span></div>
+                  <div className="kpi-card-value" style={{ fontSize: '18px', color: (customOrders || customProducts || customCustomers) ? 'var(--status-success)' : 'var(--primary-accent)' }}>
+                    {(customOrders || customProducts || customCustomers) ? 'Custom Ingestion' : 'Demo Baseline'}
+                  </div>
+                  <div className="kpi-card-subtext">Client-Side Memory Execution</div>
+                </div>
+              </div>
+
+              {/* Upload Feedback Alert */}
+              {uploadFeedback && (
+                <div className={`alert-banner ${uploadFeedback.type === 'success' ? 'success' : uploadFeedback.type === 'danger' ? 'danger' : 'info'}`} style={{ marginBottom: '16px' }}>
+                  {uploadFeedback.type === 'success' ? (
+                    <CheckCircle2 size={18} color="var(--status-success)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  ) : uploadFeedback.type === 'danger' ? (
+                    <AlertCircle size={18} color="var(--status-critical)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  ) : (
+                    <Info size={18} color="var(--primary-accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  )}
+                  <div>
+                    <strong>{uploadFeedback.type === 'success' ? 'Ingestion Successful: ' : uploadFeedback.type === 'danger' ? 'Validation Error: ' : 'Dataset Reset: '}</strong>
+                    {uploadFeedback.message}
+                  </div>
+                </div>
+              )}
+
+              {/* 3 Upload Cards */}
+              <div className="dashboard-kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', marginBottom: '24px' }}>
+                
+                {/* 1. B2B Orders Dropzone */}
+                <div className="panel-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <FileUp size={18} color="var(--primary-accent)" />
+                        <strong style={{ fontSize: '14px' }}>1. B2B Orders Dataset</strong>
+                      </div>
+                      <span className={`badge ${customOrders ? 'success' : 'neutral'}`}>
+                        {customOrders ? `${customOrders.length} Ingested` : 'Demo (600)'}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: 1.4 }}>
+                      Replaces transaction orders across 10 categories, order values, delivery days, SLA tracking, and returns.
+                    </p>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-card-subtle)', padding: '8px', borderRadius: '4px', marginBottom: '12px' }}>
+                      <strong>Required Headers:</strong> <code>order_id, buyer_id, category, order_date, quantity_units, unit_price_inr, total_value_inr, payment_terms, delivery_days, on_time_delivery, return_qty, repeat_buyer</code>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="action-btn primary" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', cursor: 'pointer', marginBottom: '8px' }}>
+                      <UploadCloud size={14} /> Upload Orders CSV
+                      <input type="file" accept=".csv" onChange={handleOrdersUpload} style={{ display: 'none' }} />
+                    </label>
+                    <a
+                      href="/templates/da_b2b_orders_sample.csv"
+                      download="da_b2b_orders_sample.csv"
+                      style={{ fontSize: '11px', color: 'var(--primary-accent)', display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+                    >
+                      <Download size={11} /> Download B2B Orders Sample CSV
+                    </a>
+                  </div>
+                </div>
+
+                {/* 2. Product Catalogue Dropzone */}
+                <div className="panel-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Package size={18} color="var(--primary-accent)" />
+                        <strong style={{ fontSize: '14px' }}>2. Product Catalogue</strong>
+                      </div>
+                      <span className={`badge ${customProducts ? 'success' : 'neutral'}`}>
+                        {customProducts ? `${customProducts.length} Ingested` : 'Demo (50)'}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: 1.4 }}>
+                      Replaces inventory stock, SKU unit price, cost of goods sold, and domestic origin state distributions.
+                    </p>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-card-subtle)', padding: '8px', borderRadius: '4px', marginBottom: '12px' }}>
+                      <strong>Required Headers:</strong> <code>Product_ID, Name, Category, Price_INR, Cost_INR, Stock_Quantity, Supplier_State</code>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="action-btn primary" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', cursor: 'pointer', marginBottom: '8px' }}>
+                      <UploadCloud size={14} /> Upload Catalogue CSV
+                      <input type="file" accept=".csv" onChange={handleProductsUpload} style={{ display: 'none' }} />
+                    </label>
+                    <a
+                      href="/templates/da_product_catalogue_sample.csv"
+                      download="da_product_catalogue_sample.csv"
+                      style={{ fontSize: '11px', color: 'var(--primary-accent)', display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+                    >
+                      <Download size={11} /> Download Catalogue Sample CSV
+                    </a>
+                  </div>
+                </div>
+
+                {/* 3. Customer Profiles Dropzone */}
+                <div className="panel-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Users size={18} color="var(--primary-accent)" />
+                        <strong style={{ fontSize: '14px' }}>3. Customer Profiles</strong>
+                      </div>
+                      <span className={`badge ${customCustomers ? 'success' : 'neutral'}`}>
+                        {customCustomers ? `${customCustomers.length} Ingested` : 'Demo (200)'}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: 1.4 }}>
+                      Replaces customer demographics, geographic city hubs, purchase dates, order history, and churn flags.
+                    </p>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-card-subtle)', padding: '8px', borderRadius: '4px', marginBottom: '12px' }}>
+                      <strong>Required Headers:</strong> <code>Customer_ID, City, Age_Band, Gender, Total_Orders, Total_Revenue, First_Purchase_Date, Last_Purchase_Date, Churn_Flag</code>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="action-btn primary" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', cursor: 'pointer', marginBottom: '8px' }}>
+                      <UploadCloud size={14} /> Upload Profiles CSV
+                      <input type="file" accept=".csv" onChange={handleCustomersUpload} style={{ display: 'none' }} />
+                    </label>
+                    <a
+                      href="/templates/da_customer_profiles_sample.csv"
+                      download="da_customer_profiles_sample.csv"
+                      style={{ fontSize: '11px', color: 'var(--primary-accent)', display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+                    >
+                      <Download size={11} /> Download Profiles Sample CSV
+                    </a>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Client-Side Privacy Notice */}
+              <div className="panel-card" style={{ borderLeft: '4px solid var(--status-success)', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <ShieldCheck size={18} color="var(--status-success)" />
+                  <strong style={{ fontSize: '14px' }}>Client-Side Privacy &amp; Data Security Guarantee</strong>
+                </div>
+                <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                  All uploaded CSV files are parsed and computed strictly inside your web browser memory using client-side JavaScript FileReader APIs.
+                  No commercial trade data, customer profiles, or financial transaction logs are transmitted to external cloud servers, third-party analytics trackers, or remote databases.
+                  Refreshing the web page or clicking <strong>Reset to Demo Baseline</strong> purges memory allocations instantly.
+                </p>
+              </div>
+
+              {/* Data Ingestion Specification & Validation Rules */}
+              <div className="panel-card">
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-title">Ingestion Schema Validation Rules</div>
+                    <div className="panel-subtitle">Validation tests performed upon file upload prior to dashboard recalculation</div>
+                  </div>
+                  <span className="badge info">Automated Rules</span>
+                </div>
+
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Target Dataset</th>
+                        <th>Column Validation</th>
+                        <th>Type Cast Rules</th>
+                        <th>Dynamic Calculations Triggered</th>
+                        <th>Anomaly Detection Checks</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style={{ fontWeight: 600 }}>B2B Export Orders</td>
+                        <td>12 Required Columns</td>
+                        <td><code>quantity_units</code> (int), <code>unit_price_inr</code> (float), <code>delivery_days</code> (int)</td>
+                        <td>Revenue, AOV, On-time SLA rate, Buyer profitability, Monthly trends</td>
+                        <td><code>return_qty &gt; quantity_units</code> (Return quantity overrun)</td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontWeight: 600 }}>Product Catalogue</td>
+                        <td>7 Required Columns</td>
+                        <td><code>Price_INR</code> (float), <code>Cost_INR</code> (float), <code>Stock_Quantity</code> (int)</td>
+                        <td>Catalogue gross margin (<code>(Price - Cost) / Price</code>), Sourcing states</td>
+                        <td>Negative inventory stock or zero-cost SKU checks</td>
+                      </tr>
+                      <tr>
+                        <td style={{ fontWeight: 600 }}>Customer Profiles</td>
+                        <td>9 Required Columns</td>
+                        <td><code>Total_Orders</code> (int), <code>Total_Revenue</code> (float), ISO Dates</td>
+                        <td>Customer churn rate, Average order value, Geographic distribution</td>
+                        <td><code>First_Purchase_Date &gt; Last_Purchase_Date</code> (Date inversion)</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
             </>
           )}
 

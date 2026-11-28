@@ -1,0 +1,4 @@
+order_id,destination_country,iso3_code,region,port_of_discharge,incoterm,freight_cost_inr,customs_duty_inr,customs_clearance_days,regulatory_status
+B2B-00001,United Arab Emirates,ARE,Middle East,"Jebel Ali Port, Dubai",FOB,45000.0,12500.0,3,COMPLIANT
+B2B-00002,United States,USA,North America,Port of Los Angeles,CIF,98000.0,24000.0,4,COMPLIANT
+B2B-00003,Germany,DEU,Europe,Port of Hamburg,DAP,72000.0,18500.0,2,COMPLIANT

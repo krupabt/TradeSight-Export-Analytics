@@ -54,4 +54,5 @@ def test_powerbi_full_validation_and_packaging():
     results = run_all_validations()
     assert results["all_validations_passed"] is True
     assert (PROJECT_ROOT / "frontend" / "public" / "powerbi" / "TradeSight_PowerBI_Project_Bundle.zip").is_file()
-    assert (POWERBI_DIR / "TradeSight_Analytics.pbix").is_file()
+    assert "powerbi_desktop_installed" in results
+    assert "pbip_entry" in results
