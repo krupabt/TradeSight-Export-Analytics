@@ -12,10 +12,71 @@ Covers:
 import pytest
 from src.fx_analytics import (
     calculate_fx_impact,
+    calculate_portfolio_impact,
     simulate_portfolio_fx,
     generate_scenario_matrix,
     BENCHMARK_RATES_INR,
 )
+
+
+def test_user_requested_verification_example():
+    """Verify exact user prompt example:
+
+    Invoice amount: 100,000 USD
+    Base exchange rate: 83.50
+    Revised exchange rate: 87.00
+
+    Expected results:
+    - Original Booking Value: 83,50,000 INR
+    - Revised Converted Value: 87,00,000 INR
+    - Estimated FX Gain: 3,50,000 INR
+    - Percentage Impact: approximately 4.19%
+    """
+    res = calculate_fx_impact(
+        foreign_amount=100000.0,
+        base_rate=83.50,
+        revised_rate=87.00,
+        currency="USD",
+    )
+    assert res.is_valid is True
+    assert res.original_inr == 8350000.0
+    assert res.revised_inr == 8700000.0
+    assert res.gain_loss_inr == 350000.0
+    assert pytest.approx(res.percentage_impact, 0.01) == 4.1916167
+    assert res.scenario_type == "appreciation"
+
+
+def test_portfolio_impact_calculation():
+    """Test portfolio impact with partial exposure."""
+    total_rev = 100000000.0  # ₹10 Cr
+    exposure_pct = 40.0      # 40%
+    base_rate = 80.0
+    revised_rate = 84.0      # +5%
+
+    res = calculate_portfolio_impact(
+        total_revenue_inr=total_rev,
+        exposure_pct=exposure_pct,
+        base_rate=base_rate,
+        revised_rate=revised_rate,
+        currency="USD",
+    )
+    assert res["is_valid"] is True
+    assert res["exposed_portfolio_value"] == 40000000.0   # ₹4 Cr
+    assert res["foreign_currency_exposure"] == 500000.0   # $500,000 USD
+    assert res["revised_exposure_value"] == 42000000.0    # ₹4.2 Cr
+    assert res["gain_loss_inr"] == 2000000.0              # +₹20 Lakh
+    assert res["revised_total_portfolio_value"] == 102000000.0 # ₹10.2 Cr
+    assert res["percentage_impact"] == 5.0
+    assert res["scenario_type"] == "appreciation"
+
+
+def test_portfolio_impact_invalid_bounds():
+    """Test exposure outside 0-100% raises ValueError."""
+    with pytest.raises(ValueError, match="Exposure percentage must be between 0 and 100"):
+        calculate_portfolio_impact(1000000.0, -5.0, 80.0, 84.0)
+
+    with pytest.raises(ValueError, match="Exposure percentage must be between 0 and 100"):
+        calculate_portfolio_impact(1000000.0, 105.0, 80.0, 84.0)
 
 
 def test_positive_fx_appreciation():

@@ -131,7 +131,7 @@
 
 ## Slide 9: Testing, Validation & Production Deployment
 ### Slide Content
-* **Automated Regression Testing:** 43 Pytest unit tests spanning metrics, data validation, pipeline idempotency, and FX scenarios (100% pass rate)
+* **Automated Regression Testing:** 46 Pytest unit tests spanning metrics, data validation, pipeline idempotency, statistical deep-dive, and FX scenarios (100% pass rate)
 * **Production Web Build:** Bundled with Vite 5 (`dist/index.html` + optimized assets) with zero errors
 * **Vercel Edge Deployment:** Deployed to `tradesight-export-analytics.vercel.app` with custom Cache-Control headers preventing stale cache hits
 * **Cross-Device Verification:** Inspected across Desktop (1440x900), Laptop (1280x800), Projector (1024x768), and Mobile (375x667)

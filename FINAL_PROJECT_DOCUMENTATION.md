@@ -238,11 +238,66 @@ A complete Power BI project suite is engineered under `powerbi/`:
 
 ---
 
-## 17. FX Analytics
-Implemented in `src/fx_analytics.py`:
-* **Appreciation Scenario:** When foreign billing currency gains against INR, export realization increases ($\Delta \text{Revenue} > 0$).
-* **Depreciation Scenario:** When foreign billing currency depreciates against INR, export realization falls ($\Delta \text{Revenue} < 0$).
-* **Input Validation:** Positive rate guards, non-negative invoice amounts, and zero-fluctuation neutrality.
+## 17. Currency & Foreign Exchange (FX) Risk Analytics
+
+The Currency & FX Analysis module is implemented across Python (`src/fx_analytics.py`, `tests/test_fx_analytics.py`) and React (`frontend/src/App.jsx`).
+
+### Data Availability & Governance Notice
+All source transactions in `da_b2b_orders.csv` are denominated strictly in Indian Rupee (INR). Historical foreign currency invoice amounts and spot exchange rates were not originally captured. Rather than fabricating historical exchange rates, TradeSight provides a mathematically verified, interactive sensitivity simulator for financial risk modeling.
+
+### Core Calculation Modes
+1. **Invoice Calculator Mode:**
+   - **Formulae:**
+     - $\text{Original Booking Value} = \text{Invoice Amount} \times \text{Base Rate}$
+     - $\text{Revised Converted Value} = \text{Invoice Amount} \times \text{Revised Rate}$
+     - $\text{Estimated FX Gain/Loss} = \text{Revised Value} - \text{Original Value}$
+     - $\text{Percentage Impact} = \left(\frac{\text{Estimated Gain/Loss}}{\text{Original Value}}\right) \times 100$
+   - **Benchmark Test Verification:**
+     - Invoice: $\$100,000\text{ USD}$, Base: $₹83.50$, Revised: $₹87.00$
+     - Original Booking Value: $₹83,50,000\text{ INR}$ ($₹83.50\text{ Lakh}$)
+     - Revised Converted Value: $₹87,00,000\text{ INR}$ ($₹87.00\text{ Lakh}$)
+     - Estimated FX Gain: $+₹3,50,000\text{ INR}$ ($+₹3.50\text{ Lakh}$)
+     - Percentage Impact: $+4.19\%$ (Exact: $4.1916\%$)
+2. **Portfolio Impact Mode:**
+   - **Formulae:**
+     - $\text{Exposed Portfolio Value} = \text{Total Order Value} \times \left(\frac{\text{Exposure Percentage}}{100}\right)$
+     - $\text{Estimated Foreign Exposure} = \frac{\text{Exposed Portfolio Value}}{\text{Base Rate}}$
+     - $\text{Revised Exposure Value} = \text{Foreign Currency Exposure} \times \text{Revised Rate}$
+     - $\text{Estimated FX Gain/Loss} = \text{Revised Exposure Value} - \text{Exposed Portfolio Value}$
+     - $\text{Revised Total Portfolio Value} = \text{Total Order Value} + \text{Estimated FX Gain/Loss}$
+     - $\text{Percentage Impact} = \left(\frac{\text{Estimated Gain/Loss}}{\text{Exposed Portfolio Value}}\right) \times 100$
+   - Clearly labels foreign currency exposure as hypothetical based on selectable exposure percentage ($0\%$ to $100\%$).
+
+### Supported Currencies & Illustrative Benchmarks
+- **USD – US Dollar:** $\$$, Illustrative Base: $₹83.50$
+- **EUR – Euro:** $€$, Illustrative Base: $₹90.20$
+- **GBP – British Pound:** $£$, Illustrative Base: $₹105.40$
+- **AED – UAE Dirham:** $\text{AED}$, Illustrative Base: $₹22.75$
+- **SGD – Singapore Dollar:** $\text{S}\$$, Illustrative Base: $₹61.80$
+- **JPY – Japanese Yen:** $¥$, Illustrative Base: $₹0.55$
+*(Default exchange rates are clearly designated as illustrative benchmarks, not live market rates).*
+
+### Exchange Rate Presets & Sensitivity Analysis
+- **Presets:** $-10\%, -5\%, -2\%, 0\%, +2\%, +5\%, +10\%$ calculated strictly relative to the base rate (preventing compounding on repeated clicks).
+- **Interactive Recharts Sensitivity Bar Chart:** Visualizes gain/loss across all 7 scenarios with green bars for gains ($>0$), red bars for losses ($<0$), and neutral slate for zero impact ($0$), dynamic custom tooltips with Indian currency formatting ($₹\text{ Cr} / ₹\text{ Lakh}$), and zero reference line.
+- **Scenario Comparison Matrix & CSV Export:** Comprehensive analytical comparison table highlighting the active scenario row and offering one-click CSV download (`tradesight_fx_sensitivity_<mode>_<currency>.csv`).
+
+### Multi-Currency Data Specification
+To transition from the current INR baseline to full multi-currency accounting, 7 schema fields are documented:
+1. `booking_currency` (VARCHAR(3)) — Missing (orders in INR)
+2. `foreign_invoice_amount` (NUMERIC(14,2)) — Missing
+3. `booking_date` (DATE) — Present (`order_date`)
+4. `spot_booking_rate` (NUMERIC(10,4)) — Missing
+5. `settlement_date` (DATE) — Missing (only `delivery_date` recorded)
+6. `realized_settlement_rate` (NUMERIC(10,4)) — Missing
+7. `hedging_status` (VARCHAR(20)) — Missing
+
+### Mathematical & Input Validation Guards
+- Non-negative invoice amounts ($\ge 0$)
+- Strictly positive exchange rates ($> 0$)
+- Portfolio exposure bounded strictly between $0\%$ and $100\%$
+- Complete division by zero, NaN, and Infinity protection
+- 11 dedicated automated Python tests in `tests/test_fx_analytics.py` (all passing).
 
 ---
 

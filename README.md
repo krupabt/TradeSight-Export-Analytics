@@ -42,7 +42,7 @@ To run TradeSight locally for presentations (with 100% offline support):
 git clone https://github.com/krupabt/TradeSight-Export-Analytics.git
 cd TradeSight-Export-Analytics
 
-# 2. Run Python test suite (43 automated tests)
+# 2. Run Python test suite (46 automated tests)
 pytest -v
 
 # 3. Launch the presentation web dashboard
@@ -181,7 +181,7 @@ python src/pipeline.py
 ```powershell
 pytest -v
 ```
-*Runs all 43 automated tests validating schema checks, anomaly detection, date parsing, baseline metrics, pipeline execution, statistical deep-dive modules, and foreign exchange (FX) risk modeling.*
+*Runs all 46 automated tests validating schema checks, anomaly detection, date parsing, baseline metrics, pipeline execution, statistical deep-dive modules, and foreign exchange (FX) risk modeling.*
 
 ---
 

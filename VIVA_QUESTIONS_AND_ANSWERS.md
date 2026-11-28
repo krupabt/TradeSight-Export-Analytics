@@ -89,13 +89,26 @@ Using standardized scaling and K-Means clustering (evaluated using silhouette an
 
 ## Part 5: FX Analytics, Compliance & Automated Reporting
 
-### Q11: How does the FX Sensitivity Simulator calculate currency impacts?
-**Answer:** Implemented in `src/fx_analytics.py`:
-$$\text{Original INR} = \text{Foreign Amount} \times \text{Base Rate}$$
-$$\text{Revised INR} = \text{Foreign Amount} \times \text{Revised Rate}$$
-$$\Delta \text{Gain/Loss} = \text{Revised INR} - \text{Original INR}$$
-$$\text{Percentage Impact} = \left(\frac{\Delta \text{Gain/Loss}}{\text{Original INR}}\right) \times 100$$
-When the foreign billing currency appreciates against the INR ($\text{Revised Rate} > \text{Base Rate}$), the exporter receives a positive currency gain. When it depreciates, realization decreases. Input validation guards prevent negative invoice amounts and zero or negative exchange rates.
+### Q11: How does the Currency & FX Analysis module calculate exchange rate impacts?
+**Answer:** Implemented in `src/fx_analytics.py` and React with dual modes:
+1. **Invoice Calculator Mode:**
+   $$\text{Original INR} = \text{Invoice Amount} \times \text{Base Rate}$$
+   $$\text{Revised INR} = \text{Invoice Amount} \times \text{Revised Rate}$$
+   $$\Delta \text{Gain/Loss} = \text{Revised INR} - \text{Original INR}$$
+   $$\text{Percentage Impact} = \left(\frac{\Delta \text{Gain/Loss}}{\text{Original INR}}\right) \times 100$$
+   *Verification Example:* A $\$100,000\text{ USD}$ invoice booked at $₹83.50$ ($₹83,50,000$) revalued at $₹87.00$ ($₹87,00,000$) yields an estimated FX gain of $+₹3,50,000$ ($+4.19\%$).
+2. **Portfolio Impact Mode:**
+   $$\text{Exposed Portfolio Value} = \text{Total Order Value} \times \left(\frac{\text{Exposure Percentage}}{100}\right)$$
+   $$\text{Estimated Foreign Exposure} = \frac{\text{Exposed Portfolio Value}}{\text{Base Rate}}$$
+   $$\text{Revised Exposure Value} = \text{Foreign Exposure} \times \text{Revised Rate}$$
+   $$\Delta \text{Gain/Loss} = \text{Revised Exposure Value} - \text{Exposed Portfolio Value}$$
+   $$\text{Revised Total Portfolio Value} = \text{Total Order Value} + \Delta \text{Gain/Loss}$$
+3. **Features & Governance:**
+   - Clearly discloses that source orders are denominated in INR and historical FX data is unavailable (avoiding fabricated historical figures).
+   - Exchange rate presets ($-10\%$ to $+10\%$) calculate non-compounding shifts relative to base rate.
+   - Interactive Recharts sensitivity bar chart with color-coded gain/loss/neutral bars and downloadable scenario comparison matrix CSV.
+   - Multi-currency schema specification outlining 7 fields required for future multi-currency operations (`booking_currency`, `foreign_invoice_amount`, `booking_date`, `spot_booking_rate`, `settlement_date`, `realized_settlement_rate`, `hedging_status`).
+   - Validated by 11 unit tests covering positive appreciation, negative depreciation, zero shock neutrality, negative invoice guards, positive rate assertions, and portfolio exposure bounds.
 
 ### Q12: How does the automated weekly reporting pipeline work in GitHub Actions?
 **Answer:** Configured in `.github/workflows/weekly_report.yml`:

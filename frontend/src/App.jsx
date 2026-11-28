@@ -162,34 +162,35 @@ export default function App() {
     });
   };
 
-  // What-If FX Sensitivity Scenario State
-  const [fxShockPct, setFxShockPct] = useState(0);
+  // What-If FX Sensitivity & Simulator State
   const [fxCurrency, setFxCurrency] = useState('USD');
-  const [fxInvoiceAmount, setFxInvoiceAmount] = useState(100000);
-  const [fxBaseRate, setFxBaseRate] = useState(83.50);
-  const [fxRevisedRate, setFxRevisedRate] = useState(87.68);
   const [fxSimulatorMode, setFxSimulatorMode] = useState('portfolio'); // 'portfolio' | 'invoice'
+  const [fxInvoiceAmount, setFxInvoiceAmount] = useState(100000);
+  const [fxPortfolioExposurePct, setFxPortfolioExposurePct] = useState(50);
+  const [fxBaseRate, setFxBaseRate] = useState(83.50);
+  const [fxRevisedRate, setFxRevisedRate] = useState(83.50);
+  const [fxShockPct, setFxShockPct] = useState(0);
 
-  // Benchmark Rates against INR
-  const FX_BENCHMARKS = {
-    USD: 83.50,
-    EUR: 90.20,
-    GBP: 105.40,
-    AED: 22.75,
-    SGD: 61.80,
-    JPY: 0.55
+  // Illustrative Benchmark Rates against INR (not live market rates)
+  const FX_CURRENCIES = {
+    USD: { code: 'USD', name: 'US Dollar', symbol: '$', illustrativeRate: 83.50 },
+    EUR: { code: 'EUR', name: 'Euro', symbol: '€', illustrativeRate: 90.20 },
+    GBP: { code: 'GBP', name: 'British Pound', symbol: '£', illustrativeRate: 105.40 },
+    AED: { code: 'AED', name: 'UAE Dirham', symbol: 'AED', illustrativeRate: 22.75 },
+    SGD: { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', illustrativeRate: 61.80 },
+    JPY: { code: 'JPY', name: 'Japanese Yen', symbol: '¥', illustrativeRate: 0.55 },
   };
 
   const handleFxCurrencyChange = (curr) => {
     setFxCurrency(curr);
-    const benchmark = FX_BENCHMARKS[curr] || 83.50;
+    const benchmark = FX_CURRENCIES[curr]?.illustrativeRate || 83.50;
     setFxBaseRate(benchmark);
-    setFxRevisedRate(parseFloat((benchmark * (1 + fxShockPct / 100)).toFixed(2)));
+    setFxRevisedRate(parseFloat((benchmark * (1 + fxShockPct / 100)).toFixed(4)));
   };
 
   const handleFxShockChange = (pct) => {
     setFxShockPct(pct);
-    setFxRevisedRate(parseFloat((fxBaseRate * (1 + pct / 100)).toFixed(2)));
+    setFxRevisedRate(parseFloat((fxBaseRate * (1 + pct / 100)).toFixed(4)));
   };
 
   // Pagination States for Data Tables
@@ -605,6 +606,108 @@ export default function App() {
       case 'governance': return 'Data Quality';
       default: return 'Dashboard';
     }
+  };
+
+  // Currency Module Helper Formatters & Scenario Generator
+  const formatInrVal = (val, forceFull = false) => {
+    if (val === null || val === undefined || isNaN(val)) return '₹0.00';
+    const abs = Math.abs(val);
+    const sign = val < 0 ? '-' : '';
+    if (!forceFull && abs >= 1e7) {
+      return `${sign}₹${(abs / 1e7).toFixed(2)} Cr`;
+    }
+    if (!forceFull && abs >= 1e5) {
+      return `${sign}₹${(abs / 1e5).toFixed(2)} Lakh`;
+    }
+    return `${sign}₹${abs.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}`;
+  };
+
+  const fxValidationErrors = useMemo(() => {
+    const errors = [];
+    if (isNaN(fxBaseRate) || fxBaseRate <= 0) {
+      errors.push('Base exchange rate must be strictly positive.');
+    }
+    if (isNaN(fxRevisedRate) || fxRevisedRate <= 0) {
+      errors.push('Revised exchange rate must be strictly positive.');
+    }
+    if (fxSimulatorMode === 'invoice') {
+      if (isNaN(fxInvoiceAmount) || fxInvoiceAmount < 0) {
+        errors.push('Invoice amount cannot be negative.');
+      }
+    } else {
+      if (isNaN(fxPortfolioExposurePct) || fxPortfolioExposurePct < 0 || fxPortfolioExposurePct > 100) {
+        errors.push('Portfolio exposure must be between 0% and 100%.');
+      }
+    }
+    return errors;
+  }, [fxBaseRate, fxRevisedRate, fxSimulatorMode, fxInvoiceAmount, fxPortfolioExposurePct]);
+
+  const fxPresetScenarios = [-10, -5, -2, 0, 2, 5, 10];
+
+  const fxScenarioData = useMemo(() => {
+    if (fxValidationErrors.length > 0) return [];
+    const isInvoice = fxSimulatorMode === 'invoice';
+    const totalOrderVal = stats.totalRevenue || 0;
+    const exposedVal = totalOrderVal * (fxPortfolioExposurePct / 100);
+    const foreignExposure = fxBaseRate > 0 ? (isInvoice ? fxInvoiceAmount : exposedVal / fxBaseRate) : 0;
+
+    return fxPresetScenarios.map(pct => {
+      const scenarioRevisedRate = parseFloat((fxBaseRate * (1 + pct / 100)).toFixed(4));
+      let origInr = 0;
+      let revInr = 0;
+      let diffInr = 0;
+      let pctVariance = 0;
+
+      if (isInvoice) {
+        origInr = fxInvoiceAmount * fxBaseRate;
+        revInr = fxInvoiceAmount * scenarioRevisedRate;
+        diffInr = revInr - origInr;
+        pctVariance = origInr > 0 ? (diffInr / origInr) * 100 : 0;
+      } else {
+        origInr = exposedVal;
+        revInr = foreignExposure * scenarioRevisedRate;
+        diffInr = revInr - exposedVal;
+        pctVariance = exposedVal > 0 ? (diffInr / exposedVal) * 100 : 0;
+      }
+
+      const isCurrent = Math.abs(fxShockPct - pct) < 0.05;
+
+      return {
+        label: pct > 0 ? `+${pct}%` : `${pct}%`,
+        pct,
+        revisedRate: scenarioRevisedRate,
+        revisedVal: isInvoice ? revInr : (totalOrderVal + diffInr),
+        revisedExposureVal: revInr,
+        diffInr: diffInr,
+        pctVariance: pctVariance,
+        isCurrent,
+        isGain: diffInr > 1e-4,
+        isLoss: diffInr < -1e-4,
+        isNeutral: Math.abs(diffInr) <= 1e-4
+      };
+    });
+  }, [fxValidationErrors, fxSimulatorMode, stats.totalRevenue, fxPortfolioExposurePct, fxBaseRate, fxInvoiceAmount, fxShockPct]);
+
+  const downloadFxScenariosCsv = () => {
+    if (!fxScenarioData || fxScenarioData.length === 0) return;
+    const headers = ['Scenario', 'Exchange_Rate_Shift_Pct', 'Revised_Exchange_Rate', 'Revised_Portfolio_or_Invoice_INR', 'Estimated_FX_Gain_Loss_INR', 'Percentage_Impact_Pct'];
+    const rows = fxScenarioData.map(r => [
+      `"${r.label}"`,
+      r.pct,
+      r.revisedRate.toFixed(4),
+      r.revisedVal.toFixed(2),
+      r.diffInr.toFixed(2),
+      r.pctVariance.toFixed(2)
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `tradesight_fx_sensitivity_${fxSimulatorMode}_${fxCurrency}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const pageTitle = getPageTitle();
@@ -2185,21 +2288,16 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Data Limitation Notice */}
-              <div className="alert-banner info">
-                <DollarSign size={20} color="var(--primary-accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <div>
-                  <strong style={{ display: 'block', fontSize: '14px', marginBottom: '3px' }}>
-                    Currency Data Availability
-                  </strong>
-                  All 600 orders in <code>da_b2b_orders.csv</code> are recorded strictly in <strong>Indian Rupee (INR)</strong>. The dataset does not include foreign currency amounts or historical exchange rates.
-                  <br />
-                  In accordance with strict data integrity, no historical foreign exchange gains or losses are invented. Below is a scenario tool to estimate the impact of exchange rate changes on total revenue. Results are based on simulated exchange rates.
+              {/* Data Availability Notice */}
+              <div className="alert-banner info" style={{ marginBottom: '16px' }}>
+                <DollarSign size={18} color="var(--primary-accent)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ fontSize: '13px', lineHeight: 1.5 }}>
+                  All source transactions are recorded in INR. Historical foreign currency amounts and exchange rates are unavailable. The following analysis represents hypothetical FX scenarios.
                 </div>
               </div>
 
-              {/* What-If Sensitivity Simulator */}
-              <div className="panel-card">
+              {/* What-If Sensitivity Simulator Panel */}
+              <div className="panel-card" style={{ marginBottom: '20px' }}>
                 <div className="panel-header">
                   <div>
                     <div className="panel-title">Currency & FX Impact Simulator</div>
@@ -2209,20 +2307,37 @@ export default function App() {
                     <button
                       className={`preset-pill ${fxSimulatorMode === 'portfolio' ? 'active' : ''}`}
                       onClick={() => setFxSimulatorMode('portfolio')}
+                      style={{ padding: '6px 14px', fontSize: '13px' }}
                     >
                       Portfolio Impact
                     </button>
                     <button
                       className={`preset-pill ${fxSimulatorMode === 'invoice' ? 'active' : ''}`}
                       onClick={() => setFxSimulatorMode('invoice')}
+                      style={{ padding: '6px 14px', fontSize: '13px' }}
                     >
                       Invoice Calculator
                     </button>
                   </div>
                 </div>
 
+                {/* Validation Error Alert Banner */}
+                {fxValidationErrors.length > 0 && (
+                  <div className="alert-banner warning" style={{ margin: '14px 14px 0 14px' }}>
+                    <AlertTriangle size={18} color="var(--status-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <div style={{ fontSize: '13px' }}>
+                      <strong>Input Validation:</strong>
+                      <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                        {fxValidationErrors.map((err, i) => (
+                          <li key={i}>{err}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
                 {/* Simulator Controls Toolbar */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', padding: '14px', background: 'var(--bg-card-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', padding: '14px', margin: '14px', background: 'var(--bg-card-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
                   <div className="filter-group">
                     <span className="filter-label">Target Currency:</span>
                     <select
@@ -2230,64 +2345,84 @@ export default function App() {
                       value={fxCurrency}
                       onChange={(e) => handleFxCurrencyChange(e.target.value)}
                     >
-                      <option value="USD">USD – US Dollar (Indicative ₹83.50)</option>
-                      <option value="EUR">EUR – Euro (Indicative ₹90.20)</option>
-                      <option value="GBP">GBP – British Pound (Indicative ₹105.40)</option>
-                      <option value="AED">AED – UAE Dirham (Indicative ₹22.75)</option>
-                      <option value="SGD">SGD – Singapore Dollar (Indicative ₹61.80)</option>
-                      <option value="JPY">JPY – Japanese Yen (Indicative ₹0.55)</option>
+                      {Object.values(FX_CURRENCIES).map(c => (
+                        <option key={c.code} value={c.code}>
+                          {c.code} – {c.name} (Illustrative ₹{c.illustrativeRate.toFixed(2)})
+                        </option>
+                      ))}
                     </select>
                   </div>
 
                   {fxSimulatorMode === 'invoice' ? (
                     <div className="filter-group">
-                      <span className="filter-label">Invoice Amount ({fxCurrency}):</span>
+                      <span className="filter-label">Invoice Amount ({FX_CURRENCIES[fxCurrency]?.symbol || '$'}):</span>
                       <input
                         type="number"
                         className="filter-select"
                         min="0"
                         step="1000"
-                        value={fxInvoiceAmount}
-                        onChange={(e) => setFxInvoiceAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                        value={isNaN(fxInvoiceAmount) ? '' : fxInvoiceAmount}
+                        onChange={(e) => setFxInvoiceAmount(e.target.value === '' ? '' : Math.max(0, parseFloat(e.target.value) || 0))}
                         style={{ width: '130px' }}
                       />
                     </div>
                   ) : (
-                    <div className="filter-group">
-                      <span className="filter-label">Export Portfolio:</span>
-                      <span style={{ fontWeight: 600, color: 'var(--text-heading)' }}>₹396.88 Cr ({stats.totalOrders} Orders)</span>
-                    </div>
+                    <>
+                      <div className="filter-group">
+                        <span className="filter-label">Total Order Value:</span>
+                        <span style={{ fontWeight: 600, color: 'var(--text-heading)' }}>
+                          ₹{(stats.totalRevenue / 1e7).toFixed(2)} Cr ({stats.totalOrders} Orders)
+                        </span>
+                      </div>
+                      <div className="filter-group">
+                        <span className="filter-label">Foreign Exposure (%):</span>
+                        <input
+                          type="number"
+                          className="filter-select"
+                          min="0"
+                          max="100"
+                          step="5"
+                          value={isNaN(fxPortfolioExposurePct) ? '' : fxPortfolioExposurePct}
+                          onChange={(e) => setFxPortfolioExposurePct(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                          style={{ width: '80px' }}
+                        />
+                      </div>
+                    </>
                   )}
 
                   <div className="filter-group">
-                    <span className="filter-label">Base Rate:</span>
+                    <span className="filter-label">Base Rate (₹):</span>
                     <input
                       type="number"
                       className="filter-select"
-                      min="0.01"
+                      min="0.0001"
                       step="0.05"
-                      value={fxBaseRate}
+                      value={isNaN(fxBaseRate) ? '' : fxBaseRate}
                       onChange={(e) => {
-                        const val = Math.max(0.01, parseFloat(e.target.value) || 0.01);
+                        const val = parseFloat(e.target.value);
                         setFxBaseRate(val);
-                        setFxRevisedRate(parseFloat((val * (1 + fxShockPct / 100)).toFixed(2)));
+                        if (!isNaN(val) && val > 0) {
+                          setFxRevisedRate(parseFloat((val * (1 + fxShockPct / 100)).toFixed(4)));
+                        }
                       }}
                       style={{ width: '90px' }}
                     />
                   </div>
 
                   <div className="filter-group">
-                    <span className="filter-label">Revised Rate:</span>
+                    <span className="filter-label">Revised Rate (₹):</span>
                     <input
                       type="number"
                       className="filter-select"
-                      min="0.01"
+                      min="0.0001"
                       step="0.05"
-                      value={fxRevisedRate}
+                      value={isNaN(fxRevisedRate) ? '' : fxRevisedRate}
                       onChange={(e) => {
-                        const val = Math.max(0.01, parseFloat(e.target.value) || 0.01);
+                        const val = parseFloat(e.target.value);
                         setFxRevisedRate(val);
-                        setFxShockPct(parseFloat((((val - fxBaseRate) / fxBaseRate) * 100).toFixed(1)));
+                        if (!isNaN(val) && val > 0 && !isNaN(fxBaseRate) && fxBaseRate > 0) {
+                          setFxShockPct(parseFloat((((val - fxBaseRate) / fxBaseRate) * 100).toFixed(2)));
+                        }
                       }}
                       style={{ width: '90px' }}
                     />
@@ -2295,76 +2430,323 @@ export default function App() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
                     <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-secondary)' }}>Presets:</span>
-                    {[-10, -5, -2, 0, 2, 5, 10].map(pct => (
-                      <button
-                        key={pct}
-                        className={`preset-pill ${fxShockPct === pct ? 'active' : ''}`}
-                        onClick={() => handleFxShockChange(pct)}
-                        style={{ padding: '3px 8px', fontSize: '11px' }}
-                      >
-                        {pct > 0 ? `+${pct}%` : `${pct}%`}
-                      </button>
-                    ))}
+                    {fxPresetScenarios.map(pct => {
+                      const isMatch = Math.abs(fxShockPct - pct) < 0.05;
+                      return (
+                        <button
+                          key={pct}
+                          className={`preset-pill ${isMatch ? 'active' : ''}`}
+                          onClick={() => handleFxShockChange(pct)}
+                          style={{ padding: '3px 8px', fontSize: '11px' }}
+                        >
+                          {pct > 0 ? `+${pct}%` : `${pct}%`}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Dynamic Calculated KPI Results */}
+                {/* Dynamic Calculated 4 KPI Results */}
                 {(() => {
                   const isInvoice = fxSimulatorMode === 'invoice';
-                  const origInr = isInvoice ? (fxInvoiceAmount * fxBaseRate) : stats.totalRevenue;
-                  const revInr = isInvoice ? (fxInvoiceAmount * fxRevisedRate) : (stats.totalRevenue * (1 + fxShockPct / 100));
-                  const diffInr = revInr - origInr;
-                  const pctVariance = origInr > 0 ? ((diffInr / origInr) * 100) : 0;
-                  const isGain = diffInr >= 0;
+                  const totalOrderVal = stats.totalRevenue || 0;
+                  const validBase = !isNaN(fxBaseRate) && fxBaseRate > 0 ? fxBaseRate : 83.50;
+                  const validRevised = !isNaN(fxRevisedRate) && fxRevisedRate > 0 ? fxRevisedRate : 83.50;
+                  const curr = FX_CURRENCIES[fxCurrency] || FX_CURRENCIES.USD;
+
+                  let origInr = 0;
+                  let revInr = 0;
+                  let diffInr = 0;
+                  let pctVariance = 0;
+                  let exposedInr = 0;
+                  let foreignExposure = 0;
+                  let revisedTotalPortfolioVal = 0;
+
+                  if (isInvoice) {
+                    const amt = !isNaN(fxInvoiceAmount) && fxInvoiceAmount >= 0 ? fxInvoiceAmount : 0;
+                    origInr = amt * validBase;
+                    revInr = amt * validRevised;
+                    diffInr = revInr - origInr;
+                    pctVariance = origInr > 0 ? ((diffInr / origInr) * 100) : 0;
+                  } else {
+                    const exposureRatio = (!isNaN(fxPortfolioExposurePct) && fxPortfolioExposurePct >= 0 && fxPortfolioExposurePct <= 100)
+                      ? (fxPortfolioExposurePct / 100)
+                      : 0.5;
+                    exposedInr = totalOrderVal * exposureRatio;
+                    foreignExposure = validBase > 0 ? exposedInr / validBase : 0;
+                    revInr = foreignExposure * validRevised;
+                    diffInr = revInr - exposedInr;
+                    revisedTotalPortfolioVal = totalOrderVal + diffInr;
+                    pctVariance = exposedInr > 0 ? ((diffInr / exposedInr) * 100) : 0;
+                  }
+
+                  const isGain = diffInr > 1e-4;
+                  const isLoss = diffInr < -1e-4;
+                  const isNeutral = !isGain && !isLoss;
+
+                  const statusColor = isGain
+                    ? 'var(--status-success)'
+                    : isLoss
+                    ? 'var(--status-critical)'
+                    : 'var(--text-secondary)';
+
+                  const impactSubtext = isGain
+                    ? 'Foreign currency appreciation gain'
+                    : isLoss
+                    ? 'Foreign currency depreciation loss'
+                    : 'No currency impact';
 
                   return (
-                    <div className="dashboard-kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginTop: '8px', marginBottom: '8px' }}>
-                      <div className="kpi-card">
-                        <div className="kpi-card-header"><span className="kpi-card-label">Original Booking Value</span></div>
-                        <div className="kpi-card-value">
-                          {isInvoice ? `₹${(origInr / 1e5).toFixed(2)} Lakh` : `₹${(origInr / 1e7).toFixed(2)} Cr`}
-                        </div>
-                        <div className="kpi-card-subtext">At base rate ₹{fxBaseRate.toFixed(2)} / {fxCurrency}</div>
-                      </div>
+                    <div className="dashboard-kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', margin: '0 14px 14px 14px' }}>
+                      {isInvoice ? (
+                        <>
+                          <div className="kpi-card">
+                            <div className="kpi-card-header"><span className="kpi-card-label">Original Booking Value</span></div>
+                            <div className="kpi-card-value">
+                              {formatInrVal(origInr)}
+                            </div>
+                            <div className="kpi-card-subtext">At base rate ₹{validBase.toFixed(2)} / {fxCurrency}</div>
+                          </div>
 
-                      <div className="kpi-card">
-                        <div className="kpi-card-header"><span className="kpi-card-label">Revised Converted Value</span></div>
-                        <div className="kpi-card-value" style={{ color: isGain ? 'var(--status-success)' : 'var(--status-critical)' }}>
-                          {isInvoice ? `₹${(revInr / 1e5).toFixed(2)} Lakh` : `₹${(revInr / 1e7).toFixed(2)} Cr`}
-                        </div>
-                        <div className="kpi-card-subtext">At revised rate ₹{fxRevisedRate.toFixed(2)} / {fxCurrency}</div>
-                      </div>
+                          <div className="kpi-card">
+                            <div className="kpi-card-header"><span className="kpi-card-label">Revised Converted Value</span></div>
+                            <div className="kpi-card-value" style={{ color: statusColor }}>
+                              {formatInrVal(revInr)}
+                            </div>
+                            <div className="kpi-card-subtext">At revised rate ₹{validRevised.toFixed(2)} / {fxCurrency}</div>
+                          </div>
 
-                      <div className="kpi-card">
-                        <div className="kpi-card-header"><span className="kpi-card-label">Estimated FX Gain / Loss</span></div>
-                        <div className="kpi-card-value" style={{ color: isGain ? 'var(--status-success)' : 'var(--status-critical)' }}>
-                          {diffInr >= 0 ? '+' : ''}{isInvoice ? `₹${(diffInr / 1e5).toFixed(2)} Lakh` : `₹${(diffInr / 1e7).toFixed(2)} Cr`}
-                        </div>
-                        <div className="kpi-card-subtext">{diffInr >= 0 ? 'Foreign currency appreciation gain' : 'Foreign currency depreciation loss'}</div>
-                      </div>
+                          <div className="kpi-card">
+                            <div className="kpi-card-header"><span className="kpi-card-label">Estimated FX Gain / Loss</span></div>
+                            <div className="kpi-card-value" style={{ color: statusColor }}>
+                              {diffInr > 0 ? '+' : ''}{formatInrVal(diffInr)}
+                            </div>
+                            <div className="kpi-card-subtext" style={{ color: statusColor, fontWeight: 500 }}>
+                              {impactSubtext}
+                            </div>
+                          </div>
 
-                      <div className="kpi-card">
-                        <div className="kpi-card-header"><span className="kpi-card-label">Percentage Impact</span></div>
-                        <div className="kpi-card-value" style={{ color: isGain ? 'var(--status-success)' : 'var(--status-critical)' }}>
-                          {pctVariance >= 0 ? '+' : ''}{pctVariance.toFixed(2)}%
-                        </div>
-                        <div className="kpi-card-subtext">Net variance on receivable value</div>
-                      </div>
+                          <div className="kpi-card">
+                            <div className="kpi-card-header"><span className="kpi-card-label">Percentage Impact</span></div>
+                            <div className="kpi-card-value" style={{ color: statusColor }}>
+                              {pctVariance > 0 ? '+' : ''}{pctVariance.toFixed(2)}%
+                            </div>
+                            <div className="kpi-card-subtext">
+                              {isNeutral ? 'Zero variance on booking' : 'Net variance on receivable value'}
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="kpi-card">
+                            <div className="kpi-card-header"><span className="kpi-card-label">Exposed Portfolio Value</span></div>
+                            <div className="kpi-card-value">
+                              {formatInrVal(exposedInr)} ({fxPortfolioExposurePct}%)
+                            </div>
+                            <div className="kpi-card-subtext">
+                              Hypothetical: {curr.symbol}{Math.round(foreignExposure).toLocaleString()} {fxCurrency}
+                            </div>
+                          </div>
+
+                          <div className="kpi-card">
+                            <div className="kpi-card-header"><span className="kpi-card-label">Revised Exposure Value</span></div>
+                            <div className="kpi-card-value" style={{ color: statusColor }}>
+                              {formatInrVal(revInr)}
+                            </div>
+                            <div className="kpi-card-subtext">At revised rate ₹{validRevised.toFixed(2)} / {fxCurrency}</div>
+                          </div>
+
+                          <div className="kpi-card">
+                            <div className="kpi-card-header"><span className="kpi-card-label">Estimated FX Gain / Loss</span></div>
+                            <div className="kpi-card-value" style={{ color: statusColor }}>
+                              {diffInr > 0 ? '+' : ''}{formatInrVal(diffInr)}
+                            </div>
+                            <div className="kpi-card-subtext" style={{ color: statusColor, fontWeight: 500 }}>
+                              {impactSubtext}
+                            </div>
+                          </div>
+
+                          <div className="kpi-card">
+                            <div className="kpi-card-header"><span className="kpi-card-label">Revised Total Portfolio Value</span></div>
+                            <div className="kpi-card-value" style={{ color: statusColor }}>
+                              {formatInrVal(revisedTotalPortfolioVal)}
+                            </div>
+                            <div className="kpi-card-subtext">Baseline: ₹{(totalOrderVal / 1e7).toFixed(2)} Cr</div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   );
                 })()}
 
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, padding: '8px 12px', background: 'var(--bg-card-subtle)', borderRadius: '6px' }}>
-                  <strong>Hypothetical Simulation Note:</strong> Calculations demonstrate the mathematical sensitivity of trade receivables to currency shifts. Historical export invoices in <code>da_b2b_orders.csv</code> were recorded in INR without external FX fields.
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, padding: '8px 14px', margin: '0 14px 14px 14px', background: 'var(--bg-card-subtle)', borderRadius: '6px' }}>
+                  <strong>Hypothetical Simulation Note:</strong> Default benchmark exchange rates are illustrative estimates, not live market rates. Historical export transactions in <code>da_b2b_orders.csv</code> were recorded strictly in INR without foreign currency identifiers.
                 </div>
               </div>
 
-              {/* Required Schema Specification */}
+              {/* Exchange Rate Sensitivity Chart */}
+              <div className="panel-card" style={{ marginBottom: '20px' }}>
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-title">Exchange Rate Sensitivity Analysis</div>
+                    <div className="panel-subtitle">Estimated FX gain or loss across percentage shift scenarios (-10% to +10%) in INR.</div>
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    Mode: <strong>{fxSimulatorMode === 'invoice' ? 'Invoice Calculator' : 'Portfolio Impact'}</strong> | Currency: <strong>{fxCurrency}</strong>
+                  </div>
+                </div>
+
+                <div style={{ height: 280, padding: '10px 14px 14px 14px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={fxScenarioData} margin={{ top: 20, right: 30, left: 15, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" />
+                      <XAxis
+                        dataKey="label"
+                        stroke="var(--text-secondary)"
+                        fontSize={12}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        stroke="var(--text-secondary)"
+                        fontSize={11}
+                        tickLine={false}
+                        tickFormatter={(v) => formatInrVal(v)}
+                      />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            const isGain = data.diffInr > 1e-4;
+                            const isLoss = data.diffInr < -1e-4;
+                            const tooltipColor = isGain
+                              ? 'var(--status-success)'
+                              : isLoss
+                              ? 'var(--status-critical)'
+                              : 'var(--text-secondary)';
+                            return (
+                              <div style={{
+                                background: 'var(--bg-card)',
+                                padding: '10px 14px',
+                                border: '1px solid var(--border-subtle)',
+                                borderRadius: '6px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                fontSize: '12px'
+                              }}>
+                                <div style={{ fontWeight: 600, color: 'var(--text-heading)', marginBottom: '4px' }}>
+                                  Scenario: {data.label} ({data.pct > 0 ? `+${data.pct}%` : `${data.pct}%`})
+                                </div>
+                                <div style={{ color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                                  Revised Rate: ₹{data.revisedRate.toFixed(2)} / {fxCurrency}
+                                </div>
+                                <div style={{ fontWeight: 600, color: tooltipColor }}>
+                                  Estimated FX Impact: {data.diffInr > 0 ? '+' : ''}{formatInrVal(data.diffInr)} ({data.pctVariance > 0 ? '+' : ''}{data.pctVariance.toFixed(2)}%)
+                                </div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                  {isGain ? 'Appreciation Gain' : isLoss ? 'Depreciation Loss' : 'No currency impact'}
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <ReferenceLine y={0} stroke="var(--border-color)" strokeWidth={1.5} />
+                      <Bar dataKey="diffInr" radius={[4, 4, 0, 0]}>
+                        {fxScenarioData.map((entry, index) => {
+                          const fill = entry.diffInr > 1e-4
+                            ? 'var(--status-success)'
+                            : entry.diffInr < -1e-4
+                            ? 'var(--status-critical)'
+                            : 'var(--text-secondary)';
+                          return (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={fill}
+                              stroke={entry.isCurrent ? 'var(--text-heading)' : 'none'}
+                              strokeWidth={entry.isCurrent ? 2 : 0}
+                            />
+                          );
+                        })}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Scenario Comparison Table */}
+              <div className="panel-card" style={{ marginBottom: '20px' }}>
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-title">Scenario Comparison Matrix</div>
+                    <div className="panel-subtitle">Comprehensive analytical comparison across all seven exchange rate scenarios.</div>
+                  </div>
+                  <button
+                    className="btn-secondary"
+                    onClick={downloadFxScenariosCsv}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '12px' }}
+                  >
+                    <Download size={14} /> Download Scenarios CSV
+                  </button>
+                </div>
+
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Scenario</th>
+                        <th>Exchange Rate Shift</th>
+                        <th>Revised Exchange Rate</th>
+                        <th>Revised Converted Value</th>
+                        <th>Estimated FX Gain / Loss</th>
+                        <th>Percentage Impact</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fxScenarioData.map(r => {
+                        const isGain = r.diffInr > 1e-4;
+                        const isLoss = r.diffInr < -1e-4;
+                        const statusColor = isGain
+                          ? 'var(--status-success)'
+                          : isLoss
+                          ? 'var(--status-critical)'
+                          : 'var(--text-secondary)';
+
+                        return (
+                          <tr
+                            key={r.pct}
+                            style={r.isCurrent ? { backgroundColor: 'var(--icon-bg)', fontWeight: 600 } : {}}
+                          >
+                            <td>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                {r.label}
+                                {r.isCurrent && (
+                                  <span className="badge info" style={{ fontSize: '10px', padding: '1px 6px' }}>Active</span>
+                                )}
+                              </span>
+                            </td>
+                            <td>{r.pct > 0 ? `+${r.pct}%` : `${r.pct}%`}</td>
+                            <td className="mono">₹{r.revisedRate.toFixed(4)} / {fxCurrency}</td>
+                            <td>{formatInrVal(r.revisedVal)}</td>
+                            <td style={{ color: statusColor, fontWeight: 600 }}>
+                              {r.diffInr > 0 ? '+' : ''}{formatInrVal(r.diffInr)}
+                            </td>
+                            <td style={{ color: statusColor, fontWeight: 600 }}>
+                              {r.pctVariance > 0 ? '+' : ''}{r.pctVariance.toFixed(2)}%
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Multi-Currency Data Specification */}
               <div className="panel-card">
                 <div className="panel-header">
                   <div>
                     <div className="panel-title">Multi-Currency Data Specification</div>
-                    <div className="panel-subtitle">Fields needed to track foreign exchange gain or loss.</div>
+                    <div className="panel-subtitle">Architectural schema requirements to transition from INR baseline to multi-currency operations.</div>
                   </div>
                 </div>
 
@@ -2383,30 +2765,51 @@ export default function App() {
                       <tr>
                         <td className="mono">booking_currency</td>
                         <td>VARCHAR(3)</td>
-                        <td>Currency code (USD, EUR, GBP, AED)</td>
-                        <td><span className="badge warning">Missing (Recorded in INR)</span></td>
-                        <td>Add currency field to sales order records</td>
+                        <td>ISO currency code (USD, EUR, GBP, AED, SGD, JPY)</td>
+                        <td><span className="badge warning">Missing (Recorded strictly in INR)</span></td>
+                        <td>Add transaction currency capture to ERP and sales order booking forms</td>
+                      </tr>
+                      <tr>
+                        <td className="mono">foreign_invoice_amount</td>
+                        <td>NUMERIC(14, 2)</td>
+                        <td>Original invoice principal in contract billing currency</td>
+                        <td><span className="badge warning">Missing</span></td>
+                        <td>Capture invoice nominal amount in foreign currency at contract signing</td>
+                      </tr>
+                      <tr>
+                        <td className="mono">booking_date</td>
+                        <td>DATE</td>
+                        <td>Timestamp when export order was formally confirmed</td>
+                        <td><span className="badge success">Present (order_date)</span></td>
+                        <td>Synchronize existing order_date with central bank reference rate lookup tables</td>
                       </tr>
                       <tr>
                         <td className="mono">spot_booking_rate</td>
                         <td>NUMERIC(10, 4)</td>
-                        <td>Exchange rate on order booking date</td>
+                        <td>Benchmark exchange rate on order booking date</td>
                         <td><span className="badge warning">Missing</span></td>
-                        <td>Record central bank exchange rate at booking</td>
+                        <td>Automatically capture central bank (RBI) spot exchange rate on order date</td>
+                      </tr>
+                      <tr>
+                        <td className="mono">settlement_date</td>
+                        <td>DATE</td>
+                        <td>Realized bank payment remittance value date</td>
+                        <td><span className="badge warning">Missing (Only delivery_date)</span></td>
+                        <td>Integrate bank SWIFT/wire remittance realization date into accounting ledger</td>
                       </tr>
                       <tr>
                         <td className="mono">realized_settlement_rate</td>
                         <td>NUMERIC(10, 4)</td>
-                        <td>Actual exchange rate upon payment receipt</td>
+                        <td>Actual exchange rate converted upon payment receipt</td>
                         <td><span className="badge warning">Missing</span></td>
-                        <td>Record bank settlement exchange rate on receipt</td>
+                        <td>Log realized bank settlement exchange rate to compute realized FX gain/loss</td>
                       </tr>
                       <tr>
                         <td className="mono">hedging_status</td>
                         <td>VARCHAR(20)</td>
-                        <td>Currency forward contract or hedge indicator</td>
+                        <td>Treasury forward contract or derivative cover indicator</td>
                         <td><span className="badge warning">Missing</span></td>
-                        <td>Track currency hedge status per export order</td>
+                        <td>Track treasury hedging status per order (Unhedged, Forward Contract, Collar)</td>
                       </tr>
                     </tbody>
                   </table>

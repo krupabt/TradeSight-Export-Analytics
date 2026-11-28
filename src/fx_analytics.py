@@ -125,6 +125,86 @@ def calculate_fx_impact(
     )
 
 
+def calculate_portfolio_impact(
+    total_revenue_inr: float,
+    exposure_pct: float,
+    base_rate: float,
+    revised_rate: float,
+    currency: str = "USD",
+) -> Dict[str, Any]:
+    """Calculate the currency impact on an export portfolio with foreign exposure.
+
+    Formulae:
+    - Exposed Portfolio Value = Total Order Value * Exposure Percentage / 100
+    - Estimated Foreign Currency Exposure = Exposed Portfolio Value / Base Rate
+    - Revised Exposure Value = Foreign Currency Exposure * Revised Rate
+    - Estimated FX Gain/Loss = Revised Exposure Value - Exposed Portfolio Value
+    - Revised Total Portfolio Value = Total Order Value + Estimated FX Gain/Loss
+    - Percentage Impact = (Gain/Loss / Exposed Portfolio Value) * 100
+
+    Parameters
+    ----------
+    total_revenue_inr : float
+        Total export portfolio value in INR (e.g. ₹396.88 Cr).
+    exposure_pct : float
+        Percentage of portfolio exposed to foreign currency (0.0 to 100.0).
+    base_rate : float
+        Base booking exchange rate.
+    revised_rate : float
+        Revised spot or settlement exchange rate.
+    currency : str
+        Target billing currency.
+
+    Returns
+    -------
+    dict
+        Structured portfolio impact calculations with validation flags.
+    """
+    if total_revenue_inr < 0:
+        raise ValueError("Total revenue cannot be negative.")
+    if not (0.0 <= exposure_pct <= 100.0):
+        raise ValueError(f"Exposure percentage must be between 0 and 100: {exposure_pct}")
+    if base_rate <= 0:
+        raise ValueError(f"Base exchange rate must be strictly positive: {base_rate}")
+    if revised_rate <= 0:
+        raise ValueError(f"Revised exchange rate must be strictly positive: {revised_rate}")
+
+    exposed_portfolio_value = float(total_revenue_inr * (exposure_pct / 100.0))
+    foreign_currency_exposure = float(exposed_portfolio_value / base_rate)
+    revised_exposure_value = float(foreign_currency_exposure * revised_rate)
+    gain_loss_inr = float(revised_exposure_value - exposed_portfolio_value)
+    revised_total_portfolio_value = float(total_revenue_inr + gain_loss_inr)
+
+    if exposed_portfolio_value > 0:
+        pct_impact = float((gain_loss_inr / exposed_portfolio_value) * 100.0)
+    else:
+        pct_impact = float(((revised_rate - base_rate) / base_rate) * 100.0)
+
+    if gain_loss_inr > 1e-6:
+        scenario = "appreciation"
+    elif gain_loss_inr < -1e-6:
+        scenario = "depreciation"
+    else:
+        scenario = "neutral"
+
+    return {
+        "currency": currency.upper(),
+        "total_revenue_inr": total_revenue_inr,
+        "exposure_pct": exposure_pct,
+        "base_rate": base_rate,
+        "revised_rate": revised_rate,
+        "exposed_portfolio_value": round(exposed_portfolio_value, 2),
+        "foreign_currency_exposure": round(foreign_currency_exposure, 2),
+        "revised_exposure_value": round(revised_exposure_value, 2),
+        "gain_loss_inr": round(gain_loss_inr, 2),
+        "revised_total_portfolio_value": round(revised_total_portfolio_value, 2),
+        "percentage_impact": round(pct_impact, 2),
+        "scenario_type": scenario,
+        "is_valid": True,
+        "error_message": None,
+    }
+
+
 def simulate_portfolio_fx(
     total_revenue_inr: float,
     shock_pct: float,
