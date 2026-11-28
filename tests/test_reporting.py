@@ -90,3 +90,48 @@ def test_send_smtp_alert_safety(monkeypatch):
     monkeypatch.setenv("APP_ENV", "development")
     result = send_smtp_alert("Test Subject", "Test Body", ["test@example.com"])
     assert result is False
+
+
+def test_send_smtp_alert_missing_credentials(monkeypatch):
+    """Test SMTP alert returns False when credentials are not configured."""
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.delenv("SMTP_SERVER", raising=False)
+    monkeypatch.delenv("SMTP_USER", raising=False)
+    monkeypatch.delenv("SMTP_PASSWORD", raising=False)
+    result = send_smtp_alert("Test Subject", "Test Body", ["test@example.com"])
+    assert result is False
+
+
+def test_send_smtp_alert_with_attachment_mocked(monkeypatch, tmp_path):
+    """Test SMTP alert dispatches with attachments when properly configured."""
+    from unittest.mock import MagicMock
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("SMTP_SERVER", "smtp.testserver.com")
+    monkeypatch.setenv("SMTP_PORT", "587")
+    monkeypatch.setenv("SMTP_USER", "alert@tradesight.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "secret123")
+    monkeypatch.setenv("SMTP_USE_TLS", "True")
+
+    # Create dummy attachment
+    att_file = tmp_path / "test_exception.csv"
+    att_file.write_text("exception_id,severity\nEXC-1,CRITICAL\n")
+
+    mock_smtp_instance = MagicMock()
+    mock_smtp_class = MagicMock(return_value=mock_smtp_instance)
+    mock_smtp_instance.__enter__.return_value = mock_smtp_instance
+
+    monkeypatch.setattr("smtplib.SMTP", mock_smtp_class)
+
+    result = send_smtp_alert(
+        subject="Weekly Exception Alert",
+        body_markdown="# Exception Report",
+        recipient_list=["manager@tradesight.com"],
+        attachments=[att_file],
+    )
+
+    assert result is True
+    assert mock_smtp_instance.starttls.called
+    mock_smtp_instance.login.assert_called_once_with("alert@tradesight.com", "secret123")
+    assert mock_smtp_instance.sendmail.called
+

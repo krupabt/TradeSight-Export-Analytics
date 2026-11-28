@@ -1,0 +1,188 @@
+// ==============================================================================
+// TRADESIGHT EXPORT ANALYTICS - PRODUCTION DAX MEASURES LIBRARY
+// Designed for Microsoft Power BI Desktop & Power BI Service
+// ==============================================================================
+
+// ------------------------------------------------------------------------------
+// 1. CORE REVENUE & VOLUME MEASURES
+// ------------------------------------------------------------------------------
+
+Total Export Revenue = 
+SUM(Fact_Orders[total_value_inr])
+
+Total Revenue (Cr) = 
+DIVIDE([Total Export Revenue], 10000000, 0)
+
+Total Orders = 
+COUNTROWS(Fact_Orders)
+
+Average Order Value (AOV) = 
+DIVIDE([Total Export Revenue], [Total Orders], 0)
+
+AOV (Lakhs) = 
+DIVIDE([Average Order Value (AOV)], 100000, 0)
+
+Total Units Shipped = 
+SUM(Fact_Orders[quantity_units])
+
+High-Value Orders Count = 
+CALCULATE(
+    COUNTROWS(Fact_Orders),
+    Fact_Orders[total_value_inr] >= 10000000
+)
+
+High-Value Revenue Contribution % = 
+DIVIDE(
+    CALCULATE([Total Export Revenue], Fact_Orders[total_value_inr] >= 10000000),
+    [Total Export Revenue],
+    0
+) * 100
+
+// ------------------------------------------------------------------------------
+// 2. LOGISTICS & DELIVERY SLA MEASURES
+// ------------------------------------------------------------------------------
+
+On-Time Deliveries = 
+CALCULATE(
+    COUNTROWS(Fact_Orders),
+    Fact_Orders[on_time_delivery] = 1
+)
+
+On-Time Delivery % = 
+DIVIDE([On-Time Deliveries], [Total Orders], 0) * 100
+
+Delayed Shipments = 
+CALCULATE(
+    COUNTROWS(Fact_Orders),
+    Fact_Orders[on_time_delivery] = 0
+)
+
+Delayed Shipment % = 
+DIVIDE([Delayed Shipments], [Total Orders], 0) * 100
+
+Average Transit Days = 
+AVERAGE(Fact_Orders[delivery_days])
+
+Median Transit Days = 
+MEDIAN(Fact_Orders[delivery_days])
+
+Deliveries Under SLA (<=20 Days) = 
+CALCULATE(
+    COUNTROWS(Fact_Orders),
+    Fact_Orders[delivery_days] <= 20
+)
+
+SLA Compliance Rate % = 
+DIVIDE([Deliveries Under SLA (<=20 Days)], [Total Orders], 0) * 100
+
+// ------------------------------------------------------------------------------
+// 3. RETURNS & QUALITY ANALYTICS MEASURES
+// ------------------------------------------------------------------------------
+
+Total Units Returned = 
+SUM(Fact_Orders[return_qty])
+
+Unit Return Rate % = 
+DIVIDE([Total Units Returned], [Total Units Shipped], 0) * 100
+
+Orders with Returns = 
+CALCULATE(
+    COUNTROWS(Fact_Orders),
+    Fact_Orders[return_qty] > 0
+)
+
+Order Return Rate % = 
+DIVIDE([Orders with Returns], [Total Orders], 0) * 100
+
+Invalid Return Records = 
+CALCULATE(
+    COUNTROWS(Fact_Orders),
+    Fact_Orders[return_qty] > Fact_Orders[quantity_units]
+)
+
+Invalid Return Units = 
+CALCULATE(
+    SUM(Fact_Orders[return_qty]),
+    Fact_Orders[return_qty] > Fact_Orders[quantity_units]
+)
+
+// ------------------------------------------------------------------------------
+// 4. CLIENT & BUYER ANALYTICS MEASURES
+// ------------------------------------------------------------------------------
+
+Unique Active Buyers = 
+DISTINCTCOUNT(Fact_Orders[buyer_id])
+
+Repeat Buyer Orders = 
+CALCULATE(
+    COUNTROWS(Fact_Orders),
+    Fact_Orders[repeat_buyer] = 1
+)
+
+Repeat Buyer Order Rate % = 
+DIVIDE([Repeat Buyer Orders], [Total Orders], 0) * 100
+
+First-Time Buyer Orders = 
+[Total Orders] - [Repeat Buyer Orders]
+
+First-Time Buyer Order Rate % = 
+DIVIDE([First-Time Buyer Orders], [Total Orders], 0) * 100
+
+Total Customer Profiles = 
+COUNTROWS(Dim_Customers)
+
+Churned Customer Count = 
+CALCULATE(
+    COUNTROWS(Dim_Customers),
+    Dim_Customers[Churned] = 1
+)
+
+Customer Churn Rate % = 
+DIVIDE([Churned Customer Count], [Total Customer Profiles], 0) * 100
+
+// ------------------------------------------------------------------------------
+// 5. PRODUCT & CATALOGUE MARGIN MEASURES
+// ------------------------------------------------------------------------------
+
+Total Catalogue SKUs = 
+COUNTROWS(Dim_Products)
+
+Average Product MRP = 
+AVERAGE(Dim_Products[MRP])
+
+Average Product COGS = 
+AVERAGE(Dim_Products[COGS])
+
+Catalogue Gross Margin % = 
+DIVIDE([Average Product MRP] - [Average Product COGS], [Average Product MRP], 0) * 100
+
+Catalogue Average Cost Markup % = 
+DIVIDE([Average Product MRP] - [Average Product COGS], [Average Product COGS], 0) * 100
+
+Total Warehouse Stock Units = 
+SUM(Dim_Products[Stock_Units])
+
+Total Stock Value (COGS) = 
+SUM(Dim_Products[Total_Inventory_Value_COGS])
+
+Total Stock Value (MRP) = 
+SUM(Dim_Products[Total_Inventory_Value_MRP])
+
+// ------------------------------------------------------------------------------
+// 6. FOREIGN EXCHANGE (FX) SENSITIVITY MEASURES
+// ------------------------------------------------------------------------------
+
+Selected FX Shock % = 
+SELECTEDVALUE(FX_Parameter[Shock_Pct], 0.0)
+
+Simulated Portfolio Revenue (INR) = 
+[Total Export Revenue] * (1 + ([Selected FX Shock %] / 100))
+
+Simulated Portfolio Revenue (Cr) = 
+DIVIDE([Simulated Portfolio Revenue (INR)], 10000000, 0)
+
+Estimated FX Gain Loss (INR) = 
+[Simulated Portfolio Revenue (INR)] - [Total Export Revenue]
+
+Estimated FX Gain Loss (Cr) = 
+DIVIDE([Estimated FX Gain Loss (INR)], 10000000, 0)

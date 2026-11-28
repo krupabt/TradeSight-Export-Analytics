@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import datetime
 import logging
+import mimetypes
 import os
 import smtplib
+from email import encoders
+from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Sequence
 
 import pandas as pd
 
@@ -260,10 +263,12 @@ def send_smtp_alert(
     subject: str,
     body_markdown: str,
     recipient_list: List[str] | None = None,
+    attachments: Sequence[str | Path] | None = None,
 ) -> bool:
     """Send an email alert via SMTP if explicitly configured and permitted.
 
     Safely guards against sending emails in development mode or without credentials.
+    Supports attaching exception CSVs and markdown reports.
     """
     app_env = os.getenv("APP_ENV", "development").lower()
     if app_env != "production":
@@ -299,6 +304,24 @@ def send_smtp_alert(
         msg["To"] = ", ".join(recipient_list)
         msg["Subject"] = subject
         msg.attach(MIMEText(body_markdown, "plain"))
+
+        # Attach exception files if specified
+        if attachments:
+            for att in attachments:
+                att_path = Path(att)
+                if att_path.is_file():
+                    part = MIMEBase("application", "octet-stream")
+                    with open(att_path, "rb") as f:
+                        part.set_payload(f.read())
+                    encoders.encode_base64(part)
+                    part.add_header(
+                        "Content-Disposition",
+                        f"attachment; filename=\"{att_path.name}\"",
+                    )
+                    msg.attach(part)
+                    logger.info(f"Attached exception file to email: {att_path.name}")
+                else:
+                    logger.warning(f"Attachment file not found: {att_path}")
 
         with smtplib.SMTP(smtp_server, smtp_port, timeout=15) as server:
             if use_tls:

@@ -28,8 +28,8 @@ For university examiners, academic evaluators, and client stakeholders:
 | **3. Client Profitability Ranking** | Orders provide gross revenue by buyer. Because order-level COGS is unlinked in raw B2B data, buyer commercial revenue rankings are computed accurately and cost limitations are transparently disclosed. | **Fully Supported** |
 | **4. Compliance & SLA Flags** | Flagged exactly 2 logical return overruns (`return_qty > quantity_units` in `ORD_000102` / `ORD_000412`), 135 delivery SLA breaches, and 42 customer profile date inversions, reconciled into a 179-record enterprise exception register. | **Fully Supported** |
 | **5. C-Suite Executive BI Dashboard** | 8 primary verified KPIs with interactive drill-down navigation to detailed modules (Revenue, Logistics, Returns, Buyers, Catalogue, FX, and Governance). Deployed on Vercel. | **Fully Supported** |
-| **6. Weekly Automated Report Emailing** | GitHub Actions workflow (`.github/workflows/weekly_report.yml`) scheduled weekly with Markdown & CSV artifact generation, and secure SMTP alerting in production/test modes. | **Fully Supported** |
-| **7. Power BI Integration Package** | Full `.pbip` project, Tabular Object Model (`model.bim`), 5-page layout (`report.json`), 5 modeled CSV tables, Power Query M scripts, 30+ DAX measures, and corporate styling theme. | **Fully Supported** |
+| **6. Weekly Automated Report Emailing** | GitHub Actions workflow (`.github/workflows/weekly_report.yml`) scheduled weekly with Markdown & CSV artifact generation, multi-part MIME exception attachments, and secure SMTP alerting in production/test modes. | **Fully Supported** |
+| **7. Power BI Integration Package** | Full `.pbip` project, Tabular Object Model (`model.bim`), 5-page layout (`report.json`), 5 modeled CSV tables, Power Query M scripts, 47 DAX measures, automated validator (`validate_powerbi.py`), in-app web module, and direct PBIP bundle & `.pbix` downloads. | **Fully Supported** |
 
 ---
 
@@ -42,7 +42,7 @@ To run TradeSight locally for presentations (with 100% offline support):
 git clone https://github.com/krupabt/TradeSight-Export-Analytics.git
 cd TradeSight-Export-Analytics
 
-# 2. Run Python test suite (46 automated tests)
+# 2. Run Python test suite (54 automated tests)
 pytest -v
 
 # 3. Launch the presentation web dashboard

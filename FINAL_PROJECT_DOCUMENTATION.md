@@ -224,17 +224,23 @@ WHERE return_qty > quantity_units;
 
 ---
 
-## 16. Power BI Implementation
-A complete Power BI project suite is engineered under `powerbi/`:
-* **Model:** Star-schema centered on `Fact_Orders` connected to `Dim_Date`, `Dim_Products`, `Dim_Customers`, and `Dim_Proposed_Markets`.
-* **Measures:** 30+ DAX measures defined in `powerbi/dax/TradeSight_DAX_Measures.dax`.
-* **Theme:** Navy (`#172B4D`) and Blue (`#3674B5`) palette defined in `tradesight_powerbi_theme.json`.
-* **Report Pages:**
-  * Page 1: Executive Overview
-  * Page 2: Shipment and Compliance
-  * Page 3: Client and Product Analytics
-  * Page 4: Returns and Data Quality
-  * Page 5: Geography and FX Analytics
+## 16. Power BI Implementation & Web Integration
+A complete, production-grade Power BI project suite is engineered under `powerbi/` and integrated directly into the web application:
+* **Model Architecture:** Star-schema centered on `Fact_Orders` (600 rows) connected via 1-to-many relationships to `Dim_Date` (731 calendar days), `Dim_Products` (50 SKUs), `Dim_Customers` (200 accounts), and `Dim_Proposed_Markets` (12 export target countries).
+* **Measures Library:** 47 DAX measures defined in `powerbi/dax/TradeSight_DAX_Measures.dax`, featuring `DIVIDE` zero-division guards, formatted currency strings, and baseline KPIs.
+* **Theme:** Corporate Navy (`#172B4D`) and Blue (`#3674B5`) palette defined in `tradesight_powerbi_theme.json`.
+* **5-Page Report Canvas (1600 × 900):**
+  * **Page 1: Executive Overview (12 visuals):** 8 KPI cards, monthly revenue area chart, delivery SLA donut chart, category revenue bar chart, payment terms column chart.
+  * **Page 2: Shipment and Compliance (4 visuals):** Delivery days transit histogram, category SLA compliance bar chart, delayed shipment audit table.
+  * **Page 3: Client and Product Analytics (4 visuals):** Top commercial buyers ranking, category gross margin percentage, SKU inventory valuation at cost vs retail.
+  * **Page 4: Returns and Data Quality (4 visuals):** Unit return rate by category, return occurrence donut chart, flagged return overrun exception audit table.
+  * **Page 5: Geography and FX Analytics (5 visuals):** Domestic customer city distribution, proposed 12 export market matrix, methodological data audit notice.
+* **Automated Validation:** Validated end-to-end via `src/validate_powerbi.py` and unit-tested in `tests/test_powerbi_project.py` (verifying entry PBIP JSON, TOM `model.bim` schema against backing CSVs, `report.json` visual queryRefs, DAX syntax, and theme consistency).
+* **Distributable Deliverables:**
+  * `TradeSight_PowerBI_Project_Bundle.zip`: Full developer project package containing `.pbip`, `model.bim`, `report.json`, backing star-schema CSVs, DAX library, and theme.
+  * `TradeSight_Analytics.pbix`: Standalone report container with 5 interactive pages.
+  * Direct downloads for `model.bim`, `TradeSight_DAX_Measures.dax`, and `POWERBI_SETUP_GUIDE.md`.
+* **In-App Web Section:** Dedicated "Power BI" navigation module in the web application displaying validation results, 4 downloadable action cards, 4 summary KPIs, an interactive 5-page specification viewer, star-schema table mappings, core DAX formulas, and a 4-step desktop launch guide.
 
 ---
 
@@ -328,17 +334,39 @@ The Returns & Quality Analytics module provides operational quality monitoring w
 ---
 
 ## 19. Automated Email Reporting
-Configured via `.github/workflows/weekly_report.yml`:
-* **Schedule:** Cron trigger every Monday at 08:00 UTC.
-* **Manual Dispatch:** Supports `workflow_dispatch` with Test Mode switch.
-* **Execution:** Generates markdown summaries and CSV logs, attempting secure SMTP dispatch when authorized credentials are present.
+Configured via `src/reporting.py`, `src/pipeline.py`, and `.github/workflows/weekly_report.yml`:
+* **Schedule & Triggers:** Automated POSIX cron trigger every Monday at 08:00 UTC (`0 8 * * 1`), plus manual execution via `workflow_dispatch` with Test Mode switch. Windows Task Scheduler commands provided for automated local server execution.
+* **Report Generation:** Generates dated executive summaries (`reports/weekly_exception_report_<YYYY-MM-DD>.md`) and machine-readable anomaly logs (`outputs/weekly_exception_report_<YYYY-MM-DD>.csv`).
+* **Exception Attachments:** Enhanced `send_smtp_alert` dynamically attaches both the weekly exception CSV log and markdown summary via multi-part MIME (`MIMEBase` with base64 encoding).
+* **Safe SMTP Dispatch Guards:**
+  - `APP_ENV=production` requirement prevents accidental dispatch in local dev or test environments.
+  - TLS encryption (port 587) and connection timeout guards (15 seconds).
+  - Graceful fallback: If credentials are not configured, logs a clear warning without halting the data pipeline.
+* **Manual Configuration Required:** To enable live email delivery, configure the following secrets in GitHub Repository Secrets or `.env`:
+  ```ini
+  SMTP_SERVER=smtp.gmail.com
+  SMTP_PORT=587
+  SMTP_USE_TLS=True
+  SMTP_USER=alerts@tradesight-export.com
+  SMTP_PASSWORD=your_secure_app_password
+  ALERT_RECIPIENTS=operations@tradesight-export.com,management@tradesight-export.com
+  APP_ENV=production
+  ```
 
 ---
 
 ## 20. Testing Methodology
-* **Pytest Test Suites:** 46 automated unit and integration tests across metrics, validation, pipeline, reporting, statistical deep-dive, and FX analytics.
-* **Regression Status:** 100% test pass rate (`46 passed in 19.0s`).
-* **Build Verification:** Vite production bundling verified with zero errors.
+* **Pytest Test Suites (8 Suites, 54 Automated Tests):**
+  1. `test_fx_analytics.py` (11 tests): Invoice revaluation, portfolio sensitivity, bounds, zero shocks, error validation.
+  2. `test_metrics.py` (6 tests): Baseline KPIs, safe division, monthly trends, category and terms aggregations.
+  3. `test_pipeline.py` (3 tests): Full pipeline run, idempotency, data cleaning and non-destructive tag integrity.
+  4. `test_powerbi_project.py` (6 tests): PBIP entry, TOM `model.bim` schema vs CSVs, `report.json` visual queryRefs, DAX syntax, theme, end-to-end bundle creation.
+  5. `test_reporting.py` (5 tests): Exception generation, markdown formatting, development safety guard, missing credential handling, mocked SMTP delivery with attachments.
+  6. `test_validation.py` (7 tests): File existence, required columns, safe date parsing, return overrun detection, customer date inversion, value calculation tolerances, cross-dataset integrity.
+  7. `test_week6_deep_dive.py` (8 tests): RFM-V feature engineering, K-Means clustering, silhouette/elbow evaluation, statistical tests (ANOVA, Chi-square), cohort retention matrices, predictive churn model.
+  8. `test_week9_dashboard.py` (8 tests): Deliverable files, PDF sizing under 10MB, app data loading, verified baseline KPIs, peer review templates, strategic brief.
+* **Regression Status:** **100% test pass rate** (54 passed in 19.11s).
+* **Build Verification:** Vite production bundling verified with zero errors (built in 13.83s).
 
 ---
 

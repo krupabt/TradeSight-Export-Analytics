@@ -77,13 +77,13 @@
 ### Slide Content
 * **Data Engineering & Analysis:** Python 3.12, Pandas, NumPy
 * **Database & Querying:** ANSI SQL (Aggregations, Window Functions, Quality Audits)
-* **Testing & Quality Assurance:** Pytest 9.x (43 Automated Unit & Regression Tests)
-* **Business Intelligence:** Microsoft Power BI Desktop, Power Query (M), DAX
+* **Testing & Quality Assurance:** Pytest 9.x (54 Automated Unit & Regression Tests across 8 test suites)
+* **Business Intelligence:** Microsoft Power BI Desktop, Power Query (M), 47 DAX Measures, Star-Schema
 * **Frontend Web Development:** React.js, Vite 5, Recharts, Lucide Icons, Modern CSS3
-* **Automation & Cloud Hosting:** GitHub Actions (Cron & Dispatch), Git, Vercel Edge CDN
+* **Automation & Cloud Hosting:** GitHub Actions (Cron & Dispatch with exception email attachments), Git, Vercel Edge CDN
 
 ### Presentation Speaking Script
-> "The technology stack was selected for production stability and accuracy. Python and Pandas power data transformations; SQL provides structured verification; React and Recharts deliver an intuitive, responsive web experience; and Microsoft Power BI provides deep business intelligence modeling with DAX measures. Every build and analytical calculation is validated by 43 automated Pytest test cases."
+> "The technology stack was selected for production stability and accuracy. Python and Pandas power data transformations; SQL provides structured verification; React and Recharts deliver an intuitive, responsive web experience; and Microsoft Power BI provides deep business intelligence modeling with 47 DAX measures. Every build and analytical calculation is validated by 54 automated Pytest test cases with a 100% pass rate."
 
 ---
 
@@ -93,10 +93,10 @@
 * **Mathematical Baseline Verification:** Resolved reporting discrepancies by verifying exact dataset metrics (1,509,070 shipped units; 15,242 returns; ₹396.88 Cr revenue)
 * **UX/UI Modernization:** Implemented a modern navy (`#172B4D`) and light theme layout with 220px navigation and 60/40 chart grid
 * **FX Analytics Engine:** Developed a full currency simulator with positive, negative, zero, and input validation guards
-* **Power BI Integration:** Built a 5-page Power BI Project with 30+ DAX measures and custom corporate theme
+* **Power BI Integration:** Built a 5-page Power BI Project with 47 DAX measures, automated validator, and downloadable project bundle & `.pbix`
 
 ### Presentation Speaking Script
-> "My key contributions focused on technical rigor and business clarity. I identified critical data anomalies, mathematically verified every KPI against the original raw datasets, redesigned the user experience to meet modern enterprise standards, built a working foreign exchange sensitivity engine, and created a complete Microsoft Power BI model matching the platform's brand identity."
+> "My key contributions focused on technical rigor and business clarity. I identified critical data anomalies, mathematically verified every KPI against the original raw datasets, redesigned the user experience to meet modern enterprise standards, built a working foreign exchange sensitivity engine, and created a complete Microsoft Power BI model matching the platform's brand identity with direct project downloads."
 
 ---
 
@@ -109,10 +109,11 @@
 5. **Buyer Analytics:** 187 buyer rankings, repeat order tracking (37.8%), RFM-V customer segmentation
 6. **Product Catalogue:** 50 SKUs, warehouse stock (13,857 units), retail gross margins (58.62%)
 7. **Country & FX Analytics:** Sourcing states, proposed 12-market specification, interactive currency shock simulator
-8. **Data Governance & Reports Hub:** Complete 179-record exception register (135 delays, 2 return errors, 42 date inversions), customer date audit, and automated weekly reporting
+8. **Data Governance & Reports Hub:** Complete 179-record exception register (135 delays, 2 return errors, 42 date inversions), customer date audit, and automated weekly reporting with email attachments
+9. **Power BI Reports & Semantic Model:** 5-page canvas specification, 29 visual containers, 47 DAX measures, star-schema table mappings, and direct PBIP/PBIX bundle downloads
 
 ### Presentation Speaking Script
-> "The platform organizes 10 specialized modules. The Executive Dashboard presents 8 high-level business indicators with interactive drill-down to detailed records. The Logistics module isolates SLA delivery exceptions. The Buyer module implements RFM-V segmentation across 187 commercial accounts. The Currency module allows users to simulate exchange rate shifts across major trading currencies, and the Compliance Hub provides downloadable exception reports."
+> "The platform organizes specialized operational and intelligence modules. The Executive Dashboard presents 8 high-level business indicators with interactive drill-down. The Logistics and Returns modules isolate SLA and return quantity exceptions. The Buyer module implements RFM-V segmentation. The Currency module simulates foreign exchange sensitivity. The Data Governance module reconciles all 179 enterprise anomalies, and our Power BI module provides validated project downloads and desktop launch instructions."
 
 ---
 
@@ -132,14 +133,14 @@
 
 ## Slide 9: Testing, Validation & Production Deployment
 ### Slide Content
-* **Automated Regression Testing:** 46 Pytest unit tests spanning metrics, data validation, pipeline idempotency, statistical deep-dive, and FX scenarios (100% pass rate)
+* **Automated Regression Testing:** 54 Pytest unit tests spanning metrics, data validation, pipeline idempotency, statistical deep-dive, FX scenarios, reporting attachments, and Power BI schemas (100% pass rate)
 * **Production Web Build:** Bundled with Vite 5 (`dist/index.html` + optimized assets) with zero errors
 * **Vercel Edge Deployment:** Deployed to `tradesight-export-analytics.vercel.app` with custom Cache-Control headers preventing stale cache hits
 * **Cross-Device Verification:** Inspected across Desktop (1440x900), Laptop (1280x800), Projector (1024x768), and Mobile (375x667)
-* **Power BI Validation:** Star-schema datasets, DAX measures, and report definitions validated in `powerbi/`
+* **Power BI Validation:** Star-schema datasets, DAX measures, and report definitions validated via `validate_powerbi.py` with bundle packaging
 
 ### Presentation Speaking Script
-> "To guarantee production quality, we implemented rigorous automated testing. All 43 test cases pass in under 30 seconds. The web application is deployed globally on Vercel's Edge Network with custom cache-control headers, ensuring that every user receives the latest build. We also verified full responsiveness across desktop, projector, and mobile viewports, ensuring presentation readiness."
+> "To guarantee production quality, we implemented rigorous automated testing. All 54 test cases pass in under 20 seconds. The web application is deployed globally on Vercel's Edge Network with custom cache-control headers, ensuring that every user receives the latest build. We also verified full responsiveness across desktop, projector, and mobile viewports, ensuring presentation readiness."
 
 ---
 

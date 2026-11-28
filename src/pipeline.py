@@ -332,6 +332,7 @@ def run_pipeline() -> int:
     send_smtp_alert(
         subject=f"TradeSight Weekly Exception Report - {today_str}",
         body_markdown=weekly_md,
+        attachments=[weekly_csv_path, weekly_md_path],
     )
 
     logger.info("=" * 70)

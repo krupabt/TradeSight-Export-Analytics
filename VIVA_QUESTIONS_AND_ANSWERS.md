@@ -80,12 +80,13 @@ Using standardized scaling and K-Means clustering (evaluated using silhouette an
   `On-Time Delivery % = DIVIDE(CALCULATE(COUNTROWS(Fact_Orders), Fact_Orders[on_time_delivery] = 1), COUNTROWS(Fact_Orders), 0) * 100`
 
 ### Q10: How did you implement the 5-page report in Power BI?
-**Answer:** The report is structured into 5 specialized executive pages:
+**Answer:** The report is structured into 5 specialized executive pages totaling 29 visual containers and 47 DAX measures:
 1. **Page 1: Executive Overview:** 8 KPI cards, monthly revenue area chart, SLA delivery donut chart, and category/terms bar charts.
 2. **Page 2: Shipment and Compliance:** Transit duration histogram, category SLA comparison, and delayed shipment exception table.
-3. **Page 3: Client and Product Analytics:** Top 10 buyer rankings, repeat purchase rates, and catalogue inventory valuation table.
+3. **Page 3: Client and Product Analytics:** Top 10 buyer rankings, repeat purchase rates, and catalogue inventory valuation table at cost vs retail.
 4. **Page 4: Returns and Data Quality:** Category return rates, physical defect breakdown, and flagged invalid return records.
 5. **Page 5: Geography and FX Analytics:** Geographic customer distribution, proposed 12-market specification, and currency scenario notes.
+*Validation:* Validated automatically by `src/validate_powerbi.py` against `model.bim` schemas and backing CSV files.
 
 ---
 
@@ -113,12 +114,13 @@ Using standardized scaling and K-Means clustering (evaluated using silhouette an
    - Validated by 11 unit tests covering positive appreciation, negative depreciation, zero shock neutrality, negative invoice guards, positive rate assertions, and portfolio exposure bounds.
 
 ### Q12: How does the automated weekly reporting pipeline work in GitHub Actions?
-**Answer:** Configured in `.github/workflows/weekly_report.yml`:
+**Answer:** Configured in `src/reporting.py`, `src/pipeline.py`, and `.github/workflows/weekly_report.yml`:
 1. Triggers automatically every Monday at 08:00 UTC via a POSIX cron schedule (`0 8 * * 1`) and supports manual execution (`workflow_dispatch`).
-2. Runs the Pytest suite to ensure data validation rules pass.
+2. Runs the 54-test Pytest suite to ensure data validation rules pass.
 3. Executes `run_pipeline()`, which generates timestamped markdown reports (`reports/weekly_exception_report_*.md`) and CSV logs (`outputs/weekly_exception_report_*.csv`).
-4. Invokes `send_smtp_alert()`, which securely reads SMTP credentials from GitHub Secrets and dispatches email alerts to authorized recipients (safely defaulting to Test Mode if secrets are absent).
-5. Stores the generated reports as workflow artifacts with a 30-day retention period.
+4. Invokes `send_smtp_alert()` with multi-part MIME attachments: automatically attaches both the weekly exception CSV file and Markdown summary using base64 encoding.
+5. Safely enforces `APP_ENV=production` and validates TLS SMTP credentials before dispatching emails.
+6. Stores the generated reports as workflow artifacts with a 30-day retention period.
 
 ---
 
@@ -135,3 +137,9 @@ Using standardized scaling and K-Means clustering (evaluated using silhouette an
 - `index.html` and root routes: `Cache-Control: public, max-age=0, must-revalidate`
 - Static hashed assets (`/assets/(.*)`): `Cache-Control: public, max-age=31536000, immutable`  
 Verification confirmed an HTTP 200 response with `Age: 0` and `X-Vercel-Cache: MISS`.
+
+### Q15: How is the Power BI project validated, packaged, and accessed via the TradeSight web platform?
+**Answer:** 
+1. **Automated Validation:** The `src/validate_powerbi.py` utility inspects the entry file `TradeSight_Analytics.pbip`, verifies that all tables and columns in `model.bim` match backing star-schema CSVs in `powerbi/data/`, checks that visual query references in `report.json` resolve to valid model fields, and confirms core DAX formulas.
+2. **Packaging:** The utility packages the entire developer project into `TradeSight_PowerBI_Project_Bundle.zip` and builds `TradeSight_Analytics.pbix` in `powerbi/` and `frontend/public/powerbi/`.
+3. **Web Access:** The web application features a dedicated **Power BI** sidebar module displaying validation badges, 4 direct asset download cards, 4 summary KPIs, an interactive 5-page specification viewer, star-schema architecture mappings, a DAX formula reference table, and a 4-step desktop launch guide for opening `TradeSight_Analytics.pbip` in Microsoft Power BI Desktop.
