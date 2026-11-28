@@ -47,7 +47,7 @@ International export operations involve substantial capital commitments, volatil
 * **Logistics & SLA Analytics:** Quantify on-time delivery percentages, isolate delayed shipments, and measure transit duration distributions.
 * **Buyer Segmentation & Commercial Ranking:** Implement Recency, Frequency, Monetary, and Volume (RFM-V) customer segmentation across 187 active buyers while clearly distinguishing gross revenue ranking from unlinked product-level net profitability.
 * **FX Sensitivity Simulator:** Build a mathematically verified currency fluctuation tool modeling exchange rate volatility for USD, EUR, GBP, AED, SGD, and JPY.
-* **Automated Exception Reporting:** Engineer an automated GitHub Actions CI/CD workflow executing Python pipelines every Monday at 08:00 UTC to generate markdown reports, CSV exception logs, and secure SMTP email alerts.
+* **Automated Exception Reporting:** Engineer an automated GitHub Actions CI/CD workflow executing Python pipelines every Monday at 01:30 PM IST (08:00 UTC) to generate dynamic executive KPIs, markdown summaries, HTML email bodies, CSV exception registers, and secure Gmail SMTP email alerts with attachments.
 * **Microsoft Power BI Integration:** Develop a complementary enterprise Power BI reporting model (`powerbi/`) containing star-schema datasets, Power Query M scripts, 47 enterprise DAX measures, corporate JSON theme, and 5 interactive report pages.
 
 ---

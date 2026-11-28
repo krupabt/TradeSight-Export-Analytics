@@ -43,6 +43,7 @@ from src.metrics import (
     calculate_payment_terms_breakdown,
 )
 from src.reporting import (
+    build_weekly_html_report,
     build_weekly_markdown_report,
     generate_weekly_exceptions,
     send_smtp_alert,
@@ -329,10 +330,12 @@ def run_pipeline() -> int:
     logger.info(f"Saved weekly exception reports ({len(weekly_exceptions)} items) to {weekly_md_path}")
 
     # Step 12: Optional SMTP Alert
+    weekly_html = build_weekly_html_report(weekly_exceptions, today_str, raw_orders)
     send_smtp_alert(
-        subject=f"TradeSight Weekly Exception Report - {today_str}",
+        subject=f"[TradeSight] Weekly Operational & Compliance Report - {today_str}",
         body_markdown=weekly_md,
         attachments=[weekly_csv_path, weekly_md_path],
+        body_html=weekly_html,
     )
 
     logger.info("=" * 70)

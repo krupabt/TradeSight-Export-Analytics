@@ -4218,24 +4218,54 @@ export default function App() {
               <div className="panel-card">
                 <div className="panel-header">
                   <div>
-                    <div className="panel-title">Automated Reports</div>
-                    <div className="panel-subtitle">Weekly reports are generated using GitHub Actions.</div>
+                    <div className="panel-title">Automated Weekly Email Reporting</div>
+                    <div className="panel-subtitle">Executive analytics and exception reports dispatched automatically every Monday via GitHub Actions and Gmail SMTP relay.</div>
                   </div>
-                  <span className="badge neutral">Test Mode</span>
+                  <span className="badge success">Active (Mondays 01:30 PM IST)</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  <div>
-                    <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-                      Schedule:
-                    </strong>
-                    Every Monday at 08:00 UTC. The automated workflow runs tests, checks for data anomalies and generates updated reports.
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-card-subtle)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <Calendar size={16} color="var(--primary-accent)" />
+                      <strong style={{ color: 'var(--text-primary)', fontSize: '13px' }}>Cadence &amp; Scheduling</strong>
+                    </div>
+                    <div>
+                      <strong>Schedule:</strong> Every Monday at <strong>01:30 PM IST</strong> (08:00 UTC).<br />
+                      <strong>Workflow:</strong> <code>.github/workflows/weekly_report.yml</code> triggered via GitHub Actions cron and manual dispatch.
+                    </div>
                   </div>
-                  <div>
-                    <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
-                      Email Delivery:
-                    </strong>
-                    Currently running in <strong>Test Mode</strong>. Reports are generated and saved as workflow artifacts. Email notifications can be configured with SMTP credentials.
+
+                  <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-card-subtle)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <Clock size={16} color="var(--secondary-accent)" />
+                      <strong style={{ color: 'var(--text-primary)', fontSize: '13px' }}>Gmail SMTP Relay</strong>
+                    </div>
+                    <div>
+                      <strong>Host:</strong> <code>smtp.gmail.com:587</code> (STARTTLS Encrypted)<br />
+                      <strong>Format:</strong> Dual-channel Multi-Part MIME (Plain Text + Responsive Corporate HTML).
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-card-subtle)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <TrendingUp size={16} color="var(--status-success)" />
+                      <strong style={{ color: 'var(--text-primary)', fontSize: '13px' }}>Included Executive KPIs</strong>
+                    </div>
+                    <div>
+                      Total Revenue (₹396.88 Cr), 600 Orders, AOV (₹66.15 L), On-Time SLA (77.50%), Return Rate (1.01%), 135 Delivery Delays, and 4 Strategic Recommendations.
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-card-subtle)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <FileSpreadsheet size={16} color="var(--status-critical)" />
+                      <strong style={{ color: 'var(--text-primary)', fontSize: '13px' }}>Automated Attachments</strong>
+                    </div>
+                    <div>
+                      <strong>1. Exception CSV:</strong> <code>weekly_exception_report_*.csv</code><br />
+                      <strong>2. Executive MD:</strong> <code>weekly_exception_report_*.md</code>
+                    </div>
                   </div>
                 </div>
               </div>

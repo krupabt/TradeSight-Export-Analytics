@@ -109,7 +109,7 @@
 5. **Buyer Analytics:** 187 buyer rankings, repeat order tracking (37.8%), RFM-V customer segmentation
 6. **Product Catalogue:** 50 SKUs, warehouse stock (13,857 units), retail gross margins (58.62%)
 7. **Country & FX Analytics:** Sourcing states, proposed 12-market specification, interactive currency shock simulator
-8. **Data Governance & Reports Hub:** Complete 179-record exception register (135 delays, 2 return errors, 42 date inversions), customer date audit, and automated weekly reporting with email attachments
+8. **Data Governance & Reports Hub:** Complete 179-record exception register (135 delays, 2 return errors, 42 date inversions), customer date audit, and automated weekly reporting every Monday at 01:30 PM IST via Gmail SMTP with CSV/MD attachments
 9. **Power BI Reports & Semantic Model:** 5-page canvas specification, 29 visual containers, 47 DAX measures, star-schema table mappings, and direct PBIP/PBIX bundle downloads
 
 ### Presentation Speaking Script

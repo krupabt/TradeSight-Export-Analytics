@@ -1,35 +1,45 @@
-# TradeSight Export Analytics — Weekly Operational Exception Report
+# TradeSight Export Analytics — Weekly Operational & Executive Report
 **Report Generation Date:** 2026-11-28  
-**Target Audience:** Export Operations Director, Logistics Lead, Data Governance Team  
-**Scope:** Operational shipment performance and data quality exceptions  
+**Scheduled Distribution:** Every Monday at 01:30 PM IST (08:00 UTC)  
+**Target Audience:** C-Suite Leadership, Export Operations Director, Logistics Lead, Governance Team  
+**Delivery Channel:** Automated SMTP Email via GitHub Actions with CSV/MD Attachments  
 
 > [!IMPORTANT]
 > Exceptions listed herein represent operational delivery delays, data hygiene anomalies, and logistics thresholds.
 > They do **not** represent proven legal, customs, or regulatory non-compliance violations.
 
-## 1. Executive Summary & Exception Counts
+## 1. Executive Key Performance Indicators (Executive Baseline)
 
-- **Total Monitored Orders:** 600
-- **Total Delivery Delays:** 135 (22.50% of orders)
-- **Total Flagged Exception Records:** 135
+| Key Performance Indicator | Calculated Value | Operational Baseline & Target |
+| :--- | :--- | :--- |
+| **Total Export Revenue** | **₹396.88 Cr (₹3,968,829,214.20 INR)** | Verified gross realized wholesale export sales |
+| **Total Export Orders** | **600 Orders** | Monitored export shipments across 10 categories |
+| **Average Order Value (AOV)** | **₹66.15 Lakhs (₹6,614,715.36 INR)** | Mean transaction size per fulfilled shipment |
+| **On-Time Delivery Rate** | **77.50%** (465 / 600) | Target SLA: **80.00%** (Status: Operational Action Needed) |
+| **Shipment Delivery Delays** | **135 Shipments (22.50%)** | Fulfilled past target delivery SLA threshold |
+| **Unit Return Rate** | **1.01%** (15,242 / 1,509,070 units) | Target: < 2.00% physical returned units |
+| **Order Return Incidence** | **98.50%** (591 orders) | Orders experiencing >= 1 returned unit |
+| **Data Quality Exceptions** | **135 Total Flagged Records** | Non-destructive governance audit register |
 
-### Breakdown by Severity
+## 2. Exception Breakdown by Severity & Category
+
+### Breakdown by Severity Level
 | Severity Level | Count | Action Required |
 | :--- | :--- | :--- |
 | **CRITICAL** | 2 | Immediate ERP correction: return quantity exceeds ordered volume |
 | **HIGH** | 42 | CRM data reconciliation: first purchase date after last purchase date |
-| **MEDIUM** | 37 | Logistics & Credit review: delays on 60 Days Net or extended transit |
-| **LOW** | 54 | Informational monitoring: on-time shipments with extended transit |
+| **MEDIUM** | 91 | Logistics & Credit review: delays on 60 Days Net or extended transit |
+| **LOW** | 0 | Informational monitoring: on-time shipments with extended transit |
 
-### Breakdown by Category
-| Exception Category | Count | Description |
+### Breakdown by Exception Category
+| Exception Category | Count | Operational Impact |
 | :--- | :--- | :--- |
-| Logistics - Extended Transit Exception | 71 | Operational or data anomaly identified in pipeline |
-| Data Quality - Chronological Inversion | 42 | Operational or data anomaly identified in pipeline |
-| Logistics - Credit Term Delay Risk | 20 | Operational or data anomaly identified in pipeline |
-| Data Quality - Logical Inconsistency | 2 | Operational or data anomaly identified in pipeline |
+| Logistics - Severe Transit Delay | 71 | Operational or data quality anomaly identified in pipeline |
+| Data Quality - Chronological Inversion | 42 | Operational or data quality anomaly identified in pipeline |
+| Logistics - Credit Term Delay Risk | 20 | Operational or data quality anomaly identified in pipeline |
+| Data Quality - Logical Inconsistency | 2 | Operational or data quality anomaly identified in pipeline |
 
-## 2. Critical & High Priority Exceptions Detail
+## 3. Critical & High Priority Exceptions Detail
 
 | Exception ID | Dataset | Record ID | Entity | Category | Observed Value | Recommended Action |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -59,9 +69,9 @@
 | `EXC-DATE-C103` | `da_customer_profiles` | `C103` | City: Chennai, Channel: Offline | Customer Profile | First: 2026-05-20 > Last: 2026-04-26 | Investigate CRM transaction sync logic; swap dates or re-extract initial onboarding timestamp. |
 | `EXC-DATE-C108` | `da_customer_profiles` | `C108` | City: Mumbai, Channel: Marketplace | Customer Profile | First: 2026-05-30 > Last: 2025-07-11 | Investigate CRM transaction sync logic; swap dates or re-extract initial onboarding timestamp. |
 
-*Note: Displaying first 25 of 44 critical/high exceptions. Complete listing available in the accompanied CSV export.*
+*Note: Displaying first 25 of 44 critical/high exceptions. Complete listing available in the attached CSV export.*
 
-## 3. Logistics Working Capital Exposure (Delays on 60 Days Net)
+## 4. Logistics Working Capital Exposure (Delays on 60 Days Net)
 
 When orders with deferred payment terms (`60 Days Net`) encounter delivery delays, working capital cash conversion cycles are significantly extended.
 
@@ -88,10 +98,28 @@ When orders with deferred payment terms (`60 Days Net`) encounter delivery delay
 | `B2B-00527` | BUY-0177 | Office Supplies | Transit: 7 days, Value: INR 3,219,640.00 | Follow up with buyer |
 | `B2B-00588` | BUY-0014 | Pharmaceuticals | Transit: 22 days, Value: INR 17,424,058.35 | Follow up with buyer |
 
-## 4. Scheduling & Automated Distribution
+## 5. Strategic Business & Operational Recommendations
+
+1. **Logistics & Carrier SLA Enforcement:**
+   - **135 shipments (22.50%)** failed target on-time SLAs, averaging 23.5 transit days.
+   - Enforce carrier performance benchmarks and review route bottlenecks for shipments exceeding 30 days.
+
+2. **Working Capital Protection on Deferred Terms:**
+   - For delayed orders under `60 Days Net`, link invoice maturity to verified Proof of Delivery (POD) rather than dispatch date.
+
+3. **Physical Return Manifest Audit:**
+   - Audit the **2 critical return overrun records** where returned units exceeded fulfilled volume.
+   - Reconcile physical warehouse receipts against order manifests and adjust source ERP values.
+
+4. **Customer Profile Master Data Hygiene:**
+   - Reconcile the **42 customer account date inversions** where First_Purchase_Date > Last_Purchase_Date.
+   - Standardize transaction synchronization webhooks between CRM and billing databases.
+
+---
+## 6. Scheduling & Automated Distribution
 
 ### Windows Task Scheduler Setup
-To execute this exception generator automatically every Monday at 08:00 AM:
+To execute this exception generator automatically every Monday at 08:00 AM local time:
 
 ```powershell
 # In an elevated PowerShell terminal:
@@ -101,18 +129,10 @@ $Settings = New-ScheduledTaskSettingsSet -StartWhenAvailable
 Register-ScheduledTask -TaskName "TradeSight_Weekly_Exception_Report" -Action $Action -Trigger $Trigger -Settings $Settings -Description "Runs weekly data pipeline and exception generator"
 ```
 
-### Safe SMTP Configuration
-To enable automated weekly email dispatch, configure `.env` with valid credentials:
-
-```ini
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USE_TLS=True
-SMTP_USER=alerts@tradesight-export.com
-SMTP_PASSWORD=your_secure_app_password
-ALERT_RECIPIENTS=operations@tradesight-export.com,management@tradesight-export.com
-APP_ENV=production
-```
+### Cloud CI/CD & SMTP Distribution
+- **Schedule:** Every Monday at 01:30 PM IST (08:00 UTC) via GitHub Actions CI/CD (`.github/workflows/weekly_report.yml`).
+- **SMTP Relay:** Gmail SMTP (`smtp.gmail.com:587`, TLS encryption enabled).
+- **Attachments:** Reconciled weekly exception register (`.csv`) and executive analytics report (`.md`).
 
 ---
 *Report generated automatically by TradeSight Export Analytics Pipeline v1.0.0.*

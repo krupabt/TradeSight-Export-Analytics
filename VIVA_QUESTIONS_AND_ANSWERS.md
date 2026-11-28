@@ -119,7 +119,8 @@ Using standardized scaling and K-Means clustering (evaluated using silhouette an
 2. Runs the 54-test Pytest suite to ensure data validation rules pass.
 3. Executes `run_pipeline()`, which generates timestamped markdown reports (`reports/weekly_exception_report_*.md`) and CSV logs (`outputs/weekly_exception_report_*.csv`).
 4. Invokes `send_smtp_alert()` with multi-part MIME attachments: automatically attaches both the weekly exception CSV file and Markdown summary using base64 encoding.
-5. Safely enforces `APP_ENV=production` and validates TLS SMTP credentials before dispatching emails.
+5. Safely enforces `APP_ENV=production` and validates TLS SMTP credentials before dispatching emails via Gmail SMTP (`smtp.gmail.com:587`, TLS encryption).
+6. Dispatches dual-channel Multi-Part MIME emails containing both plain text markdown and responsive corporate HTML, embedding core executive metrics (Revenue, Orders, AOV, On-time SLA %, Return Rate %, Delays, and 4 Strategic Recommendations) plus two attachments: the weekly exception register CSV and analytical Markdown report.
 6. Stores the generated reports as workflow artifacts with a 30-day retention period.
 
 ---

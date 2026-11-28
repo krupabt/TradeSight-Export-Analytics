@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       test_mode:
-        description: 'Run in test mode (validates report generation without external SMTP dispatch)'
+        description: 'Run in test mode (true = dry run validation; false = live SMTP email dispatch)'
         required: true
         type: boolean
-        default: true
+        default: false
       recipient_email:
-        description: 'Authorized recipient email for manual dispatch test'
+        description: 'Recipient email address (optional override, defaults to ALERT_RECIPIENTS secret or SMTP_USER)'
         required: false
         type: string
         default: ''
@@ -40,23 +40,25 @@ jobs:
         run: |
           pytest -q tests/test_validation.py tests/test_reporting.py
 
-      - name: Generate weekly operational exception reports
+      - name: Generate weekly operational exception reports & dispatch email
         env:
-          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER || secrets.SMTP_HOST || 'smtp.gmail.com' }}
           SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
           SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS || 'True' }}
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          ALERT_RECIPIENTS: ${{ github.event.inputs.recipient_email || secrets.ALERT_RECIPIENTS }}
-          APP_ENV: ${{ github.event.inputs.test_mode == false && 'production' || 'test' }}
+          ALERT_RECIPIENTS: ${{ github.event.inputs.recipient_email || secrets.ALERT_RECIPIENTS || secrets.ALERT_RECIPIENT || secrets.SMTP_USER }}
+          APP_ENV: ${{ (github.event_name == 'schedule' || github.event.inputs.test_mode == false) && 'production' || 'test' }}
         run: |
           python -c "
           import os, sys, glob
+          import pandas as pd
           from src.pipeline import run_pipeline
-          from src.reporting import send_smtp_alert
+          from src.reporting import send_smtp_alert, build_weekly_html_report, generate_weekly_exceptions
 
-          test_mode = os.environ.get('APP_ENV', 'test') == 'test'
-          print(f'Starting automated weekly reporting job (Test Mode: {test_mode})...')
+          app_env = os.environ.get('APP_ENV', 'test')
+          test_mode = app_env != 'production'
+          print(f'Starting automated weekly reporting job (APP_ENV: {app_env}, Test Mode: {test_mode})...')
 
           # 1. Run data pipeline and exception report generation
           exit_code = run_pipeline()
@@ -64,7 +66,7 @@ jobs:
               sys.exit(exit_code)
           print('Pipeline executed successfully.')
 
-          # 2. Attempt SMTP dispatch if configured
+          # 2. Gather generated artifacts for dispatch
           latest_reports = sorted(glob.glob('reports/weekly_exception_report_*.md'))
           latest_csvs = sorted(glob.glob('outputs/weekly_exception_report_*.csv'))
           attachments = []
@@ -76,12 +78,21 @@ jobs:
           if latest_reports:
               with open(latest_reports[-1], 'r', encoding='utf-8') as f:
                   md_content = f.read()
+              
+              orders_df = pd.read_csv('data/da_b2b_orders.csv')
+              customers_df = pd.read_csv('data/da_customer_profiles.csv')
+              exceptions_df = generate_weekly_exceptions(orders_df, customers_df)
+              html_content = build_weekly_html_report(exceptions_df, 'latest', orders_df)
+
               dispatched = send_smtp_alert(
-                  subject='[TradeSight] Weekly Operational Exception & Compliance Report',
+                  subject='[TradeSight] Weekly Operational & Compliance Report',
                   body_markdown=md_content,
-                  attachments=attachments
+                  attachments=attachments,
+                  body_html=html_content
               )
               print(f'SMTP Dispatch Result: {dispatched}')
+              if not test_mode and not dispatched:
+                  print('NOTICE: Email was not dispatched. Ensure SMTP_USER, SMTP_PASSWORD, and ALERT_RECIPIENTS secrets are configured.')
           else:
               print('No weekly exception report markdown found to dispatch.')
           "

@@ -135,3 +135,106 @@ def test_send_smtp_alert_with_attachment_mocked(monkeypatch, tmp_path):
     mock_smtp_instance.login.assert_called_once_with("alert@tradesight.com", "secret123")
     assert mock_smtp_instance.sendmail.called
 
+
+def test_weekly_report_contains_all_executive_kpis():
+    """Verify that weekly reports calculate and include all mandatory client acceptance metrics."""
+    orders = pd.DataFrame(
+        {
+            "order_id": [f"ORD_{i:03d}" for i in range(1, 11)],
+            "buyer_id": [f"BUY_{i:02d}" for i in range(1, 11)],
+            "category": ["Textiles"] * 10,
+            "order_date": ["2024-01-15"] * 10,
+            "quantity_units": [1000] * 10,
+            "return_qty": [10, 0, 5, 0, 0, 20, 0, 0, 0, 0],
+            "total_value_inr": [500000.0] * 10,
+            "on_time_delivery": [1, 1, 1, 0, 1, 1, 0, 1, 1, 1],  # 8 on-time, 2 delayed
+            "delivery_days": [15] * 8 + [42, 35],
+            "payment_terms": ["30 Days Net"] * 10,
+        }
+    )
+    customers = pd.DataFrame(
+        {
+            "Customer_ID": ["C01"],
+            "City": ["Chennai"],
+            "Acquisition_Channel": ["Direct"],
+            "First_Purchase_Date": ["2024-01-01"],
+            "Last_Purchase_Date": ["2024-06-01"],
+        }
+    )
+
+    exceptions = generate_weekly_exceptions(orders, customers)
+    md = build_weekly_markdown_report(exceptions, "2024-10-28", orders)
+
+    # 1. Total export revenue
+    assert "Total Export Revenue" in md
+    assert "5,000,000.00" in md
+
+    # 2. Total orders
+    assert "Total Export Orders" in md
+    assert "10 Orders" in md
+
+    # 3. Average order value
+    assert "Average Order Value (AOV)" in md
+    assert "500,000.00" in md
+
+    # 4. On-time delivery rate
+    assert "On-Time Delivery Rate" in md
+    assert "80.00%" in md
+
+    # 5. Return rate
+    assert "Unit Return Rate" in md
+    assert "0.35%" in md  # 35 / 10000 = 0.35%
+
+    # 6. Shipment delays
+    assert "Shipment Delivery Delays" in md
+    assert "2 Shipments" in md
+
+    # 7. Data quality exceptions
+    assert "Data Quality Exceptions" in md
+
+    # 8. Business recommendations
+    assert "Strategic Business & Operational Recommendations" in md
+    assert "Logistics & Carrier SLA Enforcement" in md
+
+
+def test_build_weekly_html_report():
+    """Verify that the HTML version of the weekly report renders correctly with CSS styling."""
+    from src.reporting import build_weekly_html_report
+
+    orders = pd.DataFrame(
+        {
+            "order_id": ["O1", "O2"],
+            "total_value_inr": [1000000.0, 2000000.0],
+            "quantity_units": [500, 1000],
+            "return_qty": [5, 10],
+            "on_time_delivery": [1, 0],
+            "delivery_days": [12, 45],
+        }
+    )
+    exceptions = pd.DataFrame(
+        [
+            {
+                "exception_id": "EXC-1",
+                "exception_category": "Logistics - Severe Transit Delay",
+                "severity": "MEDIUM",
+                "source_dataset": "orders",
+                "record_id": "O2",
+                "buyer_or_entity": "B2",
+                "category": "Chemicals",
+                "order_date": "2024-02-01",
+                "metric_impacted": "delivery_days",
+                "observed_value": "45 days",
+                "threshold_or_rule": "< 40",
+                "recommended_action": "Follow up",
+            }
+        ]
+    )
+
+    html = build_weekly_html_report(exceptions, "2024-10-28", orders)
+    assert "<!DOCTYPE html>" in html
+    assert "TradeSight Export Analytics" in html
+    assert "Weekly Operational &amp; Executive Report" in html
+    assert "Total Export Revenue" in html
+    assert "Strategic Business Recommendations" in html
+
+
