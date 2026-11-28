@@ -214,7 +214,7 @@ WHERE return_qty > quantity_units;
 1. **Executive Dashboard:** 8 compact KPI cards, 60/40 Monthly Revenue & Delivery SLA layout, Category and Payment Term breakdowns, and drill-down links.
 2. **Revenue Analysis:** Time-series revenue trends, high-value transaction filtering, and paginated order directory.
 3. **Shipments & Logistics:** Delivery SLA compliance, transit distribution histogram, and 135 delayed order records.
-4. **Returns Analysis:** Physical return rates, return quantity distribution, and flagged data exceptions.
+4. **Returns & Quality Analytics:** Shipped units, returned units, dynamic category return rate (1.01% overall), return quantity overrun exceptions (2 flagged orders), dual category charts (volume and rate %), monthly return trends by order month, and CSV exports.
 5. **Buyer Analysis:** 187 buyer rankings, repeat order tracking, and RFM-V customer clusters.
 6. **Product Catalogue:** 50 SKUs, warehouse stock levels (13,857 units), retail margins, and inventory valuation.
 7. **Country Analysis:** Sourcing origin state distribution and the proposed 12-market expansion specification.
@@ -301,10 +301,29 @@ To transition from the current INR baseline to full multi-currency accounting, 7
 
 ---
 
-## 18. Compliance Reporting
-The compliance monitoring engine isolates two categories of operational anomalies:
-* **Severe Data Quality Violations:** Return quantities exceeding shipped volume (`ORD_000102`, `ORD_000412`).
-* **Logistics SLA Breaches:** 135 shipments exceeding delivery timelines (>20 days).
+## 18. Returns & Quality Analytics & Exception Reconciliation
+
+The Returns & Quality Analytics module provides operational quality monitoring while enforcing strict separation of concerns and non-destructive data governance:
+
+### 1. Key Performance Indicators (KPI Cards)
+- **Shipped Units:** $1,509,070\text{ Units}$ (`stats.totalUnits` across 600 orders).
+- **Returned Units:** $15,242\text{ Units}$ (`stats.returnUnits`).
+- **Return Rate:** $1.01\%$ ($\text{Returned Units} / \text{Shipped Units} \times 100$).
+- **Return Exceptions:** Exactly $2\text{ Flagged Orders}$ (replacing the previous mixed count of 44 records).
+
+### 2. Analytical Charts
+- **Returned Units by Category:** Bar chart sorted by return volume highlighting physical units returned per commodity.
+- **Return Rate by Category (%):** Bar chart displaying dynamic return rate percentage ($\text{Return Qty} / \text{Quantity Units} \times 100$), sorted by rate descending.
+- **Monthly Return Trends (Returns by Order Month):** Dual-axis ComposedChart tracking returned units (bar) and return rate percentage (line) grouped by order booking month across 2023–2024. Explicitly documented that returns are indexed by order month since return event timestamps are unrecorded.
+
+### 3. Separation of Concerns & Exception Reconciliation
+- **Returns Page Scope:** Confined strictly to return-related exceptions: orders `B2B-00131` (+6 units) and `B2B-00188` (+9 units) with audit trail, ERP adjustment action, and interactive review status dropdown.
+- **Data Governance Scope:** House the complete enterprise exception register and customer profile anomalies:
+  - **135 Delayed Shipments** (`EXC-SLA-*`): Delivery transit exceeding SLAs.
+  - **2 Return Quantity Errors** (`EXC-RET-*`): Overrun anomalies.
+  - **42 Customer Date Inversions** (`EXC-DATE-*`): First purchase date subsequent to last purchase date.
+  - **Total Reconciled Register:** Exactly $179\text{ Reconciled Records}$ dynamically computed without hardcoding.
+- **Non-Destructive Governance:** Source records are preserved intact and flagged with `is_valid_return=False` and `is_chronologically_valid=False`. Invalid entries are not silently overwritten, and their inclusion in baseline KPIs is transparently disclosed.
 
 ---
 
@@ -317,8 +336,8 @@ Configured via `.github/workflows/weekly_report.yml`:
 ---
 
 ## 20. Testing Methodology
-* **Pytest Test Suites:** 43 automated unit and integration tests across metrics, validation, pipeline, reporting, and FX analytics.
-* **Regression Status:** 100% test pass rate (`43 passed in 29.8s`).
+* **Pytest Test Suites:** 46 automated unit and integration tests across metrics, validation, pipeline, reporting, statistical deep-dive, and FX analytics.
+* **Regression Status:** 100% test pass rate (`46 passed in 19.0s`).
 * **Build Verification:** Vite production bundling verified with zero errors.
 
 ---

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  ReferenceLine
+  ReferenceLine, ComposedChart
 } from 'recharts';
 import {
   TrendingUp, Truck, RotateCcw, Users, ShieldAlert, Package,
@@ -130,37 +130,105 @@ export default function App() {
   const [selectedOrder, setSelectedOrder] = useState(null);
 
   // Exception Review Status State (Persisted in localStorage)
-  const [exceptionsData, setExceptionsData] = useState(() => {
+  const [exceptionsStatusMap, setExceptionsStatusMap] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('tradesight_exceptions_status');
       if (saved) {
         try {
-          const map = JSON.parse(saved);
-          return exceptionsRaw.map(e => ({
-            ...e,
-            review_status: map[e.exception_id] || e.review_status
-          }));
+          return JSON.parse(saved);
         } catch (err) {
           console.error('Error loading exceptions state:', err);
         }
       }
     }
-    return exceptionsRaw;
+    return {};
   });
 
-  const [exceptionSeverityFilter, setExceptionSeverityFilter] = useState('ALL');
-  const [exceptionSearch, setExceptionSearch] = useState('');
-
   const updateExceptionStatus = (exceptionId, newStatus) => {
-    setExceptionsData(prev => {
-      const updated = prev.map(e => e.exception_id === exceptionId ? { ...e, review_status: newStatus } : e);
+    setExceptionsStatusMap(prev => {
+      const updated = { ...prev, [exceptionId]: newStatus };
       if (typeof window !== 'undefined') {
-        const map = updated.reduce((acc, cur) => { acc[cur.exception_id] = cur.review_status; return acc; }, {});
-        localStorage.setItem('tradesight_exceptions_status', JSON.stringify(map));
+        localStorage.setItem('tradesight_exceptions_status', JSON.stringify(updated));
       }
       return updated;
     });
   };
+
+  // Reconciled Complete Exception Register (Dynamically computed from source datasets)
+  // Reconciles: 135 delayed shipments + 2 return quantity errors + 42 customer date errors = 179 total
+  const allReconciledExceptions = useMemo(() => {
+    const list = [];
+
+    // 1. Critical Return Quantity Errors (2 records)
+    ordersRaw.filter(o => o.return_qty > o.quantity_units).forEach(o => {
+      const id = `EXC-RET-${o.order_id}`;
+      list.push({
+        exception_id: id,
+        severity: 'CRITICAL',
+        exception_category: 'Data Quality - Logical Inconsistency',
+        source_dataset: 'da_b2b_orders.csv',
+        record_id: o.order_id,
+        buyer_or_entity: o.buyer_id,
+        category: o.category,
+        order_date: o.order_date,
+        metric_impacted: 'return_qty vs quantity_units',
+        observed_value: `Returned: ${o.return_qty} > Shipped: ${o.quantity_units} (+${o.return_qty - o.quantity_units} excess)`,
+        threshold_or_rule: 'return_qty <= quantity_units',
+        recommended_action: 'Audit warehouse return receipt against order manifest; adjust return_qty in source ERP.',
+        review_status: exceptionsStatusMap[id] || 'Under Investigation'
+      });
+    });
+
+    // 2. High Customer Date Inversions (42 records)
+    customersRaw.filter(c => new Date(c.First_Purchase_Date) > new Date(c.Last_Purchase_Date)).forEach(c => {
+      const id = `EXC-DATE-${c.Customer_ID}`;
+      list.push({
+        exception_id: id,
+        severity: 'HIGH',
+        exception_category: 'Data Quality - Chronological Inversion',
+        source_dataset: 'da_customer_profiles.csv',
+        record_id: c.Customer_ID,
+        buyer_or_entity: `City: ${c.City}, Channel: ${c.Acquisition_Channel}`,
+        category: 'Customer Profile',
+        order_date: c.First_Purchase_Date,
+        metric_impacted: 'First_Purchase_Date vs Last_Purchase_Date',
+        observed_value: `First: ${c.First_Purchase_Date} > Last: ${c.Last_Purchase_Date}`,
+        threshold_or_rule: 'First_Purchase_Date <= Last_Purchase_Date',
+        recommended_action: 'Investigate CRM transaction sync logic; swap dates or re-extract initial onboarding timestamp.',
+        review_status: exceptionsStatusMap[id] || 'Under Investigation'
+      });
+    });
+
+    // 3. Logistics Delayed Shipments (135 records)
+    ordersRaw.filter(o => o.on_time_delivery === 0).forEach(o => {
+      const id = `EXC-SLA-${o.order_id}`;
+      const isCritical = o.delivery_days >= 40;
+      const isHigh = o.payment_terms === '60 Days Net';
+      list.push({
+        exception_id: id,
+        severity: isCritical ? 'HIGH' : isHigh ? 'MEDIUM' : 'LOW',
+        exception_category: 'Logistics SLA Breach',
+        source_dataset: 'da_b2b_orders.csv',
+        record_id: o.order_id,
+        buyer_or_entity: o.buyer_id,
+        category: o.category,
+        order_date: o.order_date,
+        metric_impacted: 'on_time_delivery (SLA Breach)',
+        observed_value: `Transit: ${o.delivery_days} days (${o.payment_terms})`,
+        threshold_or_rule: 'on_time_delivery == 1',
+        recommended_action: 'Review shipping lane logistics, carrier SLA benchmarks, and credit control terms.',
+        review_status: exceptionsStatusMap[id] || 'Open'
+      });
+    });
+
+    return list;
+  }, [exceptionsStatusMap]);
+
+  // Backward-compatible alias
+  const exceptionsData = allReconciledExceptions;
+
+  const [exceptionSeverityFilter, setExceptionSeverityFilter] = useState('ALL');
+  const [exceptionSearch, setExceptionSearch] = useState('');
 
   // What-If FX Sensitivity & Simulator State
   const [fxCurrency, setFxCurrency] = useState('USD');
@@ -347,7 +415,7 @@ export default function App() {
     return ordersRaw.filter(o => o.return_qty > o.quantity_units);
   }, []);
 
-  // Category Return Analysis
+  // Category Return Analysis (Volume Sorted)
   const categoryReturnData = useMemo(() => {
     const map = {};
     filteredOrders.forEach(o => {
@@ -360,7 +428,38 @@ export default function App() {
     return Object.values(map).map(c => ({
       ...c,
       returnRatePct: c.shippedUnits ? parseFloat(((c.returnUnits / c.shippedUnits) * 100).toFixed(2)) : 0
-    })).sort((a, b) => b.returnRatePct - a.returnRatePct);
+    })).sort((a, b) => b.returnUnits - a.returnUnits);
+  }, [filteredOrders]);
+
+  // Category Return Rate Analysis (Rate Percentage Sorted)
+  const categoryReturnRateData = useMemo(() => {
+    return [...categoryReturnData].sort((a, b) => b.returnRatePct - a.returnRatePct);
+  }, [categoryReturnData]);
+
+  // Monthly Return Trends (Returns tracked by Order Month)
+  const monthlyReturnTrends = useMemo(() => {
+    const map = {};
+    filteredOrders.forEach(o => {
+      const ym = o.order_year_month;
+      if (!map[ym]) {
+        map[ym] = { month: ym, shippedUnits: 0, returnUnits: 0, totalOrders: 0, returnOrders: 0 };
+      }
+      map[ym].shippedUnits += (o.quantity_units || 0);
+      map[ym].returnUnits += (o.return_qty || 0);
+      map[ym].totalOrders += 1;
+      if (o.return_qty > 0) {
+        map[ym].returnOrders += 1;
+      }
+    });
+    return Object.keys(map).sort().map(k => {
+      const shipped = map[k].shippedUnits;
+      const returned = map[k].returnUnits;
+      const returnRatePct = shipped > 0 ? parseFloat(((returned / shipped) * 100).toFixed(2)) : 0;
+      return {
+        ...map[k],
+        returnRatePct
+      };
+    });
   }, [filteredOrders]);
 
   // Monthly Revenue Trends
@@ -581,7 +680,99 @@ export default function App() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `tradesight_exceptions_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `tradesight_reconciled_exceptions_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Export Category Returns Summary to CSV
+  const handleExportCategoryReturnsCSV = () => {
+    if (!categoryReturnData.length) return;
+    const headers = ['Category', 'Shipped_Units', 'Returned_Units', 'Return_Rate_Pct'];
+    const rows = categoryReturnData.map(c => [
+      `"${c.category}"`,
+      c.shippedUnits,
+      c.returnUnits,
+      c.returnRatePct
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `tradesight_category_returns_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Export Monthly Return Trends to CSV
+  const handleExportMonthlyReturnsCSV = () => {
+    if (!monthlyReturnTrends.length) return;
+    const headers = ['Order_Month', 'Shipped_Units', 'Returned_Units', 'Return_Rate_Pct', 'Total_Orders', 'Orders_With_Returns'];
+    const rows = monthlyReturnTrends.map(m => [
+      `"${m.month}"`,
+      m.shippedUnits,
+      m.returnUnits,
+      m.returnRatePct,
+      m.totalOrders,
+      m.returnOrders
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `tradesight_monthly_returns_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Export Return Exceptions to CSV
+  const handleExportReturnExceptionsCSV = () => {
+    if (!suspiciousReturnsList.length) return;
+    const headers = ['Order_ID', 'Order_Date', 'Buyer_ID', 'Category', 'Shipped_Units', 'Returned_Units', 'Excess_Overrun_Units', 'Recommended_Action', 'Review_Status'];
+    const rows = suspiciousReturnsList.map(o => [
+      `"${o.order_id}"`,
+      `"${o.order_date}"`,
+      `"${o.buyer_id}"`,
+      `"${o.category}"`,
+      o.quantity_units,
+      o.return_qty,
+      o.return_qty - o.quantity_units,
+      `"Audit warehouse return receipt against order manifest; adjust return_qty in source ERP."`,
+      `"${exceptionsStatusMap[`EXC-RET-${o.order_id}`] || 'Under Investigation'}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `tradesight_return_quantity_exceptions_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Export Customer Date Inconsistencies to CSV
+  const handleExportCustomerDateErrorsCSV = () => {
+    if (!customerDateInconsistencies.length) return;
+    const headers = ['Customer_ID', 'City', 'Age_Band', 'Gender', 'Acquisition_Channel', 'First_Purchase_Date', 'Last_Purchase_Date', 'Total_Orders', 'Total_Revenue_INR'];
+    const rows = customerDateInconsistencies.map(c => [
+      `"${c.Customer_ID}"`,
+      `"${c.City}"`,
+      `"${c.Age_Band}"`,
+      `"${c.Gender}"`,
+      `"${c.Acquisition_Channel}"`,
+      `"${c.First_Purchase_Date}"`,
+      `"${c.Last_Purchase_Date}"`,
+      c.Total_Orders,
+      c.Total_Revenue
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `tradesight_customer_date_inconsistencies_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -595,7 +786,7 @@ export default function App() {
       case 'logistics':
       case 'shipment': return 'Shipment Analysis';
       case 'returns':
-      case 'compliance': return 'Returns Analysis';
+      case 'compliance': return 'Returns & Quality Analytics';
       case 'buyers':
       case 'clients': return 'Buyer Analysis';
       case 'catalogue':
@@ -603,7 +794,7 @@ export default function App() {
       case 'country': return 'Country Analysis';
       case 'currency': return 'Currency Analysis';
       case 'reports': return 'Reports';
-      case 'governance': return 'Data Quality';
+      case 'governance': return 'Data Quality & Governance';
       default: return 'Dashboard';
     }
   };
@@ -755,7 +946,7 @@ export default function App() {
             className={`nav-item ${(activeSection === 'returns' || activeSection === 'compliance') ? 'active' : ''}`}
             onClick={() => handleSelectSection('returns')}
           >
-            <RotateCcw size={16} className="nav-icon" /> Returns
+            <RotateCcw size={16} className="nav-icon" /> Returns & Quality
           </button>
           <button
             className={`nav-item ${(activeSection === 'buyers' || activeSection === 'clients') ? 'active' : ''}`}
@@ -999,7 +1190,7 @@ export default function App() {
                   className="kpi-card" 
                   onClick={() => { handleSelectSection('returns'); handlePresetFilter('returns'); }} 
                   style={{ cursor: 'pointer' }}
-                  title="Click to drill down to Returns Analysis"
+                  title="Click to drill down to Returns & Quality Analytics"
                 >
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Return Rate</span>
@@ -2819,29 +3010,29 @@ export default function App() {
           )}
 
           {/* =========================================================================
-              7. RETURNS ANALYSIS SECTION
+              7. RETURNS & QUALITY ANALYTICS SECTION
               ========================================================================= */}
           {(activeSection === 'returns' || activeSection === 'compliance') && (
             <>
               <div className="section-header-block">
                 <div>
-                  <h1 className="section-title">Returns Analysis</h1>
-                  <p className="section-subtitle">Return quantities, return rates and flagged records.</p>
+                  <h1 className="section-title">Returns &amp; Quality Analytics</h1>
+                  <p className="section-subtitle">Return quantities, category return rates and quality anomaly tracking.</p>
                 </div>
               </div>
 
-              {/* Summary Cards */}
+              {/* Summary KPI Cards */}
               <div className="dashboard-kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
                 <div className="kpi-card">
                   <div className="kpi-card-header"><span className="kpi-card-label">Shipped Units</span></div>
                   <div className="kpi-card-value">{stats.totalUnits.toLocaleString()}</div>
-                  <div className="kpi-card-subtext">Total units shipped</div>
+                  <div className="kpi-card-subtext">Total units shipped across 600 orders</div>
                 </div>
 
                 <div className="kpi-card">
                   <div className="kpi-card-header"><span className="kpi-card-label">Returned Units</span></div>
                   <div className="kpi-card-value">{stats.returnUnits.toLocaleString()}</div>
-                  <div className="kpi-card-subtext">Total units returned</div>
+                  <div className="kpi-card-subtext">Total physical units returned</div>
                 </div>
 
                 <div className="kpi-card">
@@ -2849,46 +3040,152 @@ export default function App() {
                   <div className="kpi-card-value" style={{ color: stats.returnRate <= 2.0 ? 'var(--status-success)' : 'var(--status-warning)' }}>
                     {stats.returnRate.toFixed(2)}%
                   </div>
-                  <div className="kpi-card-subtext">Units returned vs shipped</div>
+                  <div className="kpi-card-subtext">Units returned ÷ shipped units ({((stats.returnUnits / stats.totalUnits) * 100).toFixed(2)}%)</div>
                 </div>
 
                 <div className="kpi-card">
-                  <div className="kpi-card-header"><span className="kpi-card-label">Flagged Records</span></div>
-                  <div className="kpi-card-value" style={{ color: 'var(--status-warning)' }}>
-                    {suspiciousReturnsList.length + customerDateInconsistencies.length} Records
+                  <div className="kpi-card-header"><span className="kpi-card-label">Return Exceptions</span></div>
+                  <div className="kpi-card-value" style={{ color: 'var(--status-critical)' }}>
+                    {suspiciousReturnsList.length} Flagged Orders
                   </div>
-                  <div className="kpi-card-subtext">2 return errors + 42 date errors</div>
+                  <div className="kpi-card-subtext">Return quantity exceeds shipped quantity</div>
                 </div>
               </div>
 
-              {/* Category-Wise Return Analysis Chart */}
-              <div className="panel-card">
-                <div className="panel-header">
-                  <div>
-                    <div className="panel-title">Returns by Category</div>
-                    <div className="panel-subtitle">Shipped and returned units across product categories</div>
+              {/* Row 1: Category Analytics (Returned Units + Return Rate %) */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+                {/* Chart 1: Returned Units by Category */}
+                <div className="panel-card" style={{ marginBottom: 0 }}>
+                  <div className="panel-header">
+                    <div>
+                      <div className="panel-title">Returned Units by Category</div>
+                      <div className="panel-subtitle">Total physical returned volume across commercial categories</div>
+                    </div>
+                    <button 
+                      className="action-btn" 
+                      onClick={handleExportCategoryReturnsCSV}
+                      title="Download Category Returns CSV"
+                      style={{ fontSize: '11.5px', padding: '4px 8px' }}
+                    >
+                      <Download size={13} /> Export CSV
+                    </button>
+                  </div>
+                  <div style={{ height: 260 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={categoryReturnData} margin={{ top: 10, right: 15, left: -5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                        <XAxis dataKey="category" stroke="var(--text-secondary)" fontSize={10} tickLine={false} tickFormatter={formatCategoryName} />
+                        <YAxis stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="chart-tooltip">
+                                  <div className="chart-tooltip-title">{formatCategoryName(payload[0].payload.category)}</div>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
+                                    Shipped Units: {payload[0].payload.shippedUnits.toLocaleString()}
+                                  </div>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--status-warning)' }}>
+                                    Returned Units: {payload[0].payload.returnUnits.toLocaleString()}
+                                  </div>
+                                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                                    Return Rate: {payload[0].payload.returnRatePct}%
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar dataKey="returnUnits" fill="var(--status-warning)" radius={[4, 4, 0, 0]} name="Returned Units" />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
-                <div style={{ height: 260 }}>
+
+                {/* Chart 2: Return Rate by Category (%) */}
+                <div className="panel-card" style={{ marginBottom: 0 }}>
+                  <div className="panel-header">
+                    <div>
+                      <div className="panel-title">Return Rate by Category (%)</div>
+                      <div className="panel-subtitle">Dynamic rate: Returned Units ÷ Shipped Units × 100</div>
+                    </div>
+                    <span className="badge info">Ranked by Rate</span>
+                  </div>
+                  <div style={{ height: 260 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={categoryReturnRateData} margin={{ top: 10, right: 15, left: -5, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
+                        <XAxis dataKey="category" stroke="var(--text-secondary)" fontSize={10} tickLine={false} tickFormatter={formatCategoryName} />
+                        <YAxis stroke="var(--text-secondary)" fontSize={11} tickLine={false} tickFormatter={(v) => `${v}%`} />
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="chart-tooltip">
+                                  <div className="chart-tooltip-title">{formatCategoryName(payload[0].payload.category)}</div>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)', fontWeight: 600 }}>
+                                    Return Rate: {payload[0].payload.returnRatePct}%
+                                  </div>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--text-secondary)' }}>
+                                    Returned Units: {payload[0].payload.returnUnits.toLocaleString()}
+                                  </div>
+                                  <div className="chart-tooltip-item" style={{ color: 'var(--text-secondary)' }}>
+                                    Shipped Units: {payload[0].payload.shippedUnits.toLocaleString()}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar dataKey="returnRatePct" fill="var(--primary-accent)" radius={[4, 4, 0, 0]} name="Return Rate (%)" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Monthly Return Trends (Timeline) */}
+              <div className="panel-card" style={{ marginBottom: '20px' }}>
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-title">Monthly Return Trends (Returns by Order Month)</div>
+                    <div className="panel-subtitle">Returned units and return rate tracked by order placement month (2023–2024).</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button 
+                      className="action-btn" 
+                      onClick={handleExportMonthlyReturnsCSV}
+                      title="Download Monthly Return Trends CSV"
+                      style={{ fontSize: '11.5px', padding: '4px 8px' }}
+                    >
+                      <Download size={13} /> Export Monthly Trends
+                    </button>
+                  </div>
+                </div>
+                <div style={{ height: 280 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={categoryReturnData} margin={{ top: 10, right: 15, left: -5, bottom: 5 }}>
+                    <ComposedChart data={monthlyReturnTrends} margin={{ top: 15, right: 25, left: 0, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" vertical={false} />
-                      <XAxis dataKey="category" stroke="var(--text-secondary)" fontSize={10} tickLine={false} tickFormatter={formatCategoryName} />
-                      <YAxis stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                      <XAxis dataKey="month" stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                      <YAxis yAxisId="left" stroke="var(--text-secondary)" fontSize={11} tickLine={false} />
+                      <YAxis yAxisId="right" orientation="right" stroke="var(--status-critical)" fontSize={11} tickLine={false} tickFormatter={(v) => `${v}%`} />
                       <Tooltip 
                         content={({ active, payload }) => {
                           if (active && payload && payload.length) {
+                            const d = payload[0].payload;
                             return (
                               <div className="chart-tooltip">
-                                <div className="chart-tooltip-title">{formatCategoryName(payload[0].payload.category)}</div>
+                                <div className="chart-tooltip-title">Order Month: {d.month}</div>
                                 <div className="chart-tooltip-item" style={{ color: 'var(--primary-accent)' }}>
-                                  Shipped Units: {payload[0].payload.shippedUnits.toLocaleString()}
+                                  Returned Volume: {d.returnUnits.toLocaleString()} Units
                                 </div>
-                                <div className="chart-tooltip-item" style={{ color: 'var(--status-warning)' }}>
-                                  Returned Units: {payload[0].payload.returnUnits.toLocaleString()}
+                                <div className="chart-tooltip-item" style={{ color: 'var(--status-critical)', fontWeight: 600 }}>
+                                  Return Rate: {d.returnRatePct}%
                                 </div>
-                                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
-                                  Return Rate: {payload[0].payload.returnRatePct}%
+                                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 3 }}>
+                                  Shipped: {d.shippedUnits.toLocaleString()} units across {d.totalOrders} orders ({d.returnOrders} with returns)
                                 </div>
                               </div>
                             );
@@ -2896,26 +3193,36 @@ export default function App() {
                           return null;
                         }}
                       />
-                      <Bar dataKey="returnUnits" fill="var(--status-warning)" radius={[4, 4, 0, 0]} name="Returned Units" />
-                    </BarChart>
+                      <Legend verticalAlign="top" height={36} />
+                      <Bar yAxisId="left" dataKey="returnUnits" fill="var(--soft-blue)" radius={[4, 4, 0, 0]} name="Returned Units" />
+                      <Line yAxisId="right" type="monotone" dataKey="returnRatePct" stroke="var(--status-critical)" strokeWidth={2.5} dot={{ r: 3 }} name="Return Rate (%)" />
+                    </ComposedChart>
                   </ResponsiveContainer>
+                </div>
+                <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', padding: '6px 12px', background: 'var(--bg-card-subtle)', borderRadius: '6px', marginTop: '8px' }}>
+                  <strong>Timeline Note:</strong> Monthly trends are grouped by order booking date, as transactional return receipt timestamps are not captured in the source dataset.
                 </div>
               </div>
 
-              {/* Suspicious Return Quantity Records Table */}
+              {/* Return Quantity Exceptions Table */}
               <div className="panel-card">
                 <div className="panel-header">
                   <div>
-                    <div className="panel-title">Return Quantity Errors (Return Qty &gt; Shipped Qty)</div>
-                    <div className="panel-subtitle">Two orders where return quantity exceeds shipped quantity.</div>
+                    <div className="panel-title">Return Quantity Exceptions (Return Qty &gt; Shipped Qty)</div>
+                    <div className="panel-subtitle">Orders where recorded return quantity exceeds shipped quantity (audit flags preserved intact).</div>
                   </div>
-                  <span className="badge danger">2 Flagged Orders</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="badge danger">{suspiciousReturnsList.length} Flagged Orders</span>
+                    <button className="action-btn" onClick={handleExportReturnExceptionsCSV}>
+                      <Download size={13} /> Export Exceptions CSV
+                    </button>
+                  </div>
                 </div>
 
                 <div className="alert-banner danger" style={{ margin: '0 0 16px 0' }}>
                   <AlertCircle size={16} color="var(--status-critical)" style={{ flexShrink: 0, marginTop: '2px' }} />
                   <div>
-                    <strong>Data Entry Error:</strong> In orders <code>B2B-00131</code> and <code>B2B-00188</code>, the recorded return quantity is higher than the shipped quantity. These records require verification.
+                    <strong>Non-Destructive Governance Note:</strong> In orders <code>B2B-00131</code> (+6 units) and <code>B2B-00188</code> (+9 units), the recorded return quantity is higher than the shipped quantity. In accordance with enterprise audit standards, these records are <strong>preserved intact</strong> and flagged with <code>is_valid_return=False</code> rather than being silently overwritten. They are included in baseline unit counts with audit tags.
                   </div>
                 </div>
 
@@ -2930,235 +3237,56 @@ export default function App() {
                         <th style={{ textAlign: 'right' }}>Shipped Qty</th>
                         <th style={{ textAlign: 'right' }}>Return Qty</th>
                         <th>Discrepancy</th>
-                        <th>Issue Description</th>
+                        <th>Recommended Corrective Action</th>
+                        <th>Review Status</th>
                         <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {suspiciousReturnsList.map(o => (
-                        <tr key={o.order_id} className="clickable" onClick={() => setSelectedOrder(o)}>
-                          <td className="mono" style={{ fontWeight: 600, color: 'var(--status-critical)' }}>{o.order_id}</td>
-                          <td>{o.order_date}</td>
-                          <td className="mono">{o.buyer_id}</td>
-                          <td>{formatCategoryName(o.category)}</td>
-                          <td style={{ textAlign: 'right', fontWeight: 600 }}>{o.quantity_units} Units</td>
-                          <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--status-critical)' }}>{o.return_qty} Units</td>
-                          <td><span className="badge danger">+{o.return_qty - o.quantity_units} Overrun</span></td>
-                          <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Return quantity exceeds shipped quantity; needs verification.</td>
-                          <td>
-                            <button className="action-btn" style={{ padding: '3px 8px', fontSize: '11.5px' }}>
-                              View Details
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {suspiciousReturnsList.map(o => {
+                        const exceptionId = `EXC-RET-${o.order_id}`;
+                        const currentStatus = exceptionsStatusMap[exceptionId] || 'Under Investigation';
+
+                        return (
+                          <tr key={o.order_id} className="clickable" onClick={() => setSelectedOrder(o)}>
+                            <td className="mono" style={{ fontWeight: 600, color: 'var(--status-critical)' }}>{o.order_id}</td>
+                            <td>{o.order_date}</td>
+                            <td className="mono">{o.buyer_id}</td>
+                            <td>{formatCategoryName(o.category)}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 600 }}>{o.quantity_units} Units</td>
+                            <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--status-critical)' }}>{o.return_qty} Units</td>
+                            <td><span className="badge danger">+{o.return_qty - o.quantity_units} Overrun</span></td>
+                            <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                              Audit warehouse return receipt against order manifest; adjust return_qty in source ERP.
+                            </td>
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <select
+                                className="filter-select"
+                                value={currentStatus}
+                                onChange={(ev) => updateExceptionStatus(exceptionId, ev.target.value)}
+                                style={{ padding: '3px 8px', fontSize: '11.5px', fontWeight: 600 }}
+                              >
+                                <option value="Under Investigation">Under Investigation</option>
+                                <option value="Pending Audit">Pending Audit</option>
+                                <option value="Action Pending">Action Pending</option>
+                                <option value="Resolved">Resolved</option>
+                                <option value="Verified">Verified</option>
+                              </select>
+                            </td>
+                            <td>
+                              <button 
+                                className="action-btn" 
+                                style={{ padding: '3px 8px', fontSize: '11.5px' }}
+                                onClick={(e) => { e.stopPropagation(); setSelectedOrder(o); }}
+                              >
+                                View Details
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
-                </div>
-              </div>
-
-              {/* Customer Purchase-Date Inconsistencies Table */}
-              <div className="panel-card">
-                <div className="panel-header">
-                  <div>
-                    <div className="panel-title">Customer Purchase Date Inconsistencies (First Purchase &gt; Last Purchase)</div>
-                    <div className="panel-subtitle">42 customer profile records where first purchase date is later than last purchase date.</div>
-                  </div>
-                  <div style={{ position: 'relative' }}>
-                    <Search size={14} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} />
-                    <input
-                      type="text"
-                      className="filter-select"
-                      placeholder="Search Customer ID or City..."
-                      value={inconsistencySearch}
-                      onChange={(e) => { setInconsistencySearch(e.target.value); setInconsistencyPage(1); }}
-                      style={{ paddingLeft: 28, width: 220 }}
-                    />
-                  </div>
-                </div>
-
-                <div className="alert-banner warning" style={{ margin: '0 0 16px 0' }}>
-                  <AlertTriangle size={16} color="var(--status-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <div>
-                    <strong>Date Inconsistency:</strong> In 42 customer profile records, the first purchase date is later than the last purchase date. These records are flagged for verification.
-                  </div>
-                </div>
-
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Customer ID</th>
-                        <th>City</th>
-                        <th>Age Band</th>
-                        <th>Gender</th>
-                        <th>Acquisition Channel</th>
-                        <th>First Purchase Date</th>
-                        <th>Last Purchase Date</th>
-                        <th style={{ textAlign: 'right' }}>Total Orders</th>
-                        <th style={{ textAlign: 'right' }}>Total Revenue</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredDateInconsistencies.slice((inconsistencyPage - 1) * pageSize, inconsistencyPage * pageSize).map(c => (
-                        <tr key={c.Customer_ID}>
-                          <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-accent)' }}>{c.Customer_ID}</td>
-                          <td>{c.City}</td>
-                          <td>{c.Age_Band}</td>
-                          <td>{c.Gender}</td>
-                          <td>{c.Acquisition_Channel}</td>
-                          <td className="mono" style={{ color: 'var(--status-critical)', fontWeight: 600 }}>{c.First_Purchase_Date}</td>
-                          <td className="mono" style={{ color: 'var(--status-warning)', fontWeight: 600 }}>{c.Last_Purchase_Date}</td>
-                          <td style={{ textAlign: 'right' }}>{c.Total_Orders}</td>
-                          <td style={{ textAlign: 'right' }}>₹{c.Total_Revenue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
-                          <td><span className="badge warning">Date Inconsistency</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="table-pagination">
-                  <div>
-                    Showing {Math.min((inconsistencyPage - 1) * pageSize + 1, filteredDateInconsistencies.length)} to {Math.min(inconsistencyPage * pageSize, filteredDateInconsistencies.length)} of {filteredDateInconsistencies.length} inconsistent records
-                  </div>
-                  <div className="pagination-btn-group">
-                    <button 
-                      className="pagination-btn" 
-                      onClick={() => setInconsistencyPage(p => Math.max(p - 1, 1))}
-                      disabled={inconsistencyPage === 1}
-                    >
-                      <ChevronLeft size={14} />
-                    </button>
-                    <span style={{ padding: '0 8px', fontWeight: 600 }}>
-                      Page {inconsistencyPage} of {Math.ceil(filteredDateInconsistencies.length / pageSize) || 1}
-                    </span>
-                    <button 
-                      className="pagination-btn" 
-                      onClick={() => setInconsistencyPage(p => Math.min(p + 1, Math.ceil(filteredDateInconsistencies.length / pageSize)))}
-                      disabled={inconsistencyPage >= Math.ceil(filteredDateInconsistencies.length / pageSize)}
-                    >
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Exception Register Table */}
-              <div className="panel-card">
-                <div className="panel-header">
-                  <div>
-                    <div className="panel-title">Exception Register (135 Records)</div>
-                    <div className="panel-subtitle">Track review status for delayed orders, return errors and date errors.</div>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <select
-                      className="filter-select"
-                      value={exceptionSeverityFilter}
-                      onChange={(e) => { setExceptionSeverityFilter(e.target.value); setExceptionPage(1); }}
-                    >
-                      <option value="ALL">All Severities ({exceptionsData.length})</option>
-                      <option value="CRITICAL">Critical (2)</option>
-                      <option value="HIGH">High (42)</option>
-                      <option value="MEDIUM">Medium (37)</option>
-                      <option value="LOW">Low (54)</option>
-                    </select>
-
-                    <div style={{ position: 'relative' }}>
-                      <Search size={14} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} />
-                      <input
-                        type="text"
-                        className="filter-select"
-                        placeholder="Search Record ID, Entity, Action..."
-                        value={exceptionSearch}
-                        onChange={(e) => { setExceptionSearch(e.target.value); setExceptionPage(1); }}
-                        style={{ paddingLeft: 28, width: 220 }}
-                      />
-                    </div>
-
-                    <button className="action-btn" onClick={handleExportExceptionsCSV}>
-                      <Download size={13} /> Download CSV
-                    </button>
-                  </div>
-                </div>
-
-                <div className="table-wrapper">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Exception ID</th>
-                        <th>Severity</th>
-                        <th>Category</th>
-                        <th>Source Dataset</th>
-                        <th>Record ID</th>
-                        <th>Observed Anomaly</th>
-                        <th>Recommended Action</th>
-                        <th>Review Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredExceptions.slice((exceptionPage - 1) * pageSize, exceptionPage * pageSize).map(e => (
-                        <tr key={e.exception_id}>
-                          <td className="mono" style={{ fontSize: '11.5px', fontWeight: 600 }}>{e.exception_id}</td>
-                          <td>
-                            <span className={`badge ${
-                              e.severity === 'CRITICAL' ? 'danger' :
-                              e.severity === 'HIGH' ? 'warning' :
-                              e.severity === 'MEDIUM' ? 'info' : 'neutral'
-                            }`}>
-                              {e.severity}
-                            </span>
-                          </td>
-                          <td style={{ fontSize: '12px' }}>{e.exception_category}</td>
-                          <td className="mono" style={{ fontSize: '11.5px' }}>{e.source_dataset}</td>
-                          <td className="mono" style={{ fontWeight: 600 }}>{e.record_id}</td>
-                          <td style={{ fontSize: '12px' }}>{e.observed_value}</td>
-                          <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{e.recommended_action}</td>
-                          <td>
-                            <select
-                              className="filter-select"
-                              value={e.review_status}
-                              onChange={(ev) => updateExceptionStatus(e.exception_id, ev.target.value)}
-                              style={{ padding: '3px 8px', fontSize: '11.5px', fontWeight: 600 }}
-                            >
-                              <option value="Open">Open</option>
-                              <option value="Under Investigation">Under Investigation</option>
-                              <option value="Action Pending">Action Pending</option>
-                              <option value="Resolved">Resolved</option>
-                              <option value="Acknowledged">Acknowledged</option>
-                            </select>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="table-pagination">
-                  <div>
-                    Showing {Math.min((exceptionPage - 1) * pageSize + 1, filteredExceptions.length)} to {Math.min(exceptionPage * pageSize, filteredExceptions.length)} of {filteredExceptions.length} exceptions. Review status persists in browser storage.
-                  </div>
-                  <div className="pagination-btn-group">
-                    <button 
-                      className="pagination-btn" 
-                      onClick={() => setExceptionPage(p => Math.max(p - 1, 1))}
-                      disabled={exceptionPage === 1}
-                    >
-                      <ChevronLeft size={14} />
-                    </button>
-                    <span style={{ padding: '0 8px', fontWeight: 600 }}>
-                      Page {exceptionPage} of {Math.ceil(filteredExceptions.length / pageSize) || 1}
-                    </span>
-                    <button 
-                      className="pagination-btn" 
-                      onClick={() => setExceptionPage(p => Math.min(p + 1, Math.ceil(filteredExceptions.length / pageSize)))}
-                      disabled={exceptionPage >= Math.ceil(filteredExceptions.length / pageSize)}
-                    >
-                      <ChevronRight size={14} />
-                    </button>
-                  </div>
                 </div>
               </div>
             </>
@@ -3486,18 +3614,51 @@ export default function App() {
           )}
 
           {/* =========================================================================
-              9. DATA QUALITY SECTION
+              9. DATA QUALITY & GOVERNANCE SECTION
               ========================================================================= */}
           {activeSection === 'governance' && (
             <>
               <div className="section-header-block">
                 <div>
-                  <h1 className="section-title">Data Quality</h1>
-                  <p className="section-subtitle">Overview of source datasets, data validation and identified errors.</p>
+                  <h1 className="section-title">Data Quality &amp; Governance</h1>
+                  <p className="section-subtitle">Source datasets, reconciled enterprise exception register, and data integrity audits.</p>
                 </div>
               </div>
 
-              {/* Data Inventory */}
+              {/* Reconciled Exception Overview Cards */}
+              <div className="dashboard-kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
+                <div className="kpi-card">
+                  <div className="kpi-card-header"><span className="kpi-card-label">Reconciled Exceptions</span></div>
+                  <div className="kpi-card-value">{allReconciledExceptions.length} Records</div>
+                  <div className="kpi-card-subtext">Total reconciled enterprise anomalies</div>
+                </div>
+
+                <div className="kpi-card">
+                  <div className="kpi-card-header"><span className="kpi-card-label">Delayed Shipments</span></div>
+                  <div className="kpi-card-value" style={{ color: 'var(--status-warning)' }}>
+                    {ordersRaw.filter(o => o.on_time_delivery === 0).length} Orders
+                  </div>
+                  <div className="kpi-card-subtext">Logistics delivery SLA breaches (77.5% on-time)</div>
+                </div>
+
+                <div className="kpi-card">
+                  <div className="kpi-card-header"><span className="kpi-card-label">Return Overrun Errors</span></div>
+                  <div className="kpi-card-value" style={{ color: 'var(--status-critical)' }}>
+                    {suspiciousReturnsList.length} Orders
+                  </div>
+                  <div className="kpi-card-subtext">return_qty &gt; quantity_units (Logical error)</div>
+                </div>
+
+                <div className="kpi-card">
+                  <div className="kpi-card-header"><span className="kpi-card-label">Customer Date Inversions</span></div>
+                  <div className="kpi-card-value" style={{ color: 'var(--status-warning)' }}>
+                    {customerDateInconsistencies.length} Accounts
+                  </div>
+                  <div className="kpi-card-subtext">First_Purchase &gt; Last_Purchase (CRM error)</div>
+                </div>
+              </div>
+
+              {/* Source Datasets Inventory */}
               <div className="panel-card">
                 <div className="panel-header">
                   <div>
@@ -3524,7 +3685,7 @@ export default function App() {
                         <td>600 rows × 13 cols</td>
                         <td className="mono">order_id</td>
                         <td>B2B export orders (2023–2024)</td>
-                        <td>Zero missing values. Two orders have return quantities greater than shipped quantities (<code>B2B-00131</code>, <code>B2B-00188</code>).</td>
+                        <td>Zero missing values. Two orders have return quantities greater than shipped quantities (<code>B2B-00131</code>, <code>B2B-00188</code>). 135 orders delayed.</td>
                       </tr>
                       <tr>
                         <td className="mono" style={{ fontWeight: 600 }}>da_product_catalogue.csv</td>
@@ -3542,6 +3703,216 @@ export default function App() {
                       </tr>
                     </tbody>
                   </table>
+                </div>
+              </div>
+
+              {/* Complete Reconciled Exception Register Table */}
+              <div className="panel-card">
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-title">Complete Exception Register ({allReconciledExceptions.length} Records)</div>
+                    <div className="panel-subtitle">Reconciled tracking across 135 delayed shipments, 2 return quantity errors, and 42 customer date errors.</div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <select
+                      className="filter-select"
+                      value={exceptionSeverityFilter}
+                      onChange={(e) => { setExceptionSeverityFilter(e.target.value); setExceptionPage(1); }}
+                    >
+                      <option value="ALL">All Severities ({allReconciledExceptions.length})</option>
+                      <option value="CRITICAL">Critical ({allReconciledExceptions.filter(e => e.severity === 'CRITICAL').length})</option>
+                      <option value="HIGH">High ({allReconciledExceptions.filter(e => e.severity === 'HIGH').length})</option>
+                      <option value="MEDIUM">Medium ({allReconciledExceptions.filter(e => e.severity === 'MEDIUM').length})</option>
+                      <option value="LOW">Low ({allReconciledExceptions.filter(e => e.severity === 'LOW').length})</option>
+                    </select>
+
+                    <div style={{ position: 'relative' }}>
+                      <Search size={14} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} />
+                      <input
+                        type="text"
+                        className="filter-select"
+                        placeholder="Search Record ID, Category, Action..."
+                        value={exceptionSearch}
+                        onChange={(e) => { setExceptionSearch(e.target.value); setExceptionPage(1); }}
+                        style={{ paddingLeft: 28, width: 220 }}
+                      />
+                    </div>
+
+                    <button className="action-btn" onClick={handleExportExceptionsCSV}>
+                      <Download size={13} /> Download Reconciled CSV
+                    </button>
+                  </div>
+                </div>
+
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Exception ID</th>
+                        <th>Severity</th>
+                        <th>Category</th>
+                        <th>Source Dataset</th>
+                        <th>Record ID</th>
+                        <th>Observed Anomaly</th>
+                        <th>Recommended Action</th>
+                        <th>Review Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredExceptions.slice((exceptionPage - 1) * pageSize, exceptionPage * pageSize).map(e => (
+                        <tr key={e.exception_id}>
+                          <td className="mono" style={{ fontSize: '11.5px', fontWeight: 600 }}>{e.exception_id}</td>
+                          <td>
+                            <span className={`badge ${
+                              e.severity === 'CRITICAL' ? 'danger' :
+                              e.severity === 'HIGH' ? 'warning' :
+                              e.severity === 'MEDIUM' ? 'info' : 'neutral'
+                            }`}>
+                              {e.severity}
+                            </span>
+                          </td>
+                          <td style={{ fontSize: '12px' }}>{e.exception_category}</td>
+                          <td className="mono" style={{ fontSize: '11.5px' }}>{e.source_dataset}</td>
+                          <td className="mono" style={{ fontWeight: 600 }}>{e.record_id}</td>
+                          <td style={{ fontSize: '12px' }}>{e.observed_value}</td>
+                          <td style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{e.recommended_action}</td>
+                          <td>
+                            <select
+                              className="filter-select"
+                              value={e.review_status}
+                              onChange={(ev) => updateExceptionStatus(e.exception_id, ev.target.value)}
+                              style={{ padding: '3px 8px', fontSize: '11.5px', fontWeight: 600 }}
+                            >
+                              <option value="Open">Open</option>
+                              <option value="Under Investigation">Under Investigation</option>
+                              <option value="Action Pending">Action Pending</option>
+                              <option value="Resolved">Resolved</option>
+                              <option value="Acknowledged">Acknowledged</option>
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="table-pagination">
+                  <div>
+                    Showing {Math.min((exceptionPage - 1) * pageSize + 1, filteredExceptions.length)} to {Math.min(exceptionPage * pageSize, filteredExceptions.length)} of {filteredExceptions.length} exceptions. Review status persists in browser storage.
+                  </div>
+                  <div className="pagination-btn-group">
+                    <button 
+                      className="pagination-btn" 
+                      onClick={() => setExceptionPage(p => Math.max(p - 1, 1))}
+                      disabled={exceptionPage === 1}
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <span style={{ padding: '0 8px', fontWeight: 600 }}>
+                      Page {exceptionPage} of {Math.ceil(filteredExceptions.length / pageSize) || 1}
+                    </span>
+                    <button 
+                      className="pagination-btn" 
+                      onClick={() => setExceptionPage(p => Math.min(p + 1, Math.ceil(filteredExceptions.length / pageSize)))}
+                      disabled={exceptionPage >= Math.ceil(filteredExceptions.length / pageSize)}
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Purchase-Date Inconsistencies Table (Moved from Returns) */}
+              <div className="panel-card">
+                <div className="panel-header">
+                  <div>
+                    <div className="panel-title">Customer Purchase Date Inconsistencies (First Purchase &gt; Last Purchase)</div>
+                    <div className="panel-subtitle">42 customer profile records where first purchase date is later than last purchase date.</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={14} style={{ position: 'absolute', left: 10, top: 10, color: 'var(--text-muted)' }} />
+                      <input
+                        type="text"
+                        className="filter-select"
+                        placeholder="Search Customer ID or City..."
+                        value={inconsistencySearch}
+                        onChange={(e) => { setInconsistencySearch(e.target.value); setInconsistencyPage(1); }}
+                        style={{ paddingLeft: 28, width: 220 }}
+                      />
+                    </div>
+                    <button className="action-btn" onClick={handleExportCustomerDateErrorsCSV}>
+                      <Download size={13} /> Export Date Errors CSV
+                    </button>
+                  </div>
+                </div>
+
+                <div className="alert-banner warning" style={{ margin: '0 0 16px 0' }}>
+                  <AlertTriangle size={16} color="var(--status-warning)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong>Date Inconsistency:</strong> In 42 customer profile records, the first purchase date is later than the last purchase date. In accordance with non-destructive data governance, records are preserved intact and tenure calculations are guarded with <code>NaN</code>.
+                  </div>
+                </div>
+
+                <div className="table-wrapper">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Customer ID</th>
+                        <th>City</th>
+                        <th>Age Band</th>
+                        <th>Gender</th>
+                        <th>Acquisition Channel</th>
+                        <th>First Purchase Date</th>
+                        <th>Last Purchase Date</th>
+                        <th style={{ textAlign: 'right' }}>Total Orders</th>
+                        <th style={{ textAlign: 'right' }}>Total Revenue</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredDateInconsistencies.slice((inconsistencyPage - 1) * pageSize, inconsistencyPage * pageSize).map(c => (
+                        <tr key={c.Customer_ID}>
+                          <td className="mono" style={{ fontWeight: 600, color: 'var(--primary-accent)' }}>{c.Customer_ID}</td>
+                          <td>{c.City}</td>
+                          <td>{c.Age_Band}</td>
+                          <td>{c.Gender}</td>
+                          <td>{c.Acquisition_Channel}</td>
+                          <td className="mono" style={{ color: 'var(--status-critical)', fontWeight: 600 }}>{c.First_Purchase_Date}</td>
+                          <td className="mono" style={{ color: 'var(--status-warning)', fontWeight: 600 }}>{c.Last_Purchase_Date}</td>
+                          <td style={{ textAlign: 'right' }}>{c.Total_Orders}</td>
+                          <td style={{ textAlign: 'right' }}>₹{c.Total_Revenue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                          <td><span className="badge warning">Date Inconsistency</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="table-pagination">
+                  <div>
+                    Showing {Math.min((inconsistencyPage - 1) * pageSize + 1, filteredDateInconsistencies.length)} to {Math.min(inconsistencyPage * pageSize, filteredDateInconsistencies.length)} of {filteredDateInconsistencies.length} inconsistent records
+                  </div>
+                  <div className="pagination-btn-group">
+                    <button 
+                      className="pagination-btn" 
+                      onClick={() => setInconsistencyPage(p => Math.max(p - 1, 1))}
+                      disabled={inconsistencyPage === 1}
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <span style={{ padding: '0 8px', fontWeight: 600 }}>
+                      Page {inconsistencyPage} of {Math.ceil(filteredDateInconsistencies.length / pageSize) || 1}
+                    </span>
+                    <button 
+                      className="pagination-btn" 
+                      onClick={() => setInconsistencyPage(p => Math.min(p + 1, Math.ceil(filteredDateInconsistencies.length / pageSize)))}
+                      disabled={inconsistencyPage >= Math.ceil(filteredDateInconsistencies.length / pageSize)}
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
 

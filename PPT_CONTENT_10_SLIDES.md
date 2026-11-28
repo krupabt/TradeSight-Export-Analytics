@@ -105,10 +105,11 @@
 1. **Executive Dashboard:** 8 C-Suite KPIs, 60/40 Monthly Revenue & SLA chart row, drill-down links
 2. **Revenue Analysis:** Monthly/Quarterly revenue trends, category breakdowns, paginated order directory
 3. **Logistics & Shipments:** Transit duration distribution, SLA metrics, 135 delayed shipment records
-4. **Buyer Analytics:** 187 buyer rankings, repeat order tracking (37.8%), RFM-V customer segmentation
-5. **Product Catalogue:** 50 SKUs, warehouse stock (13,857 units), retail gross margins (58.62%)
-6. **Country & FX Analytics:** Sourcing states, proposed 12-market specification, interactive currency shock simulator
-7. **Compliance & Reports Hub:** Automated weekly exception reporting with CSV export and PDF print
+4. **Returns & Quality Analytics:** Shipped vs. returned volume (1.01% return rate), dynamic category charts, monthly return trends, 2 flagged return overrun orders, and CSV downloads
+5. **Buyer Analytics:** 187 buyer rankings, repeat order tracking (37.8%), RFM-V customer segmentation
+6. **Product Catalogue:** 50 SKUs, warehouse stock (13,857 units), retail gross margins (58.62%)
+7. **Country & FX Analytics:** Sourcing states, proposed 12-market specification, interactive currency shock simulator
+8. **Data Governance & Reports Hub:** Complete 179-record exception register (135 delays, 2 return errors, 42 date inversions), customer date audit, and automated weekly reporting
 
 ### Presentation Speaking Script
 > "The platform organizes 10 specialized modules. The Executive Dashboard presents 8 high-level business indicators with interactive drill-down to detailed records. The Logistics module isolates SLA delivery exceptions. The Buyer module implements RFM-V segmentation across 187 commercial accounts. The Currency module allows users to simulate exchange rate shifts across major trading currencies, and the Compliance Hub provides downloadable exception reports."

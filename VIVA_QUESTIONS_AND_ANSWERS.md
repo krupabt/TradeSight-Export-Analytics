@@ -22,9 +22,11 @@
 *Relationship Note:* While `da_b2b_orders` aggregates transactions by category and buyer ID, individual order line items are unlinked to specific product SKUs. This architectural limitation is transparently documented in the platform.
 
 ### Q3: What were the major data quality anomalies identified in the raw datasets, and how did you handle them?
-**Answer:** Two critical anomalies were detected:
-1. **Invalid Return Quantities:** In orders `ORD_000102` and `ORD_000412`, the recorded `return_qty` exceeded the original `quantity_units`. Instead of silently deleting or fabricating data, the system flags these in compliance exception reports and quarantines them while calculating uncorrupted baseline metrics.
-2. **Purchase Date Inversions:** In `da_customer_profiles.csv`, several records had `First_Purchase_Date > Last_Purchase_Date`. These were logged in the data validation report to highlight needed ERP ingestion rules.
+**Answer:** Data anomalies were reconciled into a total register of **179 exceptions**:
+1. **Invalid Return Quantities (2 records):** In orders `B2B-00131` / `ORD_000102` and `B2B-00188` / `ORD_000412`, recorded `return_qty` exceeded original `quantity_units`. Instead of silently deleting or fabricating data, the system preserves them intact, tags them with `is_valid_return=False`, displays them on the **Returns & Quality Analytics** page with recommended ERP audit actions, and enables review status management.
+2. **Purchase Date Inversions (42 records):** In `da_customer_profiles.csv`, 42 customer profile records had `First_Purchase_Date > Last_Purchase_Date`. These were quarantined from tenure calculations and moved cleanly to the **Data Quality & Governance** module.
+3. **Logistics Delivery Delays (135 records):** Orders exceeding carrier transit benchmarks where `on_time_delivery == 0`.
+4. **Separation of Concerns:** Only return-related exceptions are displayed on the Returns & Quality Analytics page, while the complete 179-record register and customer profile date audits are housed in Data Governance.
 
 ---
 
