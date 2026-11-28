@@ -1,0 +1,13 @@
+Country,ISO3,Region,Port_of_Discharge,Incoterm,Target_Priority
+United Arab Emirates,ARE,Middle East,Jebel Ali (AEJEA),CIF / FOB,High
+United States,USA,North America,New York / Newark (USNYC),FOB / CFR,High
+United Kingdom,GBR,Europe,Felixstowe (GBFXT),CIF / DDP,High
+Germany,DEU,Europe,Hamburg (DEHAM),FOB / CIF,High
+Singapore,SGP,Southeast Asia,Singapore (SGSIN),CIF / CFR,Medium
+Saudi Arabia,SAU,Middle East,Jeddah (SAJED),CIF,Medium
+Netherlands,NLD,Europe,Rotterdam (NLRTM),FOB / CIF,Medium
+Japan,JPN,East Asia,Yokohama (JPYOK),FOB / CFR,Medium
+Australia,AUS,Oceania,Sydney (AUSYD),CIF,Medium
+France,FRA,Europe,Le Havre (FRLEH),FOB / CIF,Low
+Italy,ITA,Europe,Genoa (ITGOA),CIF,Low
+South Africa,ZAF,Africa,Durban (ZADUR),CIF / CFR,Low

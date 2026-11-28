@@ -51,17 +51,31 @@ jobs:
           APP_ENV: ${{ github.event.inputs.test_mode == false && 'production' || 'test' }}
         run: |
           python -c "
-          import os, sys
+          import os, sys, glob
           from src.pipeline import run_pipeline
+          from src.reporting import send_smtp_alert
 
           test_mode = os.environ.get('APP_ENV', 'test') == 'test'
           print(f'Starting automated weekly reporting job (Test Mode: {test_mode})...')
 
-          # Run data pipeline and exception report generation
+          # 1. Run data pipeline and exception report generation
           results = run_pipeline()
           print('Pipeline executed successfully.')
           print('Baseline Metrics generated:', len(results['baseline_metrics']))
           print('Weekly Exceptions flagged:', len(results['weekly_exceptions']))
+
+          # 2. Attempt SMTP dispatch if configured
+          latest_reports = sorted(glob.glob('reports/weekly_exception_report_*.md'))
+          if latest_reports:
+              with open(latest_reports[-1], 'r', encoding='utf-8') as f:
+                  md_content = f.read()
+              dispatched = send_smtp_alert(
+                  subject='[TradeSight] Weekly Operational Exception & Compliance Report',
+                  body_markdown=md_content
+              )
+              print(f'SMTP Dispatch Result: {dispatched}')
+          else:
+              print('No weekly exception report markdown found to dispatch.')
           "
 
       - name: Upload weekly exception reports

@@ -1,0 +1,288 @@
+{
+  "config": "{\"version\": \"5.48\", \"themeCollection\": {\"baseTheme\": {\"name\": \"TradeSight Export Analytics Navy Theme\", \"version\": \"1.0\"}}, \"settings\": {\"useNewFilterPaneExperience\": true}}",
+  "layoutOptimization": 0,
+  "sections": [
+    {
+      "name": "Page1_ExecutiveOverview",
+      "displayName": "Executive Overview",
+      "filters": "[]",
+      "height": 900,
+      "width": 1600,
+      "ordinal": 0,
+      "visualContainers": [
+        {
+          "x": 20,
+          "y": 20,
+          "z": 0,
+          "width": 1560,
+          "height": 60,
+          "config": "{\"name\": \"headerTitle\", \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": [{\"textRuns\": [{\"value\": \"TradeSight Export Analytics \\u2013 C-Suite Executive Overview\", \"textStyle\": {\"fontFamily\": \"Segoe UI Bold\", \"fontSize\": \"20pt\", \"color\": \"#172B4D\"}}]}]}}]}}}"
+        },
+        {
+          "x": 20,
+          "y": 90,
+          "z": 1,
+          "width": 180,
+          "height": 90,
+          "config": "{\"name\": \"kpiRev\", \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Fact_Orders.Total Revenue (Cr)\"}]}}}"
+        },
+        {
+          "x": 215,
+          "y": 90,
+          "z": 2,
+          "width": 180,
+          "height": 90,
+          "config": "{\"name\": \"kpiOrders\", \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Fact_Orders.Total Orders\"}]}}}"
+        },
+        {
+          "x": 410,
+          "y": 90,
+          "z": 3,
+          "width": 180,
+          "height": 90,
+          "config": "{\"name\": \"kpiAov\", \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Fact_Orders.AOV (Lakhs)\"}]}}}"
+        },
+        {
+          "x": 605,
+          "y": 90,
+          "z": 4,
+          "width": 180,
+          "height": 90,
+          "config": "{\"name\": \"kpiOntime\", \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Fact_Orders.On-Time Delivery %\"}]}}}"
+        },
+        {
+          "x": 800,
+          "y": 90,
+          "z": 5,
+          "width": 180,
+          "height": 90,
+          "config": "{\"name\": \"kpiReturn\", \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Fact_Orders.Unit Return Rate %\"}]}}}"
+        },
+        {
+          "x": 995,
+          "y": 90,
+          "z": 6,
+          "width": 180,
+          "height": 90,
+          "config": "{\"name\": \"kpiBuyers\", \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Fact_Orders.Unique Active Buyers\"}]}}}"
+        },
+        {
+          "x": 1190,
+          "y": 90,
+          "z": 7,
+          "width": 180,
+          "height": 90,
+          "config": "{\"name\": \"kpiSkus\", \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Dim_Products.Total Catalogue SKUs\"}]}}}"
+        },
+        {
+          "x": 1385,
+          "y": 90,
+          "z": 8,
+          "width": 195,
+          "height": 90,
+          "config": "{\"name\": \"kpiMargin\", \"singleVisual\": {\"visualType\": \"card\", \"projections\": {\"Values\": [{\"queryRef\": \"Dim_Products.Catalogue Gross Margin %\"}]}}}"
+        },
+        {
+          "x": 20,
+          "y": 195,
+          "z": 9,
+          "width": 980,
+          "height": 380,
+          "config": "{\"name\": \"chartMonthlyRev\", \"singleVisual\": {\"visualType\": \"areaChart\", \"projections\": {\"Category\": [{\"queryRef\": \"Dim_Date.YearMonth\"}], \"Y\": [{\"queryRef\": \"Fact_Orders.Total Revenue (Cr)\"}]}}}"
+        },
+        {
+          "x": 1020,
+          "y": 195,
+          "z": 10,
+          "width": 560,
+          "height": 380,
+          "config": "{\"name\": \"chartDeliveryDonut\", \"singleVisual\": {\"visualType\": \"donutChart\", \"projections\": {\"Category\": [{\"queryRef\": \"Fact_Orders.SLA_Status\"}], \"Y\": [{\"queryRef\": \"Fact_Orders.Total Orders\"}]}}}"
+        },
+        {
+          "x": 20,
+          "y": 590,
+          "z": 11,
+          "width": 770,
+          "height": 290,
+          "config": "{\"name\": \"chartCategoryBar\", \"singleVisual\": {\"visualType\": \"barChart\", \"projections\": {\"Category\": [{\"queryRef\": \"Fact_Orders.category\"}], \"Y\": [{\"queryRef\": \"Fact_Orders.Total Revenue (Cr)\"}]}}}"
+        },
+        {
+          "x": 810,
+          "y": 590,
+          "z": 12,
+          "width": 770,
+          "height": 290,
+          "config": "{\"name\": \"chartTermsBar\", \"singleVisual\": {\"visualType\": \"columnChart\", \"projections\": {\"Category\": [{\"queryRef\": \"Fact_Orders.payment_terms\"}], \"Y\": [{\"queryRef\": \"Fact_Orders.Total Revenue (Cr)\"}]}}}"
+        }
+      ]
+    },
+    {
+      "name": "Page2_ShipmentAndCompliance",
+      "displayName": "Shipment and Compliance",
+      "filters": "[]",
+      "height": 900,
+      "width": 1600,
+      "ordinal": 1,
+      "visualContainers": [
+        {
+          "x": 20,
+          "y": 20,
+          "z": 0,
+          "width": 1560,
+          "height": 60,
+          "config": "{\"name\": \"headerTitle2\", \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": [{\"textRuns\": [{\"value\": \"Logistics Performance & Compliance Monitoring\", \"textStyle\": {\"fontFamily\": \"Segoe UI Bold\", \"fontSize\": \"20pt\", \"color\": \"#172B4D\"}}]}]}}]}}}"
+        },
+        {
+          "x": 20,
+          "y": 90,
+          "z": 1,
+          "width": 770,
+          "height": 380,
+          "config": "{\"name\": \"chartTransitHistogram\", \"singleVisual\": {\"visualType\": \"columnChart\", \"projections\": {\"Category\": [{\"queryRef\": \"Fact_Orders.delivery_days\"}], \"Y\": [{\"queryRef\": \"Fact_Orders.Total Orders\"}]}}}"
+        },
+        {
+          "x": 810,
+          "y": 90,
+          "z": 2,
+          "width": 770,
+          "height": 380,
+          "config": "{\"name\": \"chartSlaByCategory\", \"singleVisual\": {\"visualType\": \"barChart\", \"projections\": {\"Category\": [{\"queryRef\": \"Fact_Orders.category\"}], \"Y\": [{\"queryRef\": \"Fact_Orders.On-Time Delivery %\"}]}}}"
+        },
+        {
+          "x": 20,
+          "y": 490,
+          "z": 3,
+          "width": 1560,
+          "height": 390,
+          "config": "{\"name\": \"tableExceptions\", \"singleVisual\": {\"visualType\": \"tableEx\", \"projections\": {\"Values\": [{\"queryRef\": \"Fact_Orders.order_id\"}, {\"queryRef\": \"Fact_Orders.buyer_id\"}, {\"queryRef\": \"Fact_Orders.category\"}, {\"queryRef\": \"Fact_Orders.order_date\"}, {\"queryRef\": \"Fact_Orders.delivery_days\"}, {\"queryRef\": \"Fact_Orders.SLA_Status\"}, {\"queryRef\": \"Fact_Orders.quantity_units\"}, {\"queryRef\": \"Fact_Orders.return_qty\"}, {\"queryRef\": \"Fact_Orders.total_value_inr\"}]}}}"
+        }
+      ]
+    },
+    {
+      "name": "Page3_ClientAndProductAnalytics",
+      "displayName": "Client and Product Analytics",
+      "filters": "[]",
+      "height": 900,
+      "width": 1600,
+      "ordinal": 2,
+      "visualContainers": [
+        {
+          "x": 20,
+          "y": 20,
+          "z": 0,
+          "width": 1560,
+          "height": 60,
+          "config": "{\"name\": \"headerTitle3\", \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": [{\"textRuns\": [{\"value\": \"Client Commercial Ranking & Product Margin Intelligence\", \"textStyle\": {\"fontFamily\": \"Segoe UI Bold\", \"fontSize\": \"20pt\", \"color\": \"#172B4D\"}}]}]}}]}}}"
+        },
+        {
+          "x": 20,
+          "y": 90,
+          "z": 1,
+          "width": 770,
+          "height": 380,
+          "config": "{\"name\": \"chartTopBuyers\", \"singleVisual\": {\"visualType\": \"barChart\", \"projections\": {\"Category\": [{\"queryRef\": \"Fact_Orders.buyer_id\"}], \"Y\": [{\"queryRef\": \"Fact_Orders.Total Revenue (Cr)\"}]}}}"
+        },
+        {
+          "x": 810,
+          "y": 90,
+          "z": 2,
+          "width": 770,
+          "height": 380,
+          "config": "{\"name\": \"chartProductMargins\", \"singleVisual\": {\"visualType\": \"columnChart\", \"projections\": {\"Category\": [{\"queryRef\": \"Dim_Products.Category\"}], \"Y\": [{\"queryRef\": \"Dim_Products.Catalogue Gross Margin %\"}]}}}"
+        },
+        {
+          "x": 20,
+          "y": 490,
+          "z": 3,
+          "width": 1560,
+          "height": 390,
+          "config": "{\"name\": \"tableProductInventory\", \"singleVisual\": {\"visualType\": \"tableEx\", \"projections\": {\"Values\": [{\"queryRef\": \"Dim_Products.Product_ID\"}, {\"queryRef\": \"Dim_Products.Name\"}, {\"queryRef\": \"Dim_Products.Category\"}, {\"queryRef\": \"Dim_Products.MRP\"}, {\"queryRef\": \"Dim_Products.COGS\"}, {\"queryRef\": \"Dim_Products.Gross_Margin_Pct\"}, {\"queryRef\": \"Dim_Products.Stock_Units\"}, {\"queryRef\": \"Dim_Products.Total_Inventory_Value_COGS\"}]}}}"
+        }
+      ]
+    },
+    {
+      "name": "Page4_ReturnsAndDataQuality",
+      "displayName": "Returns and Data Quality",
+      "filters": "[]",
+      "height": 900,
+      "width": 1600,
+      "ordinal": 3,
+      "visualContainers": [
+        {
+          "x": 20,
+          "y": 20,
+          "z": 0,
+          "width": 1560,
+          "height": 60,
+          "config": "{\"name\": \"headerTitle4\", \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": [{\"textRuns\": [{\"value\": \"Return Rate Analysis & Data Quality Exception Auditing\", \"textStyle\": {\"fontFamily\": \"Segoe UI Bold\", \"fontSize\": \"20pt\", \"color\": \"#172B4D\"}}]}]}}]}}}"
+        },
+        {
+          "x": 20,
+          "y": 90,
+          "z": 1,
+          "width": 770,
+          "height": 380,
+          "config": "{\"name\": \"chartCategoryReturnRates\", \"singleVisual\": {\"visualType\": \"columnChart\", \"projections\": {\"Category\": [{\"queryRef\": \"Fact_Orders.category\"}], \"Y\": [{\"queryRef\": \"Fact_Orders.Unit Return Rate %\"}]}}}"
+        },
+        {
+          "x": 810,
+          "y": 90,
+          "z": 2,
+          "width": 770,
+          "height": 380,
+          "config": "{\"name\": \"chartInvalidReturnsFlag\", \"singleVisual\": {\"visualType\": \"donutChart\", \"projections\": {\"Category\": [{\"queryRef\": \"Fact_Orders.Has_Return\"}], \"Y\": [{\"queryRef\": \"Fact_Orders.Total Orders\"}]}}}"
+        },
+        {
+          "x": 20,
+          "y": 490,
+          "z": 3,
+          "width": 1560,
+          "height": 390,
+          "config": "{\"name\": \"tableInvalidReturns\", \"singleVisual\": {\"visualType\": \"tableEx\", \"projections\": {\"Values\": [{\"queryRef\": \"Fact_Orders.order_id\"}, {\"queryRef\": \"Fact_Orders.buyer_id\"}, {\"queryRef\": \"Fact_Orders.category\"}, {\"queryRef\": \"Fact_Orders.quantity_units\"}, {\"queryRef\": \"Fact_Orders.return_qty\"}, {\"queryRef\": \"Fact_Orders.Invalid_Return_Flag\"}, {\"queryRef\": \"Fact_Orders.total_value_inr\"}]}}}"
+        }
+      ]
+    },
+    {
+      "name": "Page5_GeographyAndFXAnalytics",
+      "displayName": "Geography and FX Analytics",
+      "filters": "[]",
+      "height": 900,
+      "width": 1600,
+      "ordinal": 4,
+      "visualContainers": [
+        {
+          "x": 20,
+          "y": 20,
+          "z": 0,
+          "width": 1560,
+          "height": 60,
+          "config": "{\"name\": \"headerTitle5\", \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": [{\"textRuns\": [{\"value\": \"Proposed 12-Market Expansion & Currency Scenario Analysis\", \"textStyle\": {\"fontFamily\": \"Segoe UI Bold\", \"fontSize\": \"20pt\", \"color\": \"#172B4D\"}}]}]}}]}}}"
+        },
+        {
+          "x": 20,
+          "y": 90,
+          "z": 1,
+          "width": 770,
+          "height": 380,
+          "config": "{\"name\": \"chartCustomerCities\", \"singleVisual\": {\"visualType\": \"pieChart\", \"projections\": {\"Category\": [{\"queryRef\": \"Dim_Customers.City\"}], \"Y\": [{\"queryRef\": \"Dim_Customers.Total_Orders\"}]}}}"
+        },
+        {
+          "x": 810,
+          "y": 90,
+          "z": 2,
+          "width": 770,
+          "height": 380,
+          "config": "{\"name\": \"tableProposed12Markets\", \"singleVisual\": {\"visualType\": \"tableEx\", \"projections\": {\"Values\": [{\"queryRef\": \"Dim_Proposed_Markets.Country\"}, {\"queryRef\": \"Dim_Proposed_Markets.ISO3\"}, {\"queryRef\": \"Dim_Proposed_Markets.Region\"}, {\"queryRef\": \"Dim_Proposed_Markets.Port_of_Discharge\"}, {\"queryRef\": \"Dim_Proposed_Markets.Incoterm\"}, {\"queryRef\": \"Dim_Proposed_Markets.Target_Priority\"}]}}}"
+        },
+        {
+          "x": 20,
+          "y": 490,
+          "z": 3,
+          "width": 1560,
+          "height": 390,
+          "config": "{\"name\": \"textboxFXAudit\", \"singleVisual\": {\"visualType\": \"textbox\", \"objects\": {\"general\": [{\"properties\": {\"paragraphs\": [{\"textRuns\": [{\"value\": \"DATA AUDIT & METHODOLOGICAL GOVERNANCE:\\\\n1. Destination Country Limitation: da_b2b_orders.csv contains no foreign country column. In strict compliance with research ethics, no fabricated country transactions were injected. The proposed 12-market specification outlines target ports and trade lanes for enterprise ERP ingestion.\\\\n2. Currency Impact: All orders are recorded in INR. FX analytics provide forward-looking currency sensitivity modeling across USD, EUR, GBP, and AED to inform hedging strategies.\", \"textStyle\": {\"fontFamily\": \"Segoe UI\", \"fontSize\": \"12pt\", \"color\": \"#172B4D\"}}]}]}}]}}}"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,477 @@
+{
+  "name": "TradeSight_Analytics",
+  "compatibilityLevel": 1550,
+  "model": {
+    "culture": "en-US",
+    "dataSources": [
+      {
+        "type": "structured",
+        "name": "FileConnection",
+        "connectionDetails": {
+          "protocol": "file",
+          "address": {
+            "path": "data"
+          }
+        }
+      }
+    ],
+    "tables": [
+      {
+        "name": "Fact_Orders",
+        "columns": [
+          {
+            "name": "order_id",
+            "dataType": "string",
+            "sourceColumn": "order_id"
+          },
+          {
+            "name": "buyer_id",
+            "dataType": "string",
+            "sourceColumn": "buyer_id"
+          },
+          {
+            "name": "seller_id",
+            "dataType": "string",
+            "sourceColumn": "seller_id"
+          },
+          {
+            "name": "category",
+            "dataType": "string",
+            "sourceColumn": "category"
+          },
+          {
+            "name": "order_date",
+            "dataType": "dateTime",
+            "sourceColumn": "order_date",
+            "formatString": "yyyy-MM-dd"
+          },
+          {
+            "name": "quantity_units",
+            "dataType": "int64",
+            "sourceColumn": "quantity_units"
+          },
+          {
+            "name": "unit_price_inr",
+            "dataType": "double",
+            "sourceColumn": "unit_price_inr",
+            "formatString": "\u20b9#,##0.00"
+          },
+          {
+            "name": "total_value_inr",
+            "dataType": "double",
+            "sourceColumn": "total_value_inr",
+            "formatString": "\u20b9#,##0.00"
+          },
+          {
+            "name": "payment_terms",
+            "dataType": "string",
+            "sourceColumn": "payment_terms"
+          },
+          {
+            "name": "delivery_days",
+            "dataType": "int64",
+            "sourceColumn": "delivery_days"
+          },
+          {
+            "name": "on_time_delivery",
+            "dataType": "int64",
+            "sourceColumn": "on_time_delivery"
+          },
+          {
+            "name": "return_qty",
+            "dataType": "int64",
+            "sourceColumn": "return_qty"
+          },
+          {
+            "name": "repeat_buyer",
+            "dataType": "int64",
+            "sourceColumn": "repeat_buyer"
+          },
+          {
+            "name": "OrderDateKey",
+            "dataType": "int64",
+            "sourceColumn": "OrderDateKey"
+          },
+          {
+            "name": "Order_Year",
+            "dataType": "int64",
+            "sourceColumn": "Order_Year"
+          },
+          {
+            "name": "Order_Month",
+            "dataType": "string",
+            "sourceColumn": "Order_Month"
+          },
+          {
+            "name": "Order_Quarter",
+            "dataType": "string",
+            "sourceColumn": "Order_Quarter"
+          },
+          {
+            "name": "SLA_Status",
+            "dataType": "string",
+            "sourceColumn": "SLA_Status"
+          },
+          {
+            "name": "Has_Return",
+            "dataType": "string",
+            "sourceColumn": "Has_Return"
+          },
+          {
+            "name": "Invalid_Return_Flag",
+            "dataType": "int64",
+            "sourceColumn": "Invalid_Return_Flag"
+          },
+          {
+            "name": "Value_Category",
+            "dataType": "string",
+            "sourceColumn": "Value_Category"
+          }
+        ],
+        "measures": [
+          {
+            "name": "Total Export Revenue",
+            "expression": "SUM(Fact_Orders[total_value_inr])",
+            "formatString": "\u20b9#,##0.00"
+          },
+          {
+            "name": "Total Revenue (Cr)",
+            "expression": "DIVIDE([Total Export Revenue], 10000000, 0)",
+            "formatString": "#,##0.00"
+          },
+          {
+            "name": "Total Orders",
+            "expression": "COUNTROWS(Fact_Orders)",
+            "formatString": "#,##0"
+          },
+          {
+            "name": "Average Order Value (AOV)",
+            "expression": "DIVIDE([Total Export Revenue], [Total Orders], 0)",
+            "formatString": "\u20b9#,##0.00"
+          },
+          {
+            "name": "AOV (Lakhs)",
+            "expression": "DIVIDE([Average Order Value (AOV)], 100000, 0)",
+            "formatString": "#,##0.00"
+          },
+          {
+            "name": "Total Units Shipped",
+            "expression": "SUM(Fact_Orders[quantity_units])",
+            "formatString": "#,##0"
+          },
+          {
+            "name": "Total Units Returned",
+            "expression": "SUM(Fact_Orders[return_qty])",
+            "formatString": "#,##0"
+          },
+          {
+            "name": "Unit Return Rate %",
+            "expression": "DIVIDE([Total Units Returned], [Total Units Shipped], 0) * 100",
+            "formatString": "0.00\\%"
+          },
+          {
+            "name": "On-Time Deliveries",
+            "expression": "CALCULATE(COUNTROWS(Fact_Orders), Fact_Orders[on_time_delivery] = 1)",
+            "formatString": "#,##0"
+          },
+          {
+            "name": "On-Time Delivery %",
+            "expression": "DIVIDE([On-Time Deliveries], [Total Orders], 0) * 100",
+            "formatString": "0.00\\%"
+          },
+          {
+            "name": "Delayed Shipments",
+            "expression": "CALCULATE(COUNTROWS(Fact_Orders), Fact_Orders[on_time_delivery] = 0)",
+            "formatString": "#,##0"
+          },
+          {
+            "name": "Delayed Shipment %",
+            "expression": "DIVIDE([Delayed Shipments], [Total Orders], 0) * 100",
+            "formatString": "0.00\\%"
+          },
+          {
+            "name": "Average Transit Days",
+            "expression": "AVERAGE(Fact_Orders[delivery_days])",
+            "formatString": "0.0"
+          },
+          {
+            "name": "Median Transit Days",
+            "expression": "MEDIAN(Fact_Orders[delivery_days])",
+            "formatString": "0.0"
+          },
+          {
+            "name": "Unique Active Buyers",
+            "expression": "DISTINCTCOUNT(Fact_Orders[buyer_id])",
+            "formatString": "#,##0"
+          },
+          {
+            "name": "Repeat Buyer Orders",
+            "expression": "CALCULATE(COUNTROWS(Fact_Orders), Fact_Orders[repeat_buyer] = 1)",
+            "formatString": "#,##0"
+          },
+          {
+            "name": "Repeat Buyer Order Rate %",
+            "expression": "DIVIDE([Repeat Buyer Orders], [Total Orders], 0) * 100",
+            "formatString": "0.00\\%"
+          },
+          {
+            "name": "Invalid Return Records",
+            "expression": "CALCULATE(COUNTROWS(Fact_Orders), Fact_Orders[return_qty] > Fact_Orders[quantity_units])",
+            "formatString": "#,##0"
+          }
+        ]
+      },
+      {
+        "name": "Dim_Products",
+        "columns": [
+          {
+            "name": "Product_ID",
+            "dataType": "string",
+            "sourceColumn": "Product_ID"
+          },
+          {
+            "name": "Name",
+            "dataType": "string",
+            "sourceColumn": "Name"
+          },
+          {
+            "name": "Category",
+            "dataType": "string",
+            "sourceColumn": "Category"
+          },
+          {
+            "name": "MRP",
+            "dataType": "double",
+            "sourceColumn": "MRP",
+            "formatString": "\u20b9#,##0.00"
+          },
+          {
+            "name": "COGS",
+            "dataType": "double",
+            "sourceColumn": "COGS",
+            "formatString": "\u20b9#,##0.00"
+          },
+          {
+            "name": "Stock_Units",
+            "dataType": "int64",
+            "sourceColumn": "Stock_Units"
+          },
+          {
+            "name": "Avg_Monthly_Sales",
+            "dataType": "double",
+            "sourceColumn": "Avg_Monthly_Sales"
+          },
+          {
+            "name": "Gross_Margin_INR",
+            "dataType": "double",
+            "sourceColumn": "Gross_Margin_INR"
+          },
+          {
+            "name": "Gross_Margin_Pct",
+            "dataType": "double",
+            "sourceColumn": "Gross_Margin_Pct",
+            "formatString": "0.00\\%"
+          },
+          {
+            "name": "Cost_Markup_Pct",
+            "dataType": "double",
+            "sourceColumn": "Cost_Markup_Pct",
+            "formatString": "0.00\\%"
+          },
+          {
+            "name": "Total_Inventory_Value_COGS",
+            "dataType": "double",
+            "sourceColumn": "Total_Inventory_Value_COGS",
+            "formatString": "\u20b9#,##0.00"
+          },
+          {
+            "name": "Total_Inventory_Value_MRP",
+            "dataType": "double",
+            "sourceColumn": "Total_Inventory_Value_MRP",
+            "formatString": "\u20b9#,##0.00"
+          }
+        ],
+        "measures": [
+          {
+            "name": "Total Catalogue SKUs",
+            "expression": "COUNTROWS(Dim_Products)",
+            "formatString": "#,##0"
+          },
+          {
+            "name": "Catalogue Gross Margin %",
+            "expression": "AVERAGE(Dim_Products[Gross_Margin_Pct])",
+            "formatString": "0.00\\%"
+          },
+          {
+            "name": "Total Warehouse Stock Units",
+            "expression": "SUM(Dim_Products[Stock_Units])",
+            "formatString": "#,##0"
+          }
+        ]
+      },
+      {
+        "name": "Dim_Customers",
+        "columns": [
+          {
+            "name": "Customer_ID",
+            "dataType": "string",
+            "sourceColumn": "Customer_ID"
+          },
+          {
+            "name": "City",
+            "dataType": "string",
+            "sourceColumn": "City"
+          },
+          {
+            "name": "Age_Band",
+            "dataType": "string",
+            "sourceColumn": "Age_Band"
+          },
+          {
+            "name": "Gender",
+            "dataType": "string",
+            "sourceColumn": "Gender"
+          },
+          {
+            "name": "Acquisition_Channel",
+            "dataType": "string",
+            "sourceColumn": "Acquisition_Channel"
+          },
+          {
+            "name": "First_Purchase_Date",
+            "dataType": "dateTime",
+            "sourceColumn": "First_Purchase_Date",
+            "formatString": "yyyy-MM-dd"
+          },
+          {
+            "name": "Total_Orders",
+            "dataType": "int64",
+            "sourceColumn": "Total_Orders"
+          },
+          {
+            "name": "Total_Revenue",
+            "dataType": "double",
+            "sourceColumn": "Total_Revenue",
+            "formatString": "\u20b9#,##0.00"
+          },
+          {
+            "name": "Last_Purchase_Date",
+            "dataType": "dateTime",
+            "sourceColumn": "Last_Purchase_Date",
+            "formatString": "yyyy-MM-dd"
+          },
+          {
+            "name": "Churned",
+            "dataType": "int64",
+            "sourceColumn": "Churned"
+          },
+          {
+            "name": "Status",
+            "dataType": "string",
+            "sourceColumn": "Status"
+          }
+        ]
+      },
+      {
+        "name": "Dim_Date",
+        "columns": [
+          {
+            "name": "Date",
+            "dataType": "dateTime",
+            "sourceColumn": "Date",
+            "formatString": "yyyy-MM-dd"
+          },
+          {
+            "name": "DateKey",
+            "dataType": "int64",
+            "sourceColumn": "DateKey"
+          },
+          {
+            "name": "Year",
+            "dataType": "int64",
+            "sourceColumn": "Year"
+          },
+          {
+            "name": "Quarter",
+            "dataType": "string",
+            "sourceColumn": "Quarter"
+          },
+          {
+            "name": "YearQuarter",
+            "dataType": "string",
+            "sourceColumn": "YearQuarter"
+          },
+          {
+            "name": "Month",
+            "dataType": "int64",
+            "sourceColumn": "Month"
+          },
+          {
+            "name": "MonthName",
+            "dataType": "string",
+            "sourceColumn": "MonthName"
+          },
+          {
+            "name": "YearMonth",
+            "dataType": "string",
+            "sourceColumn": "YearMonth"
+          },
+          {
+            "name": "DayOfWeek",
+            "dataType": "string",
+            "sourceColumn": "DayOfWeek"
+          },
+          {
+            "name": "IsWeekend",
+            "dataType": "int64",
+            "sourceColumn": "IsWeekend"
+          }
+        ]
+      },
+      {
+        "name": "Dim_Proposed_Markets",
+        "columns": [
+          {
+            "name": "Country",
+            "dataType": "string",
+            "sourceColumn": "Country"
+          },
+          {
+            "name": "ISO3",
+            "dataType": "string",
+            "sourceColumn": "ISO3"
+          },
+          {
+            "name": "Region",
+            "dataType": "string",
+            "sourceColumn": "Region"
+          },
+          {
+            "name": "Port_of_Discharge",
+            "dataType": "string",
+            "sourceColumn": "Port_of_Discharge"
+          },
+          {
+            "name": "Incoterm",
+            "dataType": "string",
+            "sourceColumn": "Incoterm"
+          },
+          {
+            "name": "Target_Priority",
+            "dataType": "string",
+            "sourceColumn": "Target_Priority"
+          }
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "name": "Orders_to_Date",
+        "fromTable": "Fact_Orders",
+        "fromColumn": "OrderDateKey",
+        "toTable": "Dim_Date",
+        "toColumn": "DateKey"
+      }
+    ]
+  }
+}

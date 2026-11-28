@@ -164,6 +164,33 @@ export default function App() {
 
   // What-If FX Sensitivity Scenario State
   const [fxShockPct, setFxShockPct] = useState(0);
+  const [fxCurrency, setFxCurrency] = useState('USD');
+  const [fxInvoiceAmount, setFxInvoiceAmount] = useState(100000);
+  const [fxBaseRate, setFxBaseRate] = useState(83.50);
+  const [fxRevisedRate, setFxRevisedRate] = useState(87.68);
+  const [fxSimulatorMode, setFxSimulatorMode] = useState('portfolio'); // 'portfolio' | 'invoice'
+
+  // Benchmark Rates against INR
+  const FX_BENCHMARKS = {
+    USD: 83.50,
+    EUR: 90.20,
+    GBP: 105.40,
+    AED: 22.75,
+    SGD: 61.80,
+    JPY: 0.55
+  };
+
+  const handleFxCurrencyChange = (curr) => {
+    setFxCurrency(curr);
+    const benchmark = FX_BENCHMARKS[curr] || 83.50;
+    setFxBaseRate(benchmark);
+    setFxRevisedRate(parseFloat((benchmark * (1 + fxShockPct / 100)).toFixed(2)));
+  };
+
+  const handleFxShockChange = (pct) => {
+    setFxShockPct(pct);
+    setFxRevisedRate(parseFloat((fxBaseRate * (1 + pct / 100)).toFixed(2)));
+  };
 
   // Pagination States for Data Tables
   const [orderPage, setOrderPage] = useState(1);
@@ -802,10 +829,15 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 8 Primary Key Metrics Grid (4 columns x 2 rows, Compact, No Subtext) */}
+              {/* 8 Primary Key Metrics Grid (4 columns x 2 rows, Drill-Down Enabled) */}
               <div className="dashboard-kpi-grid">
                 {/* 1. Total Revenue */}
-                <div className="kpi-card">
+                <div 
+                  className="kpi-card" 
+                  onClick={() => handleSelectSection('revenue')} 
+                  style={{ cursor: 'pointer' }}
+                  title="Click to drill down to Revenue Analysis"
+                >
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Total Revenue</span>
                     <div className="kpi-card-icon"><TrendingUp size={16} /></div>
@@ -814,7 +846,12 @@ export default function App() {
                 </div>
 
                 {/* 2. Total Orders */}
-                <div className="kpi-card">
+                <div 
+                  className="kpi-card" 
+                  onClick={() => handleSelectSection('revenue')} 
+                  style={{ cursor: 'pointer' }}
+                  title="Click to drill down to Order Records"
+                >
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Total Orders</span>
                     <div className="kpi-card-icon"><Box size={16} /></div>
@@ -823,7 +860,12 @@ export default function App() {
                 </div>
 
                 {/* 3. Average Order Value */}
-                <div className="kpi-card">
+                <div 
+                  className="kpi-card" 
+                  onClick={() => handleSelectSection('revenue')} 
+                  style={{ cursor: 'pointer' }}
+                  title="Click to drill down to AOV Breakdown"
+                >
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Average Order Value</span>
                     <div className="kpi-card-icon"><DollarSign size={16} /></div>
@@ -832,7 +874,12 @@ export default function App() {
                 </div>
 
                 {/* 4. On-Time Delivery */}
-                <div className="kpi-card">
+                <div 
+                  className="kpi-card" 
+                  onClick={() => { handleSelectSection('logistics'); handlePresetFilter('ontime'); }} 
+                  style={{ cursor: 'pointer' }}
+                  title="Click to drill down to On-Time Shipments"
+                >
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">On-Time Delivery</span>
                     <div className="kpi-card-icon" style={{ color: 'var(--status-success)', backgroundColor: 'var(--status-success-bg)' }}>
@@ -845,7 +892,12 @@ export default function App() {
                 </div>
 
                 {/* 5. Return Rate */}
-                <div className="kpi-card">
+                <div 
+                  className="kpi-card" 
+                  onClick={() => { handleSelectSection('returns'); handlePresetFilter('returns'); }} 
+                  style={{ cursor: 'pointer' }}
+                  title="Click to drill down to Returns Analysis"
+                >
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Return Rate</span>
                     <div className="kpi-card-icon"><RotateCcw size={16} /></div>
@@ -854,7 +906,12 @@ export default function App() {
                 </div>
 
                 {/* 6. Total Buyers */}
-                <div className="kpi-card">
+                <div 
+                  className="kpi-card" 
+                  onClick={() => handleSelectSection('buyers')} 
+                  style={{ cursor: 'pointer' }}
+                  title="Click to drill down to Buyer Directory"
+                >
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Total Buyers</span>
                     <div className="kpi-card-icon"><Users size={16} /></div>
@@ -863,7 +920,12 @@ export default function App() {
                 </div>
 
                 {/* 7. Total Products */}
-                <div className="kpi-card">
+                <div 
+                  className="kpi-card" 
+                  onClick={() => handleSelectSection('catalogue')} 
+                  style={{ cursor: 'pointer' }}
+                  title="Click to drill down to Product Catalogue"
+                >
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Total Products</span>
                     <div className="kpi-card-icon"><Package size={16} /></div>
@@ -872,7 +934,12 @@ export default function App() {
                 </div>
 
                 {/* 8. Catalogue Margin */}
-                <div className="kpi-card">
+                <div 
+                  className="kpi-card" 
+                  onClick={() => handleSelectSection('catalogue')} 
+                  style={{ cursor: 'pointer' }}
+                  title="Click to drill down to Product Margins"
+                >
                   <div className="kpi-card-header">
                     <span className="kpi-card-label">Catalogue Margin</span>
                     <div className="kpi-card-icon" style={{ color: 'var(--status-success)', backgroundColor: 'var(--status-success-bg)' }}>
@@ -2135,17 +2202,105 @@ export default function App() {
               <div className="panel-card">
                 <div className="panel-header">
                   <div>
-                    <div className="panel-title">Exchange Rate Sensitivity Tool</div>
-                    <div className="panel-subtitle">Estimate the effect of currency fluctuations on ₹396.88 Crore export revenue.</div>
+                    <div className="panel-title">Currency & FX Impact Simulator</div>
+                    <div className="panel-subtitle">Simulate currency appreciation and depreciation impacts on export receivables.</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Sliders size={14} color="var(--primary-accent)" />
-                    <span style={{ fontSize: '12px', fontWeight: 600 }}>Currency Fluctuation:</span>
+                    <button
+                      className={`preset-pill ${fxSimulatorMode === 'portfolio' ? 'active' : ''}`}
+                      onClick={() => setFxSimulatorMode('portfolio')}
+                    >
+                      Portfolio Impact
+                    </button>
+                    <button
+                      className={`preset-pill ${fxSimulatorMode === 'invoice' ? 'active' : ''}`}
+                      onClick={() => setFxSimulatorMode('invoice')}
+                    >
+                      Invoice Calculator
+                    </button>
+                  </div>
+                </div>
+
+                {/* Simulator Controls Toolbar */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center', padding: '14px', background: 'var(--bg-card-subtle)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                  <div className="filter-group">
+                    <span className="filter-label">Target Currency:</span>
+                    <select
+                      className="filter-select"
+                      value={fxCurrency}
+                      onChange={(e) => handleFxCurrencyChange(e.target.value)}
+                    >
+                      <option value="USD">USD – US Dollar (Indicative ₹83.50)</option>
+                      <option value="EUR">EUR – Euro (Indicative ₹90.20)</option>
+                      <option value="GBP">GBP – British Pound (Indicative ₹105.40)</option>
+                      <option value="AED">AED – UAE Dirham (Indicative ₹22.75)</option>
+                      <option value="SGD">SGD – Singapore Dollar (Indicative ₹61.80)</option>
+                      <option value="JPY">JPY – Japanese Yen (Indicative ₹0.55)</option>
+                    </select>
+                  </div>
+
+                  {fxSimulatorMode === 'invoice' ? (
+                    <div className="filter-group">
+                      <span className="filter-label">Invoice Amount ({fxCurrency}):</span>
+                      <input
+                        type="number"
+                        className="filter-select"
+                        min="0"
+                        step="1000"
+                        value={fxInvoiceAmount}
+                        onChange={(e) => setFxInvoiceAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                        style={{ width: '130px' }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="filter-group">
+                      <span className="filter-label">Export Portfolio:</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text-heading)' }}>₹396.88 Cr ({stats.totalOrders} Orders)</span>
+                    </div>
+                  )}
+
+                  <div className="filter-group">
+                    <span className="filter-label">Base Rate:</span>
+                    <input
+                      type="number"
+                      className="filter-select"
+                      min="0.01"
+                      step="0.05"
+                      value={fxBaseRate}
+                      onChange={(e) => {
+                        const val = Math.max(0.01, parseFloat(e.target.value) || 0.01);
+                        setFxBaseRate(val);
+                        setFxRevisedRate(parseFloat((val * (1 + fxShockPct / 100)).toFixed(2)));
+                      }}
+                      style={{ width: '90px' }}
+                    />
+                  </div>
+
+                  <div className="filter-group">
+                    <span className="filter-label">Revised Rate:</span>
+                    <input
+                      type="number"
+                      className="filter-select"
+                      min="0.01"
+                      step="0.05"
+                      value={fxRevisedRate}
+                      onChange={(e) => {
+                        const val = Math.max(0.01, parseFloat(e.target.value) || 0.01);
+                        setFxRevisedRate(val);
+                        setFxShockPct(parseFloat((((val - fxBaseRate) / fxBaseRate) * 100).toFixed(1)));
+                      }}
+                      style={{ width: '90px' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
+                    <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-secondary)' }}>Presets:</span>
                     {[-10, -5, -2, 0, 2, 5, 10].map(pct => (
                       <button
                         key={pct}
                         className={`preset-pill ${fxShockPct === pct ? 'active' : ''}`}
-                        onClick={() => setFxShockPct(pct)}
+                        onClick={() => handleFxShockChange(pct)}
+                        style={{ padding: '3px 8px', fontSize: '11px' }}
                       >
                         {pct > 0 ? `+${pct}%` : `${pct}%`}
                       </button>
@@ -2153,30 +2308,54 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="dashboard-kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: '16px' }}>
-                  <div className="kpi-card">
-                    <div className="kpi-card-header"><span className="kpi-card-label">Baseline Revenue</span></div>
-                    <div className="kpi-card-value">₹{(stats.totalRevenue / 1e7).toFixed(2)} Cr</div>
-                    <div className="kpi-card-subtext">Recorded in INR</div>
-                  </div>
-                  <div className="kpi-card">
-                    <div className="kpi-card-header"><span className="kpi-card-label">Simulated Revenue</span></div>
-                    <div className="kpi-card-value" style={{ color: fxShockPct >= 0 ? 'var(--status-success)' : 'var(--status-critical)' }}>
-                      ₹{((stats.totalRevenue * (1 + fxShockPct / 100)) / 1e7).toFixed(2)} Cr
-                    </div>
-                    <div className="kpi-card-subtext">At {fxShockPct > 0 ? `+${fxShockPct}%` : `${fxShockPct}%`} fluctuation</div>
-                  </div>
-                  <div className="kpi-card">
-                    <div className="kpi-card-header"><span className="kpi-card-label">Estimated Difference</span></div>
-                    <div className="kpi-card-value" style={{ color: fxShockPct >= 0 ? 'var(--status-success)' : 'var(--status-critical)' }}>
-                      {fxShockPct >= 0 ? '+' : ''}₹{((stats.totalRevenue * (fxShockPct / 100)) / 1e7).toFixed(2)} Cr
-                    </div>
-                    <div className="kpi-card-subtext">Estimated variance</div>
-                  </div>
-                </div>
+                {/* Dynamic Calculated KPI Results */}
+                {(() => {
+                  const isInvoice = fxSimulatorMode === 'invoice';
+                  const origInr = isInvoice ? (fxInvoiceAmount * fxBaseRate) : stats.totalRevenue;
+                  const revInr = isInvoice ? (fxInvoiceAmount * fxRevisedRate) : (stats.totalRevenue * (1 + fxShockPct / 100));
+                  const diffInr = revInr - origInr;
+                  const pctVariance = origInr > 0 ? ((diffInr / origInr) * 100) : 0;
+                  const isGain = diffInr >= 0;
 
-                <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  <strong>Scenario Note:</strong> If orders were invoiced in foreign currency (such as USD), a 5% USD appreciation against INR would yield an estimated <strong>+₹19.84 Cr</strong> gain, while a 5% depreciation would lower revenue realization by the same amount.
+                  return (
+                    <div className="dashboard-kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginTop: '8px', marginBottom: '8px' }}>
+                      <div className="kpi-card">
+                        <div className="kpi-card-header"><span className="kpi-card-label">Original Booking Value</span></div>
+                        <div className="kpi-card-value">
+                          {isInvoice ? `₹${(origInr / 1e5).toFixed(2)} Lakh` : `₹${(origInr / 1e7).toFixed(2)} Cr`}
+                        </div>
+                        <div className="kpi-card-subtext">At base rate ₹{fxBaseRate.toFixed(2)} / {fxCurrency}</div>
+                      </div>
+
+                      <div className="kpi-card">
+                        <div className="kpi-card-header"><span className="kpi-card-label">Revised Converted Value</span></div>
+                        <div className="kpi-card-value" style={{ color: isGain ? 'var(--status-success)' : 'var(--status-critical)' }}>
+                          {isInvoice ? `₹${(revInr / 1e5).toFixed(2)} Lakh` : `₹${(revInr / 1e7).toFixed(2)} Cr`}
+                        </div>
+                        <div className="kpi-card-subtext">At revised rate ₹{fxRevisedRate.toFixed(2)} / {fxCurrency}</div>
+                      </div>
+
+                      <div className="kpi-card">
+                        <div className="kpi-card-header"><span className="kpi-card-label">Estimated FX Gain / Loss</span></div>
+                        <div className="kpi-card-value" style={{ color: isGain ? 'var(--status-success)' : 'var(--status-critical)' }}>
+                          {diffInr >= 0 ? '+' : ''}{isInvoice ? `₹${(diffInr / 1e5).toFixed(2)} Lakh` : `₹${(diffInr / 1e7).toFixed(2)} Cr`}
+                        </div>
+                        <div className="kpi-card-subtext">{diffInr >= 0 ? 'Foreign currency appreciation gain' : 'Foreign currency depreciation loss'}</div>
+                      </div>
+
+                      <div className="kpi-card">
+                        <div className="kpi-card-header"><span className="kpi-card-label">Percentage Impact</span></div>
+                        <div className="kpi-card-value" style={{ color: isGain ? 'var(--status-success)' : 'var(--status-critical)' }}>
+                          {pctVariance >= 0 ? '+' : ''}{pctVariance.toFixed(2)}%
+                        </div>
+                        <div className="kpi-card-subtext">Net variance on receivable value</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, padding: '8px 12px', background: 'var(--bg-card-subtle)', borderRadius: '6px' }}>
+                  <strong>Hypothetical Simulation Note:</strong> Calculations demonstrate the mathematical sensitivity of trade receivables to currency shifts. Historical export invoices in <code>da_b2b_orders.csv</code> were recorded in INR without external FX fields.
                 </div>
               </div>
 

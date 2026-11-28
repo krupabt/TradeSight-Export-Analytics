@@ -1,0 +1,66 @@
+{
+  "name": "TradeSight Export Analytics Navy Theme",
+  "dataColors": [
+    "#3674B5",
+    "#8CB8E0",
+    "#172B4D",
+    "#25805A",
+    "#E0A35A",
+    "#C94C4C",
+    "#5B93C7",
+    "#A8CEEF"
+  ],
+  "background": "#F5F7FA",
+  "foreground": "#172B4D",
+  "tableAccent": "#3674B5",
+  "visualStyles": {
+    "*": {
+      "*": {
+        "outspace": [{ "color": { "solid": { "color": "#F5F7FA" } } }],
+        "border": [{ "show": true, "color": { "solid": { "color": "#E2E8F0" } }, "radius": 8 }],
+        "background": [{ "show": true, "color": { "solid": { "color": "#FFFFFF" } }, "transparency": 0 }],
+        "title": [
+          {
+            "show": true,
+            "fontColor": { "solid": { "color": "#172B4D" } },
+            "fontSize": 12,
+            "fontFamily": "Segoe UI Semibold"
+          }
+        ]
+      }
+    },
+    "card": {
+      "*": {
+        "labels": [{ "color": { "solid": { "color": "#172B4D" } }, "fontSize": 24, "fontFamily": "Segoe UI Bold" }],
+        "categoryLabels": [{ "color": { "solid": { "color": "#64748B" } }, "fontSize": 10, "fontFamily": "Segoe UI" }]
+      }
+    },
+    "tableEx": {
+      "*": {
+        "grid": [
+          {
+            "gridVertical": false,
+            "gridHorizontal": true,
+            "gridHorizontalColor": { "solid": { "color": "#E2E8F0" } }
+          }
+        ],
+        "columnHeaders": [
+          {
+            "fontColor": { "solid": { "color": "#172B4D" } },
+            "backColor": { "solid": { "color": "#F8FAFC" } },
+            "fontSize": 10,
+            "fontFamily": "Segoe UI Semibold"
+          }
+        ],
+        "values": [
+          {
+            "fontColorPrimary": { "solid": { "color": "#172B4D" } },
+            "backColorPrimary": { "solid": { "color": "#FFFFFF" } },
+            "fontSize": 9.5,
+            "fontFamily": "Segoe UI"
+          }
+        ]
+      }
+    }
+  }
+}
